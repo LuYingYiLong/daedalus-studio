@@ -29,19 +29,13 @@ export default function ComputerOverlay(): React.JSX.Element {
 			}[state.state];
 	if (bar)
 		return (
-			<div
-				className={styles.bar}
-				role="status"
-				data-testid="computer-control-bar"
-			>
+			<div className={styles.bar} role="status" data-testid="computer-control-bar">
 				<div className={styles.message}>
 					<span>{label}</span>
 					{state.preview && <small>{t("computer.overlay.preview")}</small>}
 					{state.state === "paused" && (
 						<small>
-							{state.resuming
-								? t("computer.overlay.resumeHint")
-								: t(computerPauseHintKey(state.code))}
+							{state.resuming ? t("computer.overlay.resumeHint") : t(computerPauseHintKey(state.code))}
 						</small>
 					)}
 				</div>
@@ -65,12 +59,18 @@ export default function ComputerOverlay(): React.JSX.Element {
 			</div>
 		);
 	return (
-		<div
-			className={styles.edge}
-			data-paused={state.state !== "running"}
-			aria-hidden="true"
-		>
-			{state.state === "running" && state.highlight && <div className={styles.highlight} style={{ left: state.highlight.x, top: state.highlight.y, width: state.highlight.width, height: state.highlight.height }} />}
+		<div className={styles.edge} data-paused={state.state !== "running"} aria-hidden="true">
+			{state.state === "running" && state.highlight && (
+				<div
+					className={styles.highlight}
+					style={{
+						left: state.highlight.x,
+						top: state.highlight.y,
+						width: state.highlight.width,
+						height: state.highlight.height,
+					}}
+				/>
+			)}
 			{state.state === "running" && state.cursorVisible && (
 				<div
 					className={styles.cursor}
@@ -80,12 +80,7 @@ export default function ComputerOverlay(): React.JSX.Element {
 					}}
 				>
 					<img src={cursor} alt="" />
-					{state.clickSequence > 0 && (
-						<span
-							key={state.clickSequence}
-							className={styles.ripple}
-						/>
-					)}
+					{state.clickSequence > 0 && <span key={state.clickSequence} className={styles.ripple} />}
 				</div>
 			)}
 		</div>

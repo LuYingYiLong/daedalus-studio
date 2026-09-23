@@ -240,7 +240,7 @@ export function moveSectionSessionInTreeOrder(
 export function moveSessionToWorkspaceInTreeOrder(
 	preferences: WorkspaceTreeOrderPreferences,
 	sessionId: string,
-	targetWorkspaceId: string,
+	targetWorkspaceId: string | null,
 	pinned: boolean
 ): WorkspaceTreeOrderPreferences {
 	const sessionIdsByWorkspace: Record<string, string[]> = Object.fromEntries(
@@ -249,22 +249,32 @@ export function moveSessionToWorkspaceInTreeOrder(
 			sessionIds.filter((candidateId: string): boolean => candidateId !== sessionId)
 		])
 	);
-	if (!pinned) {
+	if (!pinned && targetWorkspaceId !== null) {
 		sessionIdsByWorkspace[targetWorkspaceId] = [
 			sessionId,
 			...(sessionIdsByWorkspace[targetWorkspaceId] ?? [])
 		];
 	}
+	const recentSessionIds: string[] = preferences.recentSessionIds.filter((candidateId: string): boolean => candidateId !== sessionId);
+	if (!pinned && targetWorkspaceId === null) {
+		recentSessionIds.unshift(sessionId);
+	}
+	const expandedSectionKeys: WorkspaceTreeSectionKey[] = targetWorkspaceId === null
+		? preferences.expandedSectionKeys.includes("recent")
+			? preferences.expandedSectionKeys
+			: [...preferences.expandedSectionKeys, "recent"]
+		: preferences.expandedSectionKeys.includes("projects")
+			? preferences.expandedSectionKeys
+			: [...preferences.expandedSectionKeys, "projects"];
 	return {
 		...preferences,
 		sessionIdsByWorkspace,
-		recentSessionIds: preferences.recentSessionIds.filter((candidateId: string): boolean => candidateId !== sessionId),
-		expandedSectionKeys: preferences.expandedSectionKeys.includes("projects")
-			? preferences.expandedSectionKeys
-			: [...preferences.expandedSectionKeys, "projects"],
-		expandedWorkspaceIds: preferences.expandedWorkspaceIds.includes(targetWorkspaceId)
-			? preferences.expandedWorkspaceIds
-			: [...preferences.expandedWorkspaceIds, targetWorkspaceId]
+		recentSessionIds,
+		expandedSectionKeys,
+		expandedWorkspaceIds:
+			targetWorkspaceId === null || preferences.expandedWorkspaceIds.includes(targetWorkspaceId)
+				? preferences.expandedWorkspaceIds
+				: [...preferences.expandedWorkspaceIds, targetWorkspaceId]
 	};
 }
 

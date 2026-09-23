@@ -76,7 +76,7 @@ export type WorkspaceTreeProps = {
 	onSessionRename?: (session: SessionMetadata) => void;
 	onSessionWorkspaceMove?: (
 		session: SessionMetadata,
-		workspace: WorkspaceConfig,
+		workspace: WorkspaceConfig | null,
 	) => Promise<MoveSessionWorkspaceResult>;
 	onSessionWorktreeDelete?: (session: SessionMetadata) => Promise<SessionMetadata>;
 	onSessionsChange?: (sessions: SessionMetadata[]) => void;
@@ -150,6 +150,7 @@ type WorkspaceTreeLabels = {
 	rename: string;
 	renameSession: string;
 	moveSession: string;
+	moveSessionToUnbound: string;
 	movingSession: string;
 	moveSessionRunningBlocked: string;
 	moveSessionWorktreeBlocked: string;
@@ -188,7 +189,7 @@ type CreateSessionMenuItemOptions = {
 	onPinButton: (session: SessionMetadata, event: MouseEvent<HTMLElement>) => void;
 	onPin: (session: SessionMetadata) => void;
 	onRename: (session: SessionMetadata) => void;
-	onMove: (session: SessionMetadata, workspace: WorkspaceConfig) => void;
+	onMove: (session: SessionMetadata, workspace: WorkspaceConfig | null) => void;
 	onArchive: (session: SessionMetadata) => void;
 	canOpenSessionWorkspace: (session: SessionMetadata) => boolean;
 	onOpenSessionWorkspaceInExplorer: (session: SessionMetadata) => void;
@@ -250,11 +251,14 @@ function createSessionTreePresentation(
 					? { iconName: "worktree", label: labels.worktreeSession }
 					: null;
 	const currentWorkspaceId: string | undefined = getSessionProjectWorkspaceId(session);
+	const hasMoveTargets: boolean =
+		currentWorkspaceId !== undefined ||
+		options.moveWorkspaces.some((workspace: WorkspaceConfig): boolean => workspace.id !== currentWorkspaceId);
 	const canMove: boolean =
 		session.worktree === undefined &&
 		!isRunning &&
 		options.movingSessionId === null &&
-		options.moveWorkspaces.some((workspace: WorkspaceConfig): boolean => workspace.id !== currentWorkspaceId);
+		hasMoveTargets;
 	const moveDisabledReason: string | null =
 		session.worktree !== undefined
 			? labels.moveSessionWorktreeBlocked
@@ -262,9 +266,7 @@ function createSessionTreePresentation(
 				? labels.moveSessionRunningBlocked
 				: options.movingSessionId !== null
 					? labels.movingSession
-					: options.moveWorkspaces.every(
-								(workspace: WorkspaceConfig): boolean => workspace.id === currentWorkspaceId,
-						  )
+					: !hasMoveTargets
 						? labels.moveSessionNoTargets
 						: null;
 	const actionMenu: MenuProps = {
@@ -291,12 +293,22 @@ function createSessionTreePresentation(
 					),
 				icon: <Icon name="move-session" />,
 				disabled: !canMove,
-				children: options.moveWorkspaces.map((workspace: WorkspaceConfig) => ({
-					key: `move:${workspace.id}`,
-					label: workspace.name,
-					icon: <WorkspaceTreeIconView workspace={workspace} expanded={false} />,
-					disabled: workspace.id === currentWorkspaceId || options.movingSessionId !== null,
-				})),
+				children: [
+					...(currentWorkspaceId === undefined
+						? []
+						: [{
+								key: "move:unbound",
+								label: labels.moveSessionToUnbound,
+								icon: <Icon name="folder-open" />,
+								disabled: options.movingSessionId !== null,
+							}]),
+					...options.moveWorkspaces.map((workspace: WorkspaceConfig) => ({
+						key: `move:workspace:${workspace.id}`,
+						label: workspace.name,
+						icon: <WorkspaceTreeIconView workspace={workspace} expanded={false} />,
+						disabled: workspace.id === currentWorkspaceId || options.movingSessionId !== null,
+					})),
+				],
 			},
 			{
 				key: "fork",
@@ -358,8 +370,13 @@ function createSessionTreePresentation(
 				return;
 			}
 			if (key.startsWith("move:")) {
+				if (key === "move:unbound") {
+					options.onMove(session, null);
+					return;
+				}
+				const workspaceId: string = key.slice("move:workspace:".length);
 				const workspace: WorkspaceConfig | undefined = options.moveWorkspaces.find(
-					(candidate: WorkspaceConfig): boolean => candidate.id === key.slice("move:".length),
+					(candidate: WorkspaceConfig): boolean => candidate.id === workspaceId,
 				);
 				if (workspace !== undefined) {
 					options.onMove(session, workspace);
@@ -899,6 +916,7 @@ function WorkspaceTree({
 			rename: t("workspaceTree.actions.rename"),
 			renameSession: t("workspaceTree.actions.renameSession"),
 			moveSession: t("workspaceTree.actions.moveSession"),
+			moveSessionToUnbound: t("workspaceTree.actions.moveSessionToUnbound"),
 			movingSession: t("workspaceTree.status.movingSession"),
 			moveSessionRunningBlocked: t("workspaceTree.status.moveSessionRunningBlocked"),
 			moveSessionWorktreeBlocked: t("workspaceTree.status.moveSessionWorktreeBlocked"),
@@ -1232,14 +1250,27 @@ function WorkspaceTree({
 		);
 	}
 
+	function canMoveSessionToTarget(sessionId: string, workspaceId: string | null): boolean {
+		const targetSession: SessionMetadata | undefined = sessionsRef.current.find(
+			(candidate: SessionMetadata): boolean => candidate.id === sessionId,
+		);
+		return (
+			targetSession !== undefined &&
+			targetSession.worktree === undefined &&
+			!runningSessionIdSet.has(sessionId) &&
+			movingSessionIdRef.current === null &&
+			(getSessionProjectWorkspaceId(targetSession) ?? null) !== workspaceId
+		);
+	}
+
 	async function handleMoveSessionToWorkspace(
 		targetSession: SessionMetadata,
-		workspace: WorkspaceConfig,
+		workspace: WorkspaceConfig | null,
 	): Promise<void> {
 		if (
 			movingSessionIdRef.current !== null ||
 			onSessionWorkspaceMove === undefined ||
-			!canMoveSessionToWorkspace(targetSession.id, workspace)
+			!canMoveSessionToTarget(targetSession.id, workspace?.id ?? null)
 		) {
 			return;
 		}
@@ -1262,7 +1293,7 @@ function WorkspaceTree({
 				moveSessionToWorkspaceInTreeOrder(
 					reconciledOrder,
 					result.metadata.id,
-					workspace.id,
+					result.metadata.workspaceId ?? null,
 					result.metadata.pinned === true,
 				),
 			);
@@ -1526,7 +1557,7 @@ function WorkspaceTree({
 			onRename: (session: SessionMetadata): void => {
 				handleRenameSessionStart(session);
 			},
-			onMove: (session: SessionMetadata, workspace: WorkspaceConfig): void => {
+			onMove: (session: SessionMetadata, workspace: WorkspaceConfig | null): void => {
 				void handleMoveSessionToWorkspace(session, workspace);
 			},
 			onFork: (session: SessionMetadata): void => {

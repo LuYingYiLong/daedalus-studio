@@ -1,5 +1,6 @@
 import {
   app,
+  desktopCapturer,
   ipcMain,
   powerMonitor,
   screen,
@@ -9,8 +10,10 @@ import {
 } from "electron";
 import { basename, dirname, join } from "node:path";
 import {
+  COMPUTER_MAX_THUMBNAIL_DATA_URL_BYTES,
   computerId,
   computerObject,
+  type ComputerWindowListDiagnostics,
   parseComputerObservation,
   parseComputerOverlayPreview,
   type ComputerScope,
@@ -23,6 +26,7 @@ import { ComputerOverlay } from "./computer-overlay";
 import { ComputerOverlayPreviewController } from "./computer-overlay-preview";
 import { NativeComputerHelper, verifyComputerResources } from "./helper-client";
 import { assertComputerSender } from "./sender-guard";
+import { loadWindowThumbnails } from "../window-capture/window-capture-service";
 
 function sendToWindow(
   window: BrowserWindow | null,
@@ -67,6 +71,11 @@ export function registerComputerIpc(
     : join(developmentRoot, "build/computer-observation");
   const helper = new NativeComputerHelper(directory);
   const diagnostic = new NativeComputerHelper(directory);
+  const thumbnailsFor = (sourceIds: readonly string[]) =>
+    loadWindowThumbnails(
+      (options) => desktopCapturer.getSources(options),
+      sourceIds,
+    );
   let diagnosticGeneration = 0;
   let diagnosticSources = new Set<string>();
   const closeDiagnostics = (): void => {
@@ -101,6 +110,7 @@ export function registerComputerIpc(
       highlight: (bounds) => { if (!preview.active) overlay.highlight(bounds); },
       close: () => { if (!preview.active) overlay.close(); },
     },
+    thumbnailsFor,
   );
   const observed = new WeakSet<WebContents>();
   const guard = (event: IpcMainInvokeEvent, settings = false): void => {
@@ -285,18 +295,48 @@ export function registerComputerIpc(
     const result = await diagnostic.request("list");
     if (generation !== diagnosticGeneration)
       throw new Error("computer_cancelled");
-    const sources = result.sources as ComputerSource[];
+    const nativeSources = result.sources as Array<
+      ComputerSource & { captureSourceId?: unknown }
+    >;
+    const diagnostics = result.diagnostics as ComputerWindowListDiagnostics;
     if (
-      !Array.isArray(sources) ||
-      sources.length > 100 ||
-      sources.some(
+      !Array.isArray(nativeSources) ||
+      nativeSources.length > 100 ||
+      !diagnostics ||
+      Object.values(diagnostics).some(
+        (value) => !Number.isSafeInteger(value) || value < 0,
+      ) ||
+      nativeSources.some(
         (source) =>
-          typeof source.title !== "string" || !computerId(source.sourceId),
+          typeof source.title !== "string" ||
+          !computerId(source.sourceId) ||
+          (source.captureSourceId !== undefined &&
+            (typeof source.captureSourceId !== "string" ||
+              !/^window:\d+:0$/.test(source.captureSourceId))) ||
+          (source.thumbnailDataUrl !== undefined &&
+            (typeof source.thumbnailDataUrl !== "string" ||
+              source.thumbnailDataUrl.length > COMPUTER_MAX_THUMBNAIL_DATA_URL_BYTES ||
+              !/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(
+                source.thumbnailDataUrl,
+              ))),
       )
     )
       throw new Error("computer_protocol_invalid");
+    const captureIds = nativeSources.flatMap((source) =>
+      typeof source.captureSourceId === "string" ? [source.captureSourceId] : [],
+    );
+    const thumbnails = await thumbnailsFor(captureIds);
+    if (generation !== diagnosticGeneration)
+      throw new Error("computer_cancelled");
+    const sources = nativeSources.map(({ captureSourceId, ...source }) => {
+      const thumbnailDataUrl =
+        typeof captureSourceId === "string"
+          ? thumbnails.get(captureSourceId)
+          : undefined;
+      return thumbnailDataUrl ? { ...source, thumbnailDataUrl } : source;
+    });
     diagnosticSources = new Set(sources.map((source) => source.sourceId));
-    return sources;
+    return { sources, diagnostics };
   });
   handleDiagnostic("diagnose", async (input) => {
     if (

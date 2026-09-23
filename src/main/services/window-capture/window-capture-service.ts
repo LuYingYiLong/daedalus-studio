@@ -3,6 +3,7 @@ import type {
 	WindowCaptureSource,
 	WindowScreenshot,
 } from "../../../contracts/window-capture";
+import { COMPUTER_MAX_THUMBNAIL_DATA_URL_BYTES } from "../../../contracts/computer-observation";
 
 export interface CaptureImage {
 	isEmpty(): boolean;
@@ -73,6 +74,44 @@ export function encodeCaptureImage(
 		});
 	}
 	throw new Error("window_capture_too_large");
+}
+
+/** Reuse Composer's thumbnail source while returning only explicitly matched windows. */
+export async function loadWindowThumbnails(
+	getSources: WindowCaptureAdapter["getSources"],
+	sourceIds: readonly string[],
+): Promise<Map<string, string>> {
+	const requested = new Set(sourceIds);
+	const thumbnails = new Map<string, string>();
+	const dataUrlPrefix = "data:image/png;base64,";
+	const maxPngBytes = Math.floor(
+		((COMPUTER_MAX_THUMBNAIL_DATA_URL_BYTES - dataUrlPrefix.length) * 3) /
+			4,
+	);
+	if (requested.size === 0) return thumbnails;
+
+	try {
+		const sources = await getSources({
+			types: ["window"],
+			thumbnailSize: { width: 320, height: 180 },
+			fetchWindowIcons: false,
+		});
+		for (const source of sources) {
+			if (!requested.has(source.id)) continue;
+			try {
+				thumbnails.set(
+					source.id,
+					encodeCaptureImage(source.thumbnail, 320, maxPngBytes)
+						.dataUrl,
+				);
+			} catch {
+				// Preview is optional; an unavailable thumbnail must not hide an eligible window.
+			}
+		}
+	} catch {
+		// Enumeration may be unavailable on a platform/session; keep the window list usable.
+	}
+	return thumbnails;
 }
 
 export class WindowCaptureService {
@@ -157,7 +196,11 @@ export class WindowCaptureService {
 			const source = sources.find((item) => item.id === nativeId);
 			if (!source || this.adapter.getOwnSourceIds().includes(nativeId))
 				throw new Error("window_capture_window_closed");
-			const png = encodeCaptureImage(source.thumbnail, 2560, 5 * 1024 * 1024);
+			const png = encodeCaptureImage(
+				source.thumbnail,
+				2560,
+				5 * 1024 * 1024,
+			);
 			return {
 				...png,
 				mimeType: "image/png",
@@ -187,16 +230,14 @@ export class WindowCaptureService {
 				if (this.picker === picker) this.release();
 				reject(new Error("window_capture_timeout"));
 			}, this.timeoutMs);
-			task
-				.then(resolve, (error: unknown) => {
-					const code =
-						error instanceof Error &&
-						/^window_capture_[a-z_]+$/.test(error.message)
-							? error.message
-							: "window_capture_failed";
-					reject(new Error(code));
-				})
-				.finally(() => clearTimeout(timer));
+			task.then(resolve, (error: unknown) => {
+				const code =
+					error instanceof Error &&
+					/^window_capture_[a-z_]+$/.test(error.message)
+						? error.message
+						: "window_capture_failed";
+				reject(new Error(code));
+			}).finally(() => clearTimeout(timer));
 		});
 	}
 }

@@ -3,6 +3,7 @@ export const COMPUTER_UIA_ACTIONS = ["uia_invoke", "uia_toggle", "uia_select", "
 export type ComputerUiaAction = typeof COMPUTER_UIA_ACTIONS[number];
 export type ComputerInputTransport = "uia" | "keyboard";
 export const COMPUTER_MAX_MESSAGE_BYTES = 8 * 1024 * 1024;
+export const COMPUTER_MAX_THUMBNAIL_DATA_URL_BYTES = 48 * 1024;
 export type ComputerToolName =
   | "mcp_computer_request_access"
   | "mcp_computer_observe"
@@ -67,6 +68,26 @@ export type ComputerSource = {
   sourceId: string;
   title: string;
   thumbnailDataUrl?: string;
+};
+export type ComputerWindowListDiagnostics = {
+  enumerated: number;
+  invalidOrOwn: number;
+  notVisible: number;
+  minimized: number;
+  notRoot: number;
+  protected: number;
+  cloaked: number;
+  otherSession: number;
+  processUnavailable: number;
+  tokenUnavailable: number;
+  elevated: number;
+  emptyTitle: number;
+  processStartUnavailable: number;
+  listed: number;
+};
+export type ComputerDiagnosticsWindowList = {
+  sources: ComputerSource[];
+  diagnostics: ComputerWindowListDiagnostics;
 };
 export type ComputerScope = {
   connectionId: string;
@@ -150,7 +171,7 @@ export type ComputerAPI = {
   decide(params: { callId: string; sourceId: string | null }): Promise<void>;
   revoke(): Promise<void>;
   diagnose(sourceId: string): Promise<ComputerObservation>;
-  listDiagnostics(): Promise<ComputerSource[]>;
+  listDiagnostics(): Promise<ComputerDiagnosticsWindowList>;
   closeDiagnostics(): Promise<void>;
 };
 

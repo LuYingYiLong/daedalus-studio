@@ -49,6 +49,10 @@ export async function updateFlowTreeOrder(order: FlowTreeOrderUpdate): Promise<{
 	return (await createBackendClient()).request("flow.tree.order.update", order);
 }
 
+export async function moveFlowToWorkspace(flowId: string, workspaceId: string | null, revision: number): Promise<{ flow: FlowDocument; order: FlowTreeOrder }> {
+	return (await createBackendClient()).request("flow.workspace.move", { flowId, workspaceId, revision });
+}
+
 export async function fetchFlowTreeOrder(): Promise<FlowTreeOrder> {
 	return (await createBackendClient()).request("flow.tree.order.get", {});
 }

@@ -52,7 +52,7 @@ export type SessionWorktreeController = {
 	) => Promise<SessionMetadata>;
 	handleSessionWorkspaceMove: (
 		targetSession: SessionMetadata,
-		workspace: WorkspaceConfig,
+		workspace: WorkspaceConfig | null,
 	) => Promise<MoveSessionWorkspaceResult>;
 	handleSessionWorktreeHandoff: (
 		target: "local" | "worktree",
@@ -109,7 +109,7 @@ export default function useSessionWorktreeController({
 
 	async function handleSessionWorkspaceMove(
 		targetSession: SessionMetadata,
-		workspace: WorkspaceConfig,
+		workspace: WorkspaceConfig | null,
 	): Promise<MoveSessionWorkspaceResult> {
 		const sessionLayout: SessionLayoutPreferences =
 			sessionLayouts[targetSession.id] ?? DEFAULT_SESSION_LAYOUT;
@@ -134,7 +134,7 @@ export default function useSessionWorktreeController({
 		try {
 			result = await moveSessionWorkspace({
 				sessionId: targetSession.id,
-				workspaceId: workspace.id,
+				workspaceId: workspace?.id ?? null,
 			});
 		} catch (error: unknown) {
 			if (error instanceof BackendRpcError) {

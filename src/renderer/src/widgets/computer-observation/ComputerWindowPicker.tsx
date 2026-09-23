@@ -1,7 +1,7 @@
 import { Alert, Button, Empty, Input, Modal, Spin, Typography } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { ComputerSource } from "../../../../contracts/computer-observation";
+import type { ComputerDiagnosticsWindowList, ComputerSource } from "../../../../contracts/computer-observation";
 import styles from "@/widgets/window-capture/WindowScreenshotDialog.module.css";
 import pickerStyles from "./ComputerWindowPicker.module.css";
 export default function ComputerWindowPicker({
@@ -19,7 +19,7 @@ export default function ComputerWindowPicker({
 	control?: boolean;
 	autoApproved?: boolean;
 	children?: React.ReactNode;
-	load(): Promise<ComputerSource[]>;
+	load(): Promise<ComputerSource[] | ComputerDiagnosticsWindowList>;
 	choose(sourceId: string): Promise<void>;
 	close(): void;
 }): React.JSX.Element {
@@ -31,6 +31,7 @@ export default function ComputerWindowPicker({
 		if (open) setReturnFocus(!control);
 	}, [open, control]);
 	const [sources, setSources] = useState<ComputerSource[]>([]),
+		[diagnostics, setDiagnostics] = useState<ComputerDiagnosticsWindowList["diagnostics"] | null>(null),
 		[selected, setSelected] = useState<string | null>(null),
 		[search, setSearch] = useState(""),
 		[loading, setLoading] = useState(false),
@@ -41,9 +42,18 @@ export default function ComputerWindowPicker({
 		setLoading(true);
 		setError(null);
 		setSelected(null);
+		setDiagnostics(null);
 		try {
 			const result = await load();
-			if (generation.current === current) setSources(result);
+			if (generation.current === current) {
+				if (Array.isArray(result)) {
+					setSources(result);
+					setDiagnostics(null);
+				} else {
+					setSources(result.sources);
+					setDiagnostics(result.diagnostics);
+				}
+			}
 		} catch {
 			if (generation.current === current) setError(t("computer.failed"));
 		} finally {
@@ -71,9 +81,10 @@ export default function ComputerWindowPicker({
 						? "computer.controlConsentTitle"
 						: "computer.consentTitle",
 			)}
-			width={800}
+			width={900}
 			centered
 			classNames={{ body: pickerStyles.body }}
+			className={styles.modal}
 			onCancel={close}
 			destroyOnHidden
 			footer={
@@ -88,7 +99,19 @@ export default function ComputerWindowPicker({
 							setSaving(true);
 							setError(null);
 							void choose(selected)
-								.catch(() => setError(t("computer.failed")))
+								.catch((reason: unknown) => {
+									const code =
+										reason instanceof Error
+											? reason.message.match(/computer_[a-z_]+/)?.[0]
+											: undefined;
+									setError(
+										t(
+											code === "computer_window_capture_unavailable"
+												? "computer.captureUnavailable"
+												: "computer.failed",
+										),
+									);
+								})
 								.finally(() => setSaving(false));
 						}}
 					>
@@ -109,14 +132,7 @@ export default function ComputerWindowPicker({
 				{reason !== undefined && (
 					<>
 						<Typography.Paragraph>{reason}</Typography.Paragraph>
-						<Alert
-							type="warning"
-							title={t(
-								control
-									? "computer.controlPrivacy"
-									: "computer.privacy",
-							)}
-						/>
+						<Alert type="warning" title={t(control ? "computer.controlPrivacy" : "computer.privacy")} />
 					</>
 				)}
 				{error && <Alert type="error" title={error} />}
@@ -126,11 +142,9 @@ export default function ComputerWindowPicker({
 						placeholder={t("windowCapture.search")}
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
+						allowClear
 					/>
-					<Button
-						disabled={loading || saving}
-						onClick={() => void refresh()}
-					>
+					<Button disabled={loading || saving} onClick={() => void refresh()}>
 						{t("windowCapture.refresh")}
 					</Button>
 				</div>
@@ -139,38 +153,37 @@ export default function ComputerWindowPicker({
 						role="listbox"
 						aria-label={t("windowCapture.windows")}
 						className={styles.sources}
+						aria-busy={loading || saving}
 					>
 						{sources
-							.filter((source) =>
-								source.title
-									.toLocaleLowerCase()
-									.includes(search.toLocaleLowerCase()),
-							)
+							.filter((source) => source.title.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
 							.map((source) => (
 								<button
 									key={source.sourceId}
 									type="button"
 									role="option"
 									aria-selected={selected === source.sourceId}
+									aria-busy={(loading || saving) && selected === source.sourceId}
+									aria-disabled={loading || saving}
 									className={styles.source}
-									disabled={saving}
+									disabled={loading || saving}
 									onClick={() => setSelected(source.sourceId)}
 								>
 									{source.thumbnailDataUrl && (
-										<img
-											alt=""
-											src={source.thumbnailDataUrl}
-											className={styles.thumbnail}
-										/>
+										<img alt="" src={source.thumbnailDataUrl} className={styles.thumbnail} />
 									)}
-									<span className={styles.sourceTitle}>
-										{source.title}
-									</span>
+									{!source.thumbnailDataUrl && (
+										<span className={styles.thumbnail}>{t("windowCapture.noPreview")}</span>
+									)}
+									<span className={styles.sourceTitle}>{source.title}</span>
 								</button>
 							))}
 					</div>
 					{!loading && sources.length === 0 && (
-						<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
+						<Empty
+							image={Empty.PRESENTED_IMAGE_SIMPLE}
+							description={diagnostics ? t("computer.windowListDiagnostics", diagnostics) : undefined}
+						/>
 					)}
 				</Spin>
 				{children}

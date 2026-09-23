@@ -191,6 +191,30 @@ describe("workspace tree order", (): void => {
 		expect(result.expandedWorkspaceIds).toContain("workspace-b");
 	});
 
+	it("moves an unpinned session to the unbound recent section", (): void => {
+		const result = moveSessionToWorkspaceInTreeOrder(
+			order(),
+			"session-a-old",
+			null,
+			false
+		);
+		expect(result.sessionIdsByWorkspace["workspace-a"]).toEqual(["session-a-new"]);
+		expect(result.recentSessionIds).toEqual(["session-a-old", "session-recent", "session-recent-2"]);
+		expect(result.expandedSectionKeys).toContain("recent");
+	});
+
+	it("keeps a pinned session pinned when it becomes unbound", (): void => {
+		const result = moveSessionToWorkspaceInTreeOrder(
+			order(),
+			"session-pinned",
+			null,
+			true
+		);
+		expect(result.pinnedSessionIds).toContain("session-pinned");
+		expect(result.sessionIdsByWorkspace["workspace-a"]).not.toContain("session-pinned");
+		expect(result.recentSessionIds).not.toContain("session-pinned");
+	});
+
 	it("updates a pinned session project without adding it to the project list", (): void => {
 		const result = moveSessionToWorkspaceInTreeOrder(
 			order(),

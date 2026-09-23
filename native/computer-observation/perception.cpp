@@ -5,6 +5,7 @@
 #include <condition_variable>
 #include <commctrl.h>
 #include <iostream>
+#include <cstdint>
 #include <d3d11.h>
 #include <dwmapi.h>
 #include <dxgi.h>
@@ -69,41 +70,95 @@ static ULONGLONG processStart(DWORD pid) {
                   start.dwLowDateTime
             : 0;
 }
-static bool accessible(HWND hwnd, DWORD excludedPid) {
+enum class WindowAccessFailure {
+  None,
+  InvalidOrOwn,
+  NotVisible,
+  Minimized,
+  NotRoot,
+  Protected,
+  Cloaked,
+  OtherSession,
+  ProcessUnavailable,
+  TokenUnavailable,
+  Elevated,
+};
+static bool tokenIntegrityRid(HANDLE token, DWORD &rid) {
+  DWORD size = 0;
+  GetTokenInformation(token, TokenIntegrityLevel, nullptr, 0, &size);
+  if (GetLastError() != ERROR_INSUFFICIENT_BUFFER || !size)
+    return false;
+  std::vector<BYTE> buffer(size);
+  if (!GetTokenInformation(token, TokenIntegrityLevel, buffer.data(), size,
+                           &size))
+    return false;
+  auto sid = reinterpret_cast<TOKEN_MANDATORY_LABEL *>(buffer.data())->Label.Sid;
+  auto count = GetSidSubAuthorityCount(sid);
+  if (!sid || !count || !*count)
+    return false;
+  rid = *GetSidSubAuthority(sid, *count - 1);
+  return true;
+}
+static DWORD helperIntegrityRid() {
+  static const DWORD rid = [] {
+    HANDLE token = nullptr;
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token))
+      return static_cast<DWORD>(SECURITY_MANDATORY_MEDIUM_RID);
+    DWORD value = SECURITY_MANDATORY_MEDIUM_RID;
+    const bool available = tokenIntegrityRid(token, value);
+    CloseHandle(token);
+    return available ? value
+                     : static_cast<DWORD>(SECURITY_MANDATORY_MEDIUM_RID);
+  }();
+  return rid;
+}
+bool targetIntegrityAllowed(DWORD targetRid, DWORD helperRid) {
+  return targetRid <= helperRid;
+}
+static DWORD maximumTargetIntegrityRid() {
+  return std::min<DWORD>(helperIntegrityRid(), SECURITY_MANDATORY_HIGH_RID);
+}
+static WindowAccessFailure accessFailure(HWND hwnd, DWORD excludedPid) {
   DWORD pid = 0, session = 0, ours = 0;
   GetWindowThreadProcessId(hwnd, &pid);
-  if (!pid || pid == excludedPid || !IsWindowVisible(hwnd) || IsIconic(hwnd) ||
-      GetAncestor(hwnd, GA_ROOT) != hwnd)
-    return false;
+  if (!pid || pid == excludedPid)
+    return WindowAccessFailure::InvalidOrOwn;
+  if (!IsWindowVisible(hwnd))
+    return WindowAccessFailure::NotVisible;
+  if (IsIconic(hwnd))
+    return WindowAccessFailure::Minimized;
+  if (GetAncestor(hwnd, GA_ROOT) != hwnd)
+    return WindowAccessFailure::NotRoot;
   DWORD affinity = 0;
   if (GetWindowDisplayAffinity(hwnd, &affinity) && affinity)
-    return false;
+    return WindowAccessFailure::Protected;
   DWORD cloaked = 0;
   DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, &cloaked, sizeof(cloaked));
   if (cloaked)
-    return false;
+    return WindowAccessFailure::Cloaked;
   if (!ProcessIdToSessionId(pid, &session) ||
       !ProcessIdToSessionId(GetCurrentProcessId(), &ours) || session != ours)
-    return false;
+    return WindowAccessFailure::OtherSession;
   HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid),
          token = nullptr;
   if (!process)
-    return false;
-  bool allowed = false;
-  if (OpenProcessToken(process, TOKEN_QUERY, &token)) {
-    DWORD size = 0;
-    GetTokenInformation(token, TokenIntegrityLevel, nullptr, 0, &size);
-    std::vector<BYTE> b(size);
-    if (GetTokenInformation(token, TokenIntegrityLevel, b.data(), size,
-                            &size)) {
-      auto sid = reinterpret_cast<TOKEN_MANDATORY_LABEL *>(b.data())->Label.Sid;
-      auto rid = *GetSidSubAuthority(sid, *GetSidSubAuthorityCount(sid) - 1);
-      allowed = rid <= SECURITY_MANDATORY_MEDIUM_RID;
-    }
-    CloseHandle(token);
+    return WindowAccessFailure::ProcessUnavailable;
+  if (!OpenProcessToken(process, TOKEN_QUERY, &token)) {
+    CloseHandle(process);
+    return WindowAccessFailure::TokenUnavailable;
   }
+  WindowAccessFailure failure = WindowAccessFailure::None;
+  DWORD rid = 0;
+  if (!tokenIntegrityRid(token, rid)) {
+    failure = WindowAccessFailure::TokenUnavailable;
+  } else if (!targetIntegrityAllowed(rid, maximumTargetIntegrityRid()))
+    failure = WindowAccessFailure::Elevated;
   CloseHandle(process);
-  return allowed;
+  CloseHandle(token);
+  return failure;
+}
+static bool accessible(HWND hwnd, DWORD excludedPid) {
+  return accessFailure(hwnd, excludedPid) == WindowAccessFailure::None;
 }
 static void defaultDesktop() {
   HDESK desktop = OpenInputDesktop(0, FALSE, DESKTOP_READOBJECTS);
@@ -191,6 +246,14 @@ struct Perception::WindowLife {
   GraphicsCaptureItem item{nullptr};
   std::atomic_bool valid{true};
 };
+static GraphicsCaptureItem captureItemForWindow(HWND hwnd) {
+  auto factory = winrt::get_activation_factory<
+      GraphicsCaptureItem, IGraphicsCaptureItemInterop>();
+  GraphicsCaptureItem item{nullptr};
+  winrt::check_hresult(factory->CreateForWindow(
+      hwnd, winrt::guid_of<GraphicsCaptureItem>(), winrt::put_abi(item)));
+  return item;
+}
 Perception::Perception(DWORD pid, const std::wstring &dir)
     : excludedPid(pid), directory(dir) {}
 void Perception::release() {
@@ -223,40 +286,76 @@ Json Perception::list() {
   registered.clear();
   struct Context {
     Perception *p;
+    uint32_t enumerated = 0;
+    uint32_t invalidOrOwn = 0;
+    uint32_t notVisible = 0;
+    uint32_t minimized = 0;
+    uint32_t notRoot = 0;
+    uint32_t protectedWindow = 0;
+    uint32_t cloaked = 0;
+    uint32_t otherSession = 0;
+    uint32_t processUnavailable = 0;
+    uint32_t tokenUnavailable = 0;
+    uint32_t elevated = 0;
+    uint32_t emptyTitle = 0;
+    uint32_t processStartUnavailable = 0;
   } context{this};
   EnumWindows(
       [](HWND hwnd, LPARAM data) -> BOOL {
-        auto p = reinterpret_cast<Context *>(data)->p;
-        if (p->targets.size() >= 100 || !accessible(hwnd, p->excludedPid))
+        auto context = reinterpret_cast<Context *>(data);
+        auto p = context->p;
+        if (p->targets.size() >= 100)
           return TRUE;
+        ++context->enumerated;
+        switch (accessFailure(hwnd, p->excludedPid)) {
+        case WindowAccessFailure::InvalidOrOwn:
+          ++context->invalidOrOwn;
+          return TRUE;
+        case WindowAccessFailure::NotVisible:
+          ++context->notVisible;
+          return TRUE;
+        case WindowAccessFailure::Minimized:
+          ++context->minimized;
+          return TRUE;
+        case WindowAccessFailure::NotRoot:
+          ++context->notRoot;
+          return TRUE;
+        case WindowAccessFailure::Protected:
+          ++context->protectedWindow;
+          return TRUE;
+        case WindowAccessFailure::Cloaked:
+          ++context->cloaked;
+          return TRUE;
+        case WindowAccessFailure::OtherSession:
+          ++context->otherSession;
+          return TRUE;
+        case WindowAccessFailure::ProcessUnavailable:
+          ++context->processUnavailable;
+          return TRUE;
+        case WindowAccessFailure::TokenUnavailable:
+          ++context->tokenUnavailable;
+          return TRUE;
+        case WindowAccessFailure::Elevated:
+          ++context->elevated;
+          return TRUE;
+        case WindowAccessFailure::None:
+          break;
+        }
         wchar_t title[1025];
         int length = GetWindowTextW(hwnd, title, 1025);
-        if (!length)
+        if (!length) {
+          ++context->emptyTitle;
           return TRUE;
+        }
         DWORD pid = 0;
         GetWindowThreadProcessId(hwnd, &pid);
         auto start = processStart(pid);
-        if (!start)
+        if (!start) {
+          ++context->processStartUnavailable;
           return TRUE;
-        try {
-          auto state = std::make_shared<WindowLife>();
-          auto factory =
-              winrt::get_activation_factory<GraphicsCaptureItem,
-                                            IGraphicsCaptureItemInterop>();
-          winrt::check_hresult(factory->CreateForWindow(
-              hwnd, winrt::guid_of<GraphicsCaptureItem>(),
-              winrt::put_abi(state->item)));
-          std::weak_ptr<WindowLife> weak = state;
-          state->item.Closed([weak](auto &&, auto &&) {
-            if (auto current = weak.lock())
-              current->valid = false;
-          });
-          auto id = uuid();
-          p->registered.emplace(id, state);
-          p->targets.push_back(
-              {hwnd, pid, start, id, std::wstring(title, length)});
-        } catch (...) { /* 无法建立窗口生命周期时不提供该窗口 */
         }
+        p->targets.push_back(
+            {hwnd, pid, start, uuid(), std::wstring(title, length)});
         return TRUE;
       },
       reinterpret_cast<LPARAM>(&context));
@@ -265,10 +364,29 @@ Json Perception::list() {
     Json s;
     text(s, L"sourceId", target.id);
     text(s, L"title", utf8(winrt::hstring(target.title)));
+    text(s, L"captureSourceId",
+         "window:" + std::to_string(reinterpret_cast<uintptr_t>(target.hwnd)) +
+             ":0");
     sources.Append(s);
   }
   Json result;
   result.SetNamedValue(L"sources", sources);
+  Json diagnostics;
+  number(diagnostics, L"enumerated", context.enumerated);
+  number(diagnostics, L"invalidOrOwn", context.invalidOrOwn);
+  number(diagnostics, L"notVisible", context.notVisible);
+  number(diagnostics, L"minimized", context.minimized);
+  number(diagnostics, L"notRoot", context.notRoot);
+  number(diagnostics, L"protected", context.protectedWindow);
+  number(diagnostics, L"cloaked", context.cloaked);
+  number(diagnostics, L"otherSession", context.otherSession);
+  number(diagnostics, L"processUnavailable", context.processUnavailable);
+  number(diagnostics, L"tokenUnavailable", context.tokenUnavailable);
+  number(diagnostics, L"elevated", context.elevated);
+  number(diagnostics, L"emptyTitle", context.emptyTitle);
+  number(diagnostics, L"processStartUnavailable", context.processStartUnavailable);
+  number(diagnostics, L"listed", static_cast<double>(targets.size()));
+  result.SetNamedValue(L"diagnostics", diagnostics);
   return result;
 }
 Json Perception::select(const std::string &id) {
@@ -277,11 +395,20 @@ Json Perception::select(const std::string &id) {
   if (it == targets.end() || !accessible(it->hwnd, excludedPid) ||
       processStart(it->pid) != it->processStart)
     throw std::runtime_error("computer_window_unavailable");
-  auto registration = registered.find(id);
-  if (registration == registered.end() || !registration->second->valid)
-    throw std::runtime_error("computer_window_unavailable");
+  auto state = std::make_shared<WindowLife>();
+  try {
+    state->item = captureItemForWindow(it->hwnd);
+  } catch (...) {
+    throw std::runtime_error("computer_window_capture_unavailable");
+  }
+  std::weak_ptr<WindowLife> weak = state;
+  state->item.Closed([weak](auto &&, auto &&) {
+    if (auto current = weak.lock())
+      current->valid = false;
+  });
+  registered.emplace(id, state);
   selected = std::make_unique<Target>(*it);
-  life = registration->second;
+  life = std::move(state);
   Json r;
   text(r, L"title", utf8(winrt::hstring(it->title)));
   return r;

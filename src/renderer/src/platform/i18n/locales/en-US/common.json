@@ -67,6 +67,8 @@
 		"truncated": "Capture limits reached; this result is incomplete",
 		"frame": "Static frame of the selected window",
 		"failed": "Observation failed. Check the window and retry.",
+		"captureUnavailable": "The window was found, but Windows Graphics Capture could not initialize. Composer screenshots use a separate API; restart Studio and try again.",
+		"windowListDiagnostics": "Windows enumerated {{enumerated}} windows and listed {{listed}}. Filter counts: own or invalid {{invalidOrOwn}}, above helper's allowed integrity {{elevated}}, other sessions {{otherSession}}, inaccessible process {{processUnavailable}}, inaccessible token {{tokenUnavailable}}, hidden {{notVisible}}, minimized {{minimized}}, non-root {{notRoot}}, protected {{protected}}, cloaked {{cloaked}}, empty title {{emptyTitle}}, unavailable process info {{processStartUnavailable}}. To access administrator windows, run Daedalus as administrator; system-integrity windows remain unavailable. Window titles are not logged.",
 		"saveFailed": "Could not save computer use settings",
 		"resourcesMissing": "Native helper or OCR resources are missing or invalid. Build or reinstall the Windows resources.",
 		"developerRequired": "Enable developer mode in General settings to use local diagnostics",
@@ -520,6 +522,7 @@
 			"rename": "Rename",
 			"renameSession": "Rename session",
 			"moveSession": "Move session to...",
+			"moveSessionToUnbound": "No project",
 			"forkSession": "Fork session",
 			"pinSession": "Pin session",
 			"unpinSession": "Unpin session",
@@ -663,6 +666,11 @@
 			"unreadResult": "Unread Flow result",
 			"streaming": "Streaming",
 			"waiting": "Waiting",
+			"idCopied": "Flow ID copied",
+			"moving": "Moving Flow",
+			"moved": "Flow moved",
+			"moveRunningBlocked": "Stop the active Flow run before moving it",
+			"moveNoTargets": "There are no other workspaces to move this Flow to",
 			"failed": "Failed",
 			"stopped": "Stopped"
 		},
@@ -680,6 +688,8 @@
 			"copyFromChat": "Copy as Flow",
 			"copyToChat": "Copy as chat",
 			"newInWorkspace": "New Flow in this workspace",
+			"copyId": "Copy session ID",
+			"moveTo": "Move to...",
 			"rename": "Rename",
 			"archive": "Archive Flow",
 			"pin": "Pin Flow",
@@ -1010,7 +1020,11 @@
 			"unpin": "Unpin Flow: {{title}}",
 			"newInWorkspace": "New Flow in {{workspaceName}}"
 		},
-		"errors": { "notFound": "Flow not found" },
+		"errors": {
+			"notFound": "Flow not found",
+			"copyId": "Failed to copy Flow ID",
+			"move": "Failed to move Flow"
+		},
 		"rename": {
 			"title": "Rename Flow",
 			"placeholder": "Enter a Flow name",

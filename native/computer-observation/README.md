@@ -63,6 +63,8 @@ Settings → Computer use contains separate observation/input switches and a dev
 
 Before release, manually check WGC and OCR on dedicated, non-sensitive windows on multiple monitors at 100%/150%/200% scaling, negative screen coordinates, move/resize, minimize/close, high-integrity/protected windows, lock/unlock and helper termination. Mock E2E and the dedicated-window check are not evidence that all these hardware/driver combinations have passed. Do not disable protections to make a test pass.
 
+The helper only lists, observes, or controls windows whose integrity level is at or below its own, capped at high integrity. Running Studio elevated does not separately elevate the helper; it inherits the Studio process token. A standard-integrity Studio therefore continues to exclude administrator windows, while an elevated Studio can inspect and control same-integrity administrator windows. System-integrity targets remain excluded. Input control continues to require its existing user setting and authorization checks.
+
 ## UIA and keyboard (input v3)
 
 No coordinate action is exposed to the model. UIA operations target a fresh observation node ID; keyboard operations target the observed focus and remain restricted to Unicode typing and the existing key allowlist. If an application (for example, a custom-rendered game) exposes no supported UIA controls and cannot be navigated with the allowed keys, report that limitation and ask the user to act. Do not infer a clickable target from OCR boxes or switch to another input channel. Production never reads or restores the system cursor to position the AI cursor.

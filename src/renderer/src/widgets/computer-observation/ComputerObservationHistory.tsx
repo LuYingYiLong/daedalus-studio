@@ -11,19 +11,13 @@ export default function ComputerObservationHistory({
 	observationId: string;
 }): React.JSX.Element | null {
 	const { t } = useTranslation();
-	const {
-		available,
-		developer,
-		requested,
-		state,
-		observation,
-		groundings,
-		request,
-	} = useComputerObservationHistory(sessionId, observationId);
+	const { available, developer, requested, state, observation, groundings, request } = useComputerObservationHistory(
+		sessionId,
+		observationId,
+	);
 	if (!available) return null;
 	if (!developer) return <Alert type="info" title={t("trajectory.hidden")} />;
-	if (!requested)
-		return <Button onClick={request}>{t("computer.viewEvidence")}</Button>;
+	if (!requested) return <Button onClick={request}>{t("computer.viewEvidence")}</Button>;
 	if (state === "loading") return <Spin />;
 	if (state === "full" && observation)
 		return (

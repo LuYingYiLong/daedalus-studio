@@ -36,6 +36,7 @@ std::string utf8(const winrt::hstring &s);
 std::string pngDataUrl(const Pixels &pixels);
 Pixels resizePixels(const Pixels &input, int w, int h);
 std::vector<float> normalizedPixels(const Pixels &input, int w, int h);
+bool targetIntegrityAllowed(DWORD targetRid, DWORD helperRid);
 void testUiaFixture(bool testCapture = false);
 void testUiaActions(HWND target, HWND edit, HWND password, HWND checkbox);
 class Ocr {

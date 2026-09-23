@@ -85,13 +85,13 @@ export type SetSessionPinnedResult = SessionMetadata;
 
 export type MoveSessionWorkspaceParams = {
 	sessionId: string;
-	workspaceId: string;
+	workspaceId: string | null;
 };
 
 export type MoveSessionWorkspaceResult = {
 	moved: true;
 	metadata: SessionMetadata;
-	workspace: import("./types").WorkspaceConfig;
+	workspace: import("./types").WorkspaceConfig | null;
 	workbench: WorkbenchSnapshot | null;
 };
 

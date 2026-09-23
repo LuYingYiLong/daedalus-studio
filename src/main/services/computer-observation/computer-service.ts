@@ -11,6 +11,7 @@ import type {
   ComputerForwardedRequest,
 } from "../../../contracts/computer-observation";
 import {
+  COMPUTER_MAX_THUMBNAIL_DATA_URL_BYTES,
   parseComputerObservation,
   parseComputerRequest,
 } from "../../../contracts/computer-observation";
@@ -37,6 +38,9 @@ export type ComputerPresentation = {
   highlight?(bounds: ComputerRect | null): void;
   close(): void;
 };
+type ComputerThumbnailLoader = (
+  sourceIds: readonly string[],
+) => Promise<ReadonlyMap<string, string>>;
 function scopeOnly(scope: ComputerScope): ComputerScope {
   return {
     connectionId: scope.connectionId,
@@ -109,6 +113,7 @@ export class ComputerService {
       code: string,
     ) => void = () => {},
     private readonly presentation?: ComputerPresentation,
+    private readonly loadThumbnails: ComputerThumbnailLoader = async () => new Map(),
   ) {
     helper.onControl?.((event) => {
       if (event.event === "progress") {
@@ -355,15 +360,41 @@ export class ComputerService {
     const result = await this.helper.request("list");
     if (generation !== this.generation || this.state.pending !== pending)
       throw new Error("computer_cancelled");
-    const sources = result.sources as ComputerSource[];
+    const nativeSources = result.sources as Array<
+      ComputerSource & { captureSourceId?: unknown }
+    >;
     if (
-      !Array.isArray(sources) ||
-      sources.length > 100 ||
-      sources.some(
-        (s) => typeof s.sourceId !== "string" || typeof s.title !== "string",
+      !Array.isArray(nativeSources) ||
+      nativeSources.length > 100 ||
+      nativeSources.some(
+        (s) =>
+          typeof s.sourceId !== "string" ||
+          typeof s.title !== "string" ||
+          (s.captureSourceId !== undefined &&
+            (typeof s.captureSourceId !== "string" ||
+              !/^window:\d+:0$/.test(s.captureSourceId))) ||
+          (s.thumbnailDataUrl !== undefined &&
+            (typeof s.thumbnailDataUrl !== "string" ||
+              s.thumbnailDataUrl.length > COMPUTER_MAX_THUMBNAIL_DATA_URL_BYTES ||
+              !/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(
+                s.thumbnailDataUrl,
+              ))),
       )
     )
       throw new Error("computer_protocol_invalid");
+    const captureIds = nativeSources.flatMap((source) =>
+      typeof source.captureSourceId === "string" ? [source.captureSourceId] : [],
+    );
+    const thumbnails = await this.loadThumbnails(captureIds);
+    if (generation !== this.generation || this.state.pending !== pending)
+      throw new Error("computer_cancelled");
+    const sources = nativeSources.map(({ captureSourceId, ...source }) => {
+      const thumbnailDataUrl =
+        typeof captureSourceId === "string"
+          ? thumbnails.get(captureSourceId)
+          : undefined;
+      return thumbnailDataUrl ? { ...source, thumbnailDataUrl } : source;
+    });
     this.sources = new Map(sources.map((s) => [s.sourceId, s]));
     return sources;
   }

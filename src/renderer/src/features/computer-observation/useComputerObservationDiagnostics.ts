@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
+  ComputerDiagnosticsWindowList,
   ComputerObservation,
   ComputerSource,
 } from "../../../../contracts/computer-observation";
@@ -13,7 +14,7 @@ export function useComputerObservationDiagnostics() {
     null,
   );
   const load = useCallback(
-    (): Promise<ComputerSource[]> =>
+    (): Promise<ComputerSource[] | ComputerDiagnosticsWindowList> =>
       api ? api.listDiagnostics() : Promise.resolve([]),
     [api],
   );

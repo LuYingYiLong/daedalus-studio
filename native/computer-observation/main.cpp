@@ -24,7 +24,7 @@ static void reply(const Json &value) {
   std::cout.flush();
 }
 static void exact(const Json &obj,
-                  std::initializer_list<const wchar_t *> names) {
+  std::initializer_list<const wchar_t *> names) {
   if (obj.Size() != names.size())
     throw std::runtime_error("computer_invalid_request");
   for (auto key : names)
@@ -44,6 +44,32 @@ int wmain(int argc, wchar_t **argv) {
     if (argc == 2 && std::wstring(argv[1]) == L"--test-capture") {
       testUiaFixture(true);
       std::cout << "dedicated WGC/UIA fixture passed\n";
+      return 0;
+    }
+    if (argc == 3 && std::wstring(argv[1]) == L"--test-list") {
+      constexpr wchar_t title[] = L"Daedalus computer list fixture";
+      HWND fixture = CreateWindowExW(0, L"STATIC", title,
+                                     WS_OVERLAPPEDWINDOW, 0, 0, 320, 200,
+                                     nullptr, nullptr, GetModuleHandleW(nullptr),
+                                     nullptr);
+      if (!fixture)
+        throw std::runtime_error("computer_list_fixture_failed");
+      ShowWindow(fixture, SW_SHOWNOACTIVATE);
+      UpdateWindow(fixture);
+      Perception perception(0, argv[2]);
+      const auto result = perception.list();
+      bool found = false;
+      const auto sources = result.GetNamedArray(L"sources");
+      for (uint32_t i = 0; i < sources.Size(); ++i) {
+        if (sources.GetAt(i).GetObject().GetNamedString(L"title") == title) {
+          found = true;
+          break;
+        }
+      }
+      DestroyWindow(fixture);
+      if (!found)
+        throw std::runtime_error("computer_list_fixture_missing");
+      std::cout << "native window listing fixture passed\n";
       return 0;
     }
     if (argc == 2 && std::wstring(argv[1]) == L"--test-uia") {
@@ -105,6 +131,15 @@ int wmain(int argc, wchar_t **argv) {
       return 0;
     }
     if (argc == 2 && std::wstring(argv[1]) == L"--self-test") {
+      if (!targetIntegrityAllowed(SECURITY_MANDATORY_MEDIUM_RID,
+                                  SECURITY_MANDATORY_MEDIUM_RID) ||
+          targetIntegrityAllowed(SECURITY_MANDATORY_HIGH_RID,
+                                 SECURITY_MANDATORY_MEDIUM_RID) ||
+          !targetIntegrityAllowed(SECURITY_MANDATORY_HIGH_RID,
+                                  SECURITY_MANDATORY_HIGH_RID) ||
+          targetIntegrityAllowed(SECURITY_MANDATORY_SYSTEM_RID,
+                                 SECURITY_MANDATORY_HIGH_RID))
+        return 1;
       ControlActivationGate delayed(0);
       if (delayed.sample(0, true, false, true) != ActivationStatus::Waiting ||
           delayed.sample(400, true, true, false) != ActivationStatus::Waiting ||

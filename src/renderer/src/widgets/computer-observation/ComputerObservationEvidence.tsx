@@ -2,10 +2,7 @@ import { Alert, Button, Tabs, Tag, Tree, Typography } from "antd";
 import type { DataNode } from "antd/es/tree";
 import { useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-import type {
-	ComputerObservation,
-	ComputerRect,
-} from "../../../../contracts/computer-observation";
+import type { ComputerObservation, ComputerRect } from "../../../../contracts/computer-observation";
 import type { ComputerGroundingResult } from "../../../../contracts/computer-grounding";
 import styles from "./ComputerObservationEvidence.module.css";
 
@@ -14,15 +11,8 @@ type ComputerObservationEvidenceProps = {
 	groundings?: readonly ComputerGroundingResult[];
 };
 
-export function ComputerObservationEvidence(
-	props: ComputerObservationEvidenceProps,
-): React.JSX.Element {
-	return (
-		<ComputerObservationEvidenceFrame
-			key={props.observation.observationId}
-			{...props}
-		/>
-	);
+export function ComputerObservationEvidence(props: ComputerObservationEvidenceProps): React.JSX.Element {
+	return <ComputerObservationEvidenceFrame key={props.observation.observationId} {...props} />;
 }
 
 function ComputerObservationEvidenceFrame({
@@ -40,8 +30,7 @@ function ComputerObservationEvidenceFrame({
 			children: [],
 		};
 		nodes.set(node.id, entry);
-		if (node.parentId && nodes.has(node.parentId))
-			nodes.get(node.parentId)!.children!.push(entry);
+		if (node.parentId && nodes.has(node.parentId)) nodes.get(node.parentId)!.children!.push(entry);
 		else roots.push(entry);
 	}
 	return (
@@ -57,13 +46,10 @@ function ComputerObservationEvidenceFrame({
 				UIA: {observation.uiaCapturedAt}
 			</Typography.Paragraph>
 			<Typography.Text>
-				{observation.width} × {observation.height} ·{" "}
-				{Math.round(observation.durationMs)} ms · {observation.dpi} DPI ·{" "}
-				{observation.capturedAt}
+				{observation.width} × {observation.height} · {Math.round(observation.durationMs)} ms · {observation.dpi}{" "}
+				DPI · {observation.capturedAt}
 			</Typography.Text>
-			{observation.truncated && (
-				<Alert type="warning" title={t("computer.truncated")} />
-			)}
+			{observation.truncated && <Alert type="warning" title={t("computer.truncated")} />}
 			{observation.dataUrl && (
 				<div
 					className={styles.frame}
@@ -97,10 +83,7 @@ function ComputerObservationEvidenceFrame({
 								<Tree
 									treeData={roots}
 									onSelect={(keys) =>
-										setBox(
-											observation.nodes.find((node) => node.id === keys[0])
-												?.bounds ?? null,
-										)
+										setBox(observation.nodes.find((node) => node.id === keys[0])?.bounds ?? null)
 									}
 								/>
 							</div>
@@ -143,15 +126,9 @@ function ComputerObservationEvidenceFrame({
 												</Typography.Text>
 											)}
 											{groundings
-												.filter(
-													(result) =>
-														result.observationId === observation.observationId,
-												)
+												.filter((result) => result.observationId === observation.observationId)
 												.map((result) => (
-													<section
-														key={result.groundingId}
-														className={styles.grounding}
-													>
+													<section key={result.groundingId} className={styles.grounding}>
 														<Typography.Paragraph className={styles.text}>
 															<Typography.Text strong>
 																{t("computer.grounding.query")}:{" "}
@@ -168,9 +145,7 @@ function ComputerObservationEvidenceFrame({
 															<dt>{t("computer.grounding.status")}</dt>
 															<dd>
 																<Tag>
-																	{t(
-																		`computer.grounding.statuses.${result.status}`,
-																	)}
+																	{t(`computer.grounding.statuses.${result.status}`)}
 																</Tag>
 															</dd>
 														</dl>
@@ -211,15 +186,13 @@ function ComputerObservationEvidenceFrame({
 																			type="secondary"
 																			className={styles.candidateDetails}
 																		>
-																			{t(
-																				"computer.grounding.box",
-																				candidate.box,
-																			)}
+																			{t("computer.grounding.box", candidate.box)}
 																			{candidate.status === "matched" && (
 																				<>
 																					<br />
-																					{t("computer.grounding.nodeId")}:{" "}
-																					<code>{candidate.nodeId}</code>
+																					{t(
+																						"computer.grounding.nodeId",
+																					)}: <code>{candidate.nodeId}</code>
 																					<br />
 																					{t(
 																						"computer.grounding.supportedActions",

@@ -4,6 +4,7 @@ import type { DragEvent, Key, MouseEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
+import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import type {
 	FlowDocumentSummary,
 	FlowTreeOrder,
@@ -28,6 +29,7 @@ export type FlowTreeProps = {
 	onSelect: (flowId: string) => void;
 	onRename: (flowId: string, title: string) => Promise<void>;
 	onArchive: (flow: FlowDocumentSummary) => void;
+	onMoveWorkspace: (flowId: string, workspaceId: string | null) => Promise<void>;
 	onOrderUpdate: (order: FlowTreeOrderUpdate) => Promise<void>;
 	onNewProject: () => void;
 	onNewSession: () => void;
@@ -229,6 +231,7 @@ function FlowTree({
 	onSelect,
 	onRename,
 	onArchive,
+	onMoveWorkspace,
 	onOrderUpdate,
 	onNewProject,
 	onNewSession,
@@ -241,6 +244,7 @@ function FlowTree({
 	const { t } = useTranslation();
 	const [messageApi, messageContext] = message.useMessage();
 	const [exportingFlowId, setExportingFlowId] = useState<string | null>(null);
+	const [movingFlowId, setMovingFlowId] = useState<string | null>(null);
 	const exportBusy = useRef(false);
 	const handleExport = async (flow: FlowDocumentSummary): Promise<void> => {
 		if (exportBusy.current) return;
@@ -265,6 +269,14 @@ function FlowTree({
 		} finally {
 			exportBusy.current = false;
 			setExportingFlowId(null);
+		}
+	};
+	const handleCopyFlowId = async (flow: FlowDocumentSummary): Promise<void> => {
+		try {
+			await copyTextToClipboard(flow.flowId);
+			void messageApi.success(t("flow.status.idCopied"));
+		} catch (error: unknown) {
+			void messageApi.error(`${t("flow.errors.copyId")}: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	};
 	const effectiveOrder: FlowTreeOrderUpdate = useMemo(
@@ -339,6 +351,30 @@ function FlowTree({
 		expandedKeysRef.current = nextExpandedKeys;
 		setExpandedKeys(nextExpandedKeys);
 		scheduleExpandedOrderSave();
+	}
+
+	async function handleMoveWorkspace(flow: FlowDocumentSummary, workspaceId: string | null): Promise<void> {
+		if (movingFlowId !== null || flow.workspaceId === workspaceId) return;
+		setMovingFlowId(flow.flowId);
+		try {
+			await onMoveWorkspace(flow.flowId, workspaceId);
+			const section: FlowTreeSectionKey = workspaceId === null ? "recent" : "projects";
+			ensureSectionOpen(section);
+			if (workspaceId !== null) {
+				const key: string = workspaceKey(workspaceId);
+				if (!expandedKeysRef.current.includes(key)) {
+					const nextExpandedKeys: string[] = [...expandedKeysRef.current, key];
+					expandedKeysRef.current = nextExpandedKeys;
+					setExpandedKeys(nextExpandedKeys);
+					scheduleExpandedOrderSave();
+				}
+			}
+			void messageApi.success(t("flow.status.moved"));
+		} catch (error: unknown) {
+			void messageApi.error(`${t("flow.errors.move")}: ${error instanceof Error ? error.message : String(error)}`);
+		} finally {
+			setMovingFlowId(null);
+		}
 	}
 
 	function createOrderWithCurrentExpansion(): FlowTreeOrderUpdate {
@@ -618,8 +654,16 @@ function FlowTree({
 								runtimeStatus={flowRuntimeStatusById[flow.flowId]}
 								isMutating={isMutating}
 								isPinning={pinningFlowId === flow.flowId}
+								movingFlowId={movingFlowId}
+								workspaces={workspaces}
 								onTogglePin={(): void => {
 									void handleTogglePin(flow);
+								}}
+								onCopy={(): void => {
+									void handleCopyFlowId(flow);
+								}}
+								onMoveWorkspace={(workspaceId: string | null): void => {
+									void handleMoveWorkspace(flow, workspaceId);
 								}}
 								onRenameStart={(): void => {
 									setRenameTarget(flow);
@@ -825,35 +869,54 @@ type FlowTreeItemProps = {
 	onExport: (flow: FlowDocumentSummary) => Promise<void>;
 	exportingFlowId: string | null;
 	flow: FlowDocumentSummary;
+	workspaces: WorkspaceConfig[];
 	isSelected: boolean;
 	isUnread: boolean;
 	runtimeStatus?: "running" | "failed" | "completed";
 	isMutating: boolean;
 	isPinning: boolean;
+	movingFlowId: string | null;
 	onTogglePin: () => void;
 	onRenameStart: () => void;
 	onArchive: (flow: FlowDocumentSummary) => void;
+	onCopy: () => void;
+	onMoveWorkspace: (workspaceId: string | null) => void;
 };
 
 function FlowTreeItem({
 	onExport,
 	exportingFlowId,
 	flow,
+	workspaces,
 	isSelected,
 	isUnread,
 	runtimeStatus,
 	isMutating,
 	isPinning,
+	movingFlowId,
 	onTogglePin,
 	onRenameStart,
 	onArchive,
+	onCopy,
+	onMoveWorkspace,
 }: FlowTreeItemProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const isRunning: boolean = runtimeStatus === "running";
 	const unreadLabel: string = t("flow.status.unreadResult", {
 		defaultValue: "Unread Flow result",
 	});
+	const isMoving: boolean = movingFlowId === flow.flowId;
+	const hasMoveTargets: boolean = flow.workspaceId !== null || workspaces.some((workspace): boolean => workspace.id !== flow.workspaceId);
+	const moveDisabledReason: string | null = isRunning
+		? t("flow.status.moveRunningBlocked")
+		: movingFlowId !== null || isMutating
+			? t("flow.status.moving")
+			: !hasMoveTargets
+				? t("flow.status.moveNoTargets")
+				: null;
+	const canMove: boolean = moveDisabledReason === null;
 	const actionMenu: MenuProps = {
+		expandIcon: <Icon name="arrow-forward" />,
 		items: [
 			{
 				key: "pin",
@@ -868,10 +931,30 @@ function FlowTreeItem({
 				disabled: isMutating,
 			},
 			{
+				key: "move",
+				label: moveDisabledReason === null ? t("flow.actions.moveTo") : <Tooltip title={moveDisabledReason}>{t("flow.actions.moveTo")}</Tooltip>,
+				icon: isMoving ? <Spin size="small" /> : <Icon name="move-session" />,
+				disabled: !canMove,
+				children: [
+					...(flow.workspaceId === null ? [] : [{ key: "move:unbound", label: t("flow.tree.unbound"), icon: <Icon name="folder-open" />, disabled: movingFlowId !== null }]),
+					...workspaces.map((workspace) => ({
+						key: `move:workspace:${workspace.id}`,
+						label: workspace.name,
+						icon: <WorkspaceTreeIconView workspace={workspace} expanded={false} />,
+						disabled: workspace.id === flow.workspaceId || movingFlowId !== null,
+					})),
+				],
+			},
+			{
 				key: "archive",
 				label: t("flow.actions.archive"),
 				icon: <Icon name="archive" />,
 				disabled: isMutating || isRunning,
+			},
+			{
+				key: "copy-id",
+				label: t("flow.actions.copyId"),
+				icon: <Icon name="copy" />,
 			},
 			{
 				key: "export",
@@ -887,6 +970,9 @@ function FlowTreeItem({
 			if (key === "rename") onRenameStart();
 			if (key === "archive") onArchive(flow);
 			if (key === "export") void onExport(flow);
+			if (key === "copy-id") onCopy();
+			if (key === "move:unbound") onMoveWorkspace(null);
+			if (key.startsWith("move:workspace:")) onMoveWorkspace(key.slice("move:workspace:".length));
 		},
 	};
 	return (

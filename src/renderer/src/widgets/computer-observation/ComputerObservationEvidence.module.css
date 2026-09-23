@@ -5,46 +5,55 @@
 	flex: none;
 	overflow: hidden;
 }
+
 .frame img {
 	width: 100%;
 	display: block;
 }
+
 .highlight {
 	position: absolute;
 	border: 2px solid var(--ant-color-primary);
 	background: color-mix(in srgb, var(--ant-color-primary) 15%, transparent);
 	pointer-events: none;
 }
+
 .evidence {
 	min-height: 160px;
-	max-height: 400px;
 	overflow: auto;
 }
+
 .text {
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 }
+
 .grounding {
 	padding-block: var(--ant-padding-sm);
 	border-block-start: 1px solid var(--ant-color-border-secondary);
 }
+
 .groundingMetadata {
 	display: grid;
 	grid-template-columns: auto minmax(0, 1fr);
 	gap: var(--ant-padding-xxs) var(--ant-padding-sm);
 	margin-block: 0 var(--ant-padding-sm);
 }
+
 .groundingMetadata dt {
 	color: var(--ant-color-text-secondary);
 }
+
 .groundingMetadata dd {
 	margin: 0;
 	overflow-wrap: anywhere;
 }
+
 .groundingCandidates {
 	margin: 0;
 	padding-inline-start: var(--ant-padding-lg);
 }
+
 .groundingCandidate {
 	display: flex;
 	justify-content: flex-start;
@@ -56,10 +65,12 @@
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 }
+
 .groundingCandidate > span {
 	min-width: 0;
 	max-width: 100%;
 }
+
 .candidateDetails {
 	padding-inline: var(--ant-padding-sm);
 	white-space: pre-wrap;

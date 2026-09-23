@@ -7,12 +7,14 @@ const mocks = vi.hoisted(() => ({
   handle: vi.fn(),
   ready: vi.fn(),
   on: vi.fn(),
+  getSources: vi.fn(),
   stop: vi.fn(),
   verify: vi.fn(),
   request: vi.fn(),
 }));
 vi.mock("electron", () => ({
   app: { getAppPath: () => "/fixture", whenReady: mocks.ready, on: mocks.on },
+  desktopCapturer: { getSources: mocks.getSources },
   ipcMain: { handle: mocks.handle, on: vi.fn() },
   screen: { on: vi.fn() },
   globalShortcut: { register: vi.fn(() => true), unregister: vi.fn() },
@@ -68,9 +70,28 @@ describe.skipIf(process.platform !== "win32" || process.arch !== "x64")(
       vi.clearAllMocks();
       mocks.ready.mockResolvedValue(undefined);
       mocks.verify.mockResolvedValue(undefined);
+      mocks.getSources.mockResolvedValue([]);
       mocks.request.mockImplementation(async (method: string) =>
         method === "list"
-          ? { sources: [{ sourceId: "source", title: "Fixture" }] }
+          ? {
+              sources: [{ sourceId: "source", title: "Fixture" }],
+              diagnostics: {
+                enumerated: 1,
+                invalidOrOwn: 0,
+                notVisible: 0,
+                minimized: 0,
+                notRoot: 0,
+                protected: 0,
+                cloaked: 0,
+                otherSession: 0,
+                processUnavailable: 0,
+                tokenUnavailable: 0,
+                elevated: 0,
+                emptyTitle: 0,
+                processStartUnavailable: 0,
+                listed: 1,
+              },
+            }
           : method === "observe"
             ? {
                 observationId: "observation",
@@ -139,9 +160,27 @@ describe.skipIf(process.platform !== "win32" || process.arch !== "x64")(
           "computer_sender_not_allowed",
         );
       }
-      await expect(invoke(settings, "listDiagnostics")).resolves.toEqual([
-        { sourceId: "source", title: "Fixture" },
-      ]);
+      await expect(invoke(settings, "listDiagnostics")).resolves.toEqual(
+        {
+          sources: [{ sourceId: "source", title: "Fixture" }],
+          diagnostics: {
+            enumerated: 1,
+            invalidOrOwn: 0,
+            notVisible: 0,
+            minimized: 0,
+            notRoot: 0,
+            protected: 0,
+            cloaked: 0,
+            otherSession: 0,
+            processUnavailable: 0,
+            tokenUnavailable: 0,
+            elevated: 0,
+            emptyTitle: 0,
+            processStartUnavailable: 0,
+            listed: 1,
+          },
+        },
+      );
       await expect(invoke(settings, "diagnose", "unknown")).rejects.toThrow(
         "computer_window_unavailable",
       );
@@ -157,6 +196,84 @@ describe.skipIf(process.platform !== "win32" || process.arch !== "x64")(
       await expect(invoke(settings, "diagnose", "source")).rejects.toThrow(
         "computer_window_unavailable",
       );
+    });
+
+    it("returns Composer-style previews only for eligible windows and hides native IDs", async () => {
+      const main = windowFixture(),
+        settings = windowFixture();
+      registerComputerIpc(() => main.window, () => settings.window);
+      await vi.advanceTimersByTimeAsync(0);
+      const png = Buffer.from("fixture");
+      mocks.request.mockImplementation(async (method: string) =>
+        method === "list"
+          ? {
+              sources: [
+                {
+                  sourceId: "source",
+                  title: "Fixture",
+                  captureSourceId: "window:123:0",
+                },
+              ],
+              diagnostics: {
+                enumerated: 1,
+                invalidOrOwn: 0,
+                notVisible: 0,
+                minimized: 0,
+                notRoot: 0,
+                protected: 0,
+                cloaked: 0,
+                otherSession: 0,
+                processUnavailable: 0,
+                tokenUnavailable: 0,
+                elevated: 0,
+                emptyTitle: 0,
+                processStartUnavailable: 0,
+                listed: 1,
+              },
+            }
+          : {},
+      );
+      mocks.getSources.mockResolvedValue([
+        {
+          id: "window:123:0",
+          name: "Fixture",
+          thumbnail: {
+            isEmpty: () => false,
+            getSize: () => ({ width: 100, height: 50 }),
+            resize: vi.fn(),
+            toPNG: () => png,
+          },
+        },
+        {
+          id: "window:456:0",
+          name: "Unlisted",
+          thumbnail: {
+            isEmpty: () => false,
+            getSize: () => ({ width: 100, height: 50 }),
+            resize: vi.fn(),
+            toPNG: () => png,
+          },
+        },
+      ]);
+
+      const result = await invoke(settings, "listDiagnostics") as {
+        sources: Array<Record<string, unknown>>;
+      };
+      expect(result).toMatchObject({
+        sources: [
+          {
+            sourceId: "source",
+            title: "Fixture",
+            thumbnailDataUrl: `data:image/png;base64,${png.toString("base64")}`,
+          },
+        ],
+      });
+      expect(result.sources[0]).not.toHaveProperty("captureSourceId");
+      expect(mocks.getSources).toHaveBeenCalledWith({
+        types: ["window"],
+        thumbnailSize: { width: 320, height: 180 },
+        fetchWindowIcons: false,
+      });
     });
 
     it.each(["destroyed", "render-process-gone", "did-start-navigation"])(

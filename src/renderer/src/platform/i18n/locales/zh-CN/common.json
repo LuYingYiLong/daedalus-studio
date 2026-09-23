@@ -67,6 +67,8 @@
 		"truncated": "已达到采集限制，当前结果不完整",
 		"frame": "所选窗口的静态画面",
 		"failed": "观察失败，请检查窗口状态后重试",
+		"captureUnavailable": "窗口已找到，但 Windows 图形捕获无法初始化。Composer 的截图使用另一套接口；请重启 Studio 后重试。",
+		"windowListDiagnostics": "Windows 枚举到 {{enumerated}} 个窗口，最终列出 {{listed}} 个。筛选计数：自身或无效 {{invalidOrOwn}}、高于助手可访问权限级别 {{elevated}}、其他会话 {{otherSession}}、进程不可访问 {{processUnavailable}}、令牌不可访问 {{tokenUnavailable}}、隐藏 {{notVisible}}、最小化 {{minimized}}、非根窗口 {{notRoot}}、受保护 {{protected}}、已隐藏应用窗口 {{cloaked}}、空标题 {{emptyTitle}}、进程信息不可用 {{processStartUnavailable}}。要访问管理员窗口，请以管理员身份运行 Daedalus；系统级窗口仍不可访问。刷新不会记录窗口标题。",
 		"saveFailed": "无法保存电脑操作设置",
 		"resourcesMissing": "原生助手或 OCR 资源缺失／校验失败，请构建或重新安装 Windows 感知资源",
 		"developerRequired": "在常规设置中开启开发者模式后，可使用本地诊断",
@@ -518,6 +520,7 @@
 			"rename": "重命名",
 			"renameSession": "重命名会话",
 			"moveSession": "移动会话到...",
+			"moveSessionToUnbound": "未绑定项目",
 			"forkSession": "分叉会话",
 			"pinSession": "置顶会话",
 			"unpinSession": "取消置顶会话",
@@ -658,6 +661,11 @@
 			"unreadResult": "未读 Flow 运行结果",
 			"streaming": "响应中",
 			"waiting": "等待中",
+			"idCopied": "Flow ID 已复制",
+			"moving": "正在移动 Flow",
+			"moved": "Flow 已移动",
+			"moveRunningBlocked": "请先停止正在运行的 Flow，再移动它",
+			"moveNoTargets": "没有其他可移动到的工作区",
 			"failed": "失败",
 			"stopped": "已停止"
 		},
@@ -675,6 +683,8 @@
 			"copyFromChat": "复制为 Flow",
 			"copyToChat": "复制为对话",
 			"newInWorkspace": "在此工作区新建 Flow",
+			"copyId": "复制会话 ID",
+			"moveTo": "移动到...",
 			"rename": "重命名",
 			"archive": "归档 Flow",
 			"pin": "置顶 Flow",
@@ -1005,7 +1015,11 @@
 			"unpin": "取消置顶：{{title}}",
 			"newInWorkspace": "在 {{workspaceName}} 中新建 Flow"
 		},
-		"errors": { "notFound": "找不到此 Flow" },
+		"errors": {
+			"notFound": "找不到此 Flow",
+			"copyId": "复制 Flow ID 失败",
+			"move": "移动 Flow 失败"
+		},
 		"rename": {
 			"title": "重命名 Flow",
 			"placeholder": "输入 Flow 名称",

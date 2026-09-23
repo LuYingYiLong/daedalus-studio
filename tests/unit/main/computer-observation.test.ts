@@ -38,7 +38,11 @@ function request(
     args,
   };
 }
-function setup(changed = vi.fn(), revoked = vi.fn()) {
+function setup(
+  changed = vi.fn(),
+  revoked = vi.fn(),
+  loadThumbnails: (sourceIds: readonly string[]) => Promise<ReadonlyMap<string, string>> = async () => new Map(),
+) {
   vi.useFakeTimers();
   const helper = {
     request: vi.fn(
@@ -53,7 +57,7 @@ function setup(changed = vi.fn(), revoked = vi.fn()) {
     ),
     stop: vi.fn(),
   };
-  const service = new ComputerService(helper, changed, Date.now, revoked);
+  const service = new ComputerService(helper, changed, Date.now, revoked, undefined, loadThumbnails);
   service.setAvailability(true);
   service.setContext({
     connectionId: "connection",
@@ -73,6 +77,37 @@ async function grant(service: ComputerService) {
 }
 afterEach(() => vi.useRealTimers());
 describe("computer observation consent boundary", () => {
+  it("adds only matched Electron previews and strips the native capture identifier", async () => {
+    const loadThumbnails = vi.fn(async (sourceIds: readonly string[]) => {
+      expect(sourceIds).toEqual(["window:123:0"]);
+      return new Map([["window:123:0", PNG]]);
+    });
+    const { service, helper } = setup(vi.fn(), vi.fn(), loadThumbnails);
+    service.setEnabled(true);
+    helper.request.mockImplementation(async (method) =>
+      method === "list"
+        ? {
+            sources: [
+              {
+                sourceId: "source",
+                title: "Fixture",
+                captureSourceId: "window:123:0",
+              },
+            ],
+          }
+        : {},
+    );
+    const access = request("mcp_computer_request_access", { reason: "Test" });
+    const pending = service.execute(access);
+
+    await expect(service.list()).resolves.toEqual([
+      { sourceId: "source", title: "Fixture", thumbnailDataUrl: PNG },
+    ]);
+    expect(loadThumbnails).toHaveBeenCalledOnce();
+    service.revoke();
+    await expect(pending).rejects.toThrow();
+  });
+
   it.each(["state", "revoked"])(
     "cleans up access before a failing %s notification",
     async (notification) => {

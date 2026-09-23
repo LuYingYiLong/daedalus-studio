@@ -157,7 +157,7 @@ type HomePageProps = {
 	onForkSourceOpen: (sessionId: string) => Promise<void>;
 	onSessionArchive: (session: SessionMetadata, context: SessionArchiveContext) => void;
 	onSessionRename: (session: SessionMetadata) => void;
-	onSessionWorkspaceMove: (session: SessionMetadata, workspace: WorkspaceConfig) => Promise<import("@/platform/rpc/session-api").MoveSessionWorkspaceResult>;
+	onSessionWorkspaceMove: (session: SessionMetadata, workspace: WorkspaceConfig | null) => Promise<import("@/platform/rpc/session-api").MoveSessionWorkspaceResult>;
 	onSessionWorktreeDelete: (session: SessionMetadata) => Promise<SessionMetadata>;
 	onSessionWorktreeHandoff: (target: "local" | "worktree") => Promise<void>;
 	onSessionWorktreeSetup: (action: "retry" | "skip") => Promise<void>;
@@ -762,6 +762,7 @@ function HomePage({
 		onArchive: (flow: FlowDocumentSummary): void => {
 			void flowController.archiveFlowById(flow.flowId);
 		},
+		onMoveWorkspace: flowController.moveFlowWorkspaceById,
 		onOrderUpdate: flowController.updateFlowOrder,
 		onNewProject: (): void => setIsFlowWorkspaceCreateOpen(true),
 		onNewSession: (): void => requestFlowWelcome(),

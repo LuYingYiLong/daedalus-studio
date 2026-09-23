@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { archiveFlow, commitFlowPatch, createFlow, exportFlowData, exportFlowToSession, fetchFlow, fetchFlows, importFlowFromSession, renameFlow, startFlowRun, stopFlowRun, updateFlowSettings, listFlowNodeTypes, listFlowTools, listFlowApprovals, resolveFlowApproval, updateFlowTreeOrder as persistFlowTreeOrder, type CreateFlowParams } from "@/platform/rpc/flow-api";
+import { archiveFlow, commitFlowPatch, createFlow, exportFlowData, exportFlowToSession, fetchFlow, fetchFlows, importFlowFromSession, moveFlowToWorkspace, renameFlow, startFlowRun, stopFlowRun, updateFlowSettings, listFlowNodeTypes, listFlowTools, listFlowApprovals, resolveFlowApproval, updateFlowTreeOrder as persistFlowTreeOrder, type CreateFlowParams } from "@/platform/rpc/flow-api";
 import { onBackendEvent, onBackendReconnected } from "@/platform/rpc/transport/backend-client";
 import { BackendRpcError } from "@/platform/rpc/transport/backend-rpc-client";
 import type { FlowDocumentSummary, FlowDocument, FlowDocumentEdge, FlowDocumentNode, FlowDocumentNodeRun, FlowDocumentRun, FlowDocumentSnapshot, FlowNodeTypeId, FlowNodeTypeDefinition, FlowToolDefinition, FlowApproval, FlowOperation, FlowTreeOrder, FlowTreeOrderUpdate, SessionMetadata } from "@/platform/rpc/types";
@@ -52,6 +52,7 @@ export type HomeFlowController = {
 	archiveFlowById: (flowId: string) => Promise<void>;
 	archiveCurrentFlow: () => Promise<void>;
 	updateFlowOrder: (order: FlowTreeOrderUpdate) => Promise<void>;
+	moveFlowWorkspaceById: (flowId: string, workspaceId: string | null) => Promise<void>;
 	createNode: (type: FlowNodeTypeId, x: number, y: number) => Promise<string | null>;
 	createConnectedNode: (params: { type: FlowNodeTypeId; x: number; y: number; direction: "from_existing" | "to_existing"; existingNodeId: string; existingPort: string; newPort: string; dataType: FlowDocumentNode["ports"][number]["dataTypes"][number] }) => Promise<string | null>;
 	updateNode: (nodeId: string, patch: Record<string, unknown>) => Promise<void>;
@@ -764,6 +765,29 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		}
 	}, []);
 
+	const moveFlowWorkspaceById = useCallback(async (flowId: string, workspaceId: string | null): Promise<void> => {
+		const current = flows.find((flow): boolean => flow.flowId === flowId);
+		if (current === undefined || current.workspaceId === workspaceId) return;
+		setIsMutating(true);
+		setError(null);
+		try {
+			const saved = await flushAndFetchFlow(flowId);
+			const result = await moveFlowToWorkspace(flowId, workspaceId, saved.flow.revision);
+			setFlows((items): FlowDocumentSummary[] => items.map((flow): FlowDocumentSummary =>
+				flow.flowId === flowId ? { ...flow, ...result.flow } : flow,
+			));
+			setFlowOrder(result.order);
+			if (snapshotRef.current?.flow.flowId === flowId) {
+				applySnapshot({ ...snapshotRef.current, flow: result.flow });
+			}
+		} catch (moveError: unknown) {
+			setError(errorMessage(moveError));
+			throw moveError;
+		} finally {
+			setIsMutating(false);
+		}
+	}, [applySnapshot, flows]);
+
 	const createNode = useCallback(
 		async (type: FlowNodeTypeId, x: number, y: number): Promise<string | null> => {
 			const current = snapshotRef.current;
@@ -1125,6 +1149,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		archiveFlowById,
 		archiveCurrentFlow,
 		updateFlowOrder,
+		moveFlowWorkspaceById,
 		createNode,
 		createConnectedNode,
 		updateNode,

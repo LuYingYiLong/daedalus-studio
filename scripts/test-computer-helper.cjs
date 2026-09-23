@@ -53,7 +53,12 @@ async function main() {
       name,
     );
   }
-  const checks = [["--self-test"], ["--test-uia"], ["--test-ocr", directory]];
+  const checks = [
+    ["--self-test"],
+    ["--test-uia"],
+    ["--test-list", directory],
+    ["--test-ocr", directory],
+  ];
   if (process.argv.includes("--hardware")) checks.push(["--test-capture"], ["--test-input"]);
   for (const args of checks) {
     const result = spawnSync(executable, args, {
