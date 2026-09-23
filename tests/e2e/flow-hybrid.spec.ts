@@ -82,13 +82,17 @@ test("keeps graph geometry while culling controls and preserving editing drafts"
 		)
 		.toBe(true);
 	await expect(page.locator("iframe")).toHaveCount(0);
+	await expect(first.locator("textarea").first()).toBeFocused();
+	await page.keyboard.press("Escape");
 	for (let cycle = 0; cycle < 3; cycle++) {
 		await page.getByRole("button", { name: /^(?:Fit canvas|适应画布)$/ }).click();
 		await expect.poll(() => page.locator('[data-flow-render-mode="full"]').count()).toBe(0);
 		await first.dblclick();
 		await expect(first.locator("textarea").first()).toHaveValue("草稿不能丢失");
+		await expect(first.locator("textarea").first()).toBeFocused();
 		await expect(page.locator(".react-flow__node")).toHaveCount(200);
 		expect(await page.locator('[data-flow-render-mode="full"]').count()).toBeLessThan(80);
+		await page.keyboard.press("Escape");
 	}
 });
 
