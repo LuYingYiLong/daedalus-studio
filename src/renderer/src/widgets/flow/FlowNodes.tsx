@@ -568,6 +568,7 @@ function SchemaEditor({
 				<InputNumber
 					className="nodrag"
 					disabled={disabled}
+					suffix={typeof schema["x-daedalus-unit"] === "string" ? schema["x-daedalus-unit"] : undefined}
 					value={typeof config[key] === "number" ? config[key] : undefined}
 					placeholder={title}
 					min={typeof schema.minimum === "number" ? schema.minimum : undefined}
@@ -1074,7 +1075,11 @@ function FlowNodeCard({
 						className={styles.header}
 						style={{ background: flowNodeCategoryColor(definition?.category) }}
 						onPointerDown={(event): void => {
-							if ((event.target as Element).closest("button,input,textarea,select,[contenteditable=true]") !== null)
+							if (
+								(event.target as Element).closest(
+									"button,input,textarea,select,[contenteditable=true]",
+								) !== null
+							)
 								return;
 							const active = document.activeElement;
 							if (active instanceof HTMLElement && nodeElement.current?.contains(active)) active.blur();

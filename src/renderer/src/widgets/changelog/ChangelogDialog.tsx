@@ -12,7 +12,13 @@ export type ChangelogDialogProps = {
 	onOpenFull?: () => void;
 };
 
-function ChangelogDialog({ open, version = null, full = false, onClose, onOpenFull }: ChangelogDialogProps): React.JSX.Element {
+function ChangelogDialog({
+	open,
+	version = null,
+	full = false,
+	onClose,
+	onOpenFull,
+}: ChangelogDialogProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const releaseNotes: string | null = version === null ? null : getReleaseNotesForVersion(version);
 	const markdown: string = full || releaseNotes === null ? CHANGELOG_MARKDOWN : releaseNotes;
@@ -21,7 +27,7 @@ function ChangelogDialog({ open, version = null, full = false, onClose, onOpenFu
 		<Modal
 			open={open}
 			onCancel={onClose}
-			footer={(
+			footer={
 				<div className={styles.footer}>
 					{!full && onOpenFull !== undefined ? (
 						<Button type="link" onClick={onOpenFull}>
@@ -32,7 +38,7 @@ function ChangelogDialog({ open, version = null, full = false, onClose, onOpenFu
 						{t("changelog.actions.close")}
 					</Button>
 				</div>
-			)}
+			}
 			title={full ? t("changelog.title") : t("changelog.whatsNew", { version: version ?? "" })}
 			width={720}
 		>
