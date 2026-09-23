@@ -476,20 +476,22 @@ function HomeFlowSurface({
 			return startRequestedRun({
 				entryNodeIds: group.nodeIds,
 				targetNodeIds: group.targetNodeIds,
-				forceNodeIds: forceNodeIds ?? snapshot?.nodes.filter(node => !controller.nodeDefinitions.some(definition => definition.typeId === node.typeId && definition.batch)).map((node): string => node.nodeId) ?? [],
+				...(forceNodeIds === undefined ? { forceAllSelected: true } : {}),
+				...(forceNodeIds === undefined ? {} : { forceNodeIds }),
 			});
 		},
-		[rememberRunEntry, snapshot?.nodes, startRequestedRun, controller.nodeDefinitions],
+		[rememberRunEntry, startRequestedRun],
 	);
 	const runSelectedEntry = useCallback(
 		async (forceNodeIds?: string[]): Promise<boolean> => {
 			if (selectedRunEntryGroup !== null) return runEntryGroup(selectedRunEntryGroup, forceNodeIds);
 			return startRequestedRun({
 				targetNodeIds: outputNodeIds,
-				forceNodeIds: forceNodeIds ?? snapshot?.nodes.filter(node => !controller.nodeDefinitions.some(definition => definition.typeId === node.typeId && definition.batch)).map((node): string => node.nodeId) ?? [],
+				...(forceNodeIds === undefined ? { forceAllSelected: true } : {}),
+				...(forceNodeIds === undefined ? {} : { forceNodeIds }),
 			});
 		},
-		[outputNodeIds, runEntryGroup, selectedRunEntryGroup, snapshot?.nodes, startRequestedRun, controller.nodeDefinitions],
+		[outputNodeIds, runEntryGroup, selectedRunEntryGroup, startRequestedRun],
 	);
 	const runEntryMenu = useMemo<MenuProps>(
 		() => ({
@@ -537,7 +539,7 @@ function HomeFlowSurface({
 				void startRequestedRun({
 					entryNodeIds: [nodeId],
 					targetNodeIds: reachableOutputNodeIds([nodeId], flowNodes, flowEdges, controller.nodeDefinitions),
-					forceNodeIds: flowNodes.filter(node => !controller.nodeDefinitions.some(definition => definition.typeId === node.typeId && definition.batch)).map((candidate): string => candidate.nodeId),
+					forceNodeIds: [nodeId],
 				});
 				return;
 			}

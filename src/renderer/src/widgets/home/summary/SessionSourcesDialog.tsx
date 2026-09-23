@@ -27,7 +27,12 @@ type SessionSourceGridItemProps = {
 };
 
 function isImageSource(source: SessionOverviewSourceItem): boolean {
-	return source.kind === "image_attachment" || source.kind === "generated_image";
+	return source.kind === "image_attachment" || source.kind === "generated_image" ||
+		(source.kind === "flow_media_artifact" && source.mimeType.startsWith("image/"));
+}
+
+function isVideoSource(source: SessionOverviewSourceItem): boolean {
+	return source.kind === "flow_media_artifact" && source.mimeType.startsWith("video/");
 }
 
 function SessionSourceGridItem({ sessionId, source, open, onSelect }: SessionSourceGridItemProps): JSX.Element {
@@ -117,7 +122,7 @@ function SessionSourceGridItem({ sessionId, source, open, onSelect }: SessionSou
 				<Skeleton.Node active className={styles.sourceGridThumbnailSkeleton} />
 			) : (
 				<span className={styles.sourceGridTextIcon}>
-					<Icon name={imageLoadFailed ? "warning" : "txt"} />
+					<Icon name={imageLoadFailed ? "warning" : isVideoSource(source) ? "video" : "txt"} />
 				</span>
 			)}
 			<span className={styles.sourceGridText}>

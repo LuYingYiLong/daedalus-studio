@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { useTranslation } from "react-i18next";
 import type { WorkspaceConfig } from "@/platform/rpc/types";
 import {
+	fetchFlowOverview,
 	fetchSessionOverview,
 	fetchWorkspaceOverview,
 	type SessionOverviewResult,
@@ -10,12 +11,14 @@ import {
 type SummaryOverviewTarget = {
 	scopeKey: string;
 	sessionId: string | null;
+	flowId: string | null;
 	workspace: WorkspaceConfig | null;
 };
 
 type UseSessionSummaryOverviewParams = {
 	scopeKey: string;
 	sessionId: string | null;
+	flowId: string | null;
 	workspace: WorkspaceConfig | null;
 	previewLimit: number;
 };
@@ -37,6 +40,7 @@ export type SessionSummaryOverviewController = {
 function useSessionSummaryOverview({
 	scopeKey,
 	sessionId,
+	flowId,
 	workspace,
 	previewLimit,
 }: UseSessionSummaryOverviewParams): SessionSummaryOverviewController {
@@ -46,8 +50,8 @@ function useSessionSummaryOverview({
 	const [isSummaryLoading, setIsSummaryLoading] = useState<boolean>(false);
 	const [summaryError, setSummaryError] = useState<string | null>(null);
 	const requestIdRef = useRef<number>(0);
-	const targetRef = useRef<SummaryOverviewTarget>({ scopeKey, sessionId, workspace });
-	targetRef.current = { scopeKey, sessionId, workspace };
+	const targetRef = useRef<SummaryOverviewTarget>({ scopeKey, sessionId, flowId, workspace });
+	targetRef.current = { scopeKey, sessionId, flowId, workspace };
 
 	const loadSummaryOverview = useCallback(async (
 		planLimit: number = previewLimit,
@@ -55,7 +59,7 @@ function useSessionSummaryOverview({
 		silent: boolean = false,
 	): Promise<SessionOverviewResult | null> => {
 		const target = targetRef.current;
-		if (target.sessionId === null && target.workspace === null) {
+		if (target.sessionId === null && target.flowId === null && target.workspace === null) {
 			return null;
 		}
 
@@ -65,9 +69,11 @@ function useSessionSummaryOverview({
 			setSummaryError(null);
 		}
 		try {
-			const result: SessionOverviewResult = target.sessionId !== null
-				? await fetchSessionOverview({ sessionId: target.sessionId, planLimit, sourceLimit })
-				: await fetchWorkspaceOverview(target.workspace!);
+			const result: SessionOverviewResult = target.flowId !== null
+				? await fetchFlowOverview({ flowId: target.flowId, workspace: target.workspace, sourceLimit })
+				: target.sessionId !== null
+					? await fetchSessionOverview({ sessionId: target.sessionId, planLimit, sourceLimit })
+					: await fetchWorkspaceOverview(target.workspace!);
 			if (requestId !== requestIdRef.current || target.scopeKey !== targetRef.current.scopeKey) {
 				return null;
 			}
@@ -97,10 +103,10 @@ function useSessionSummaryOverview({
 		setSummaryError(null);
 	}, [scopeKey]);
 	useEffect((): void => {
-		if (sessionId !== null || workspace !== null) {
+		if (sessionId !== null || flowId !== null || workspace !== null) {
 			void loadSummaryOverview();
 		}
-	}, [loadSummaryOverview, scopeKey, sessionId, workspace]);
+	}, [loadSummaryOverview, scopeKey, sessionId, flowId, workspace]);
 
 	const handleSummaryOpenChange = useCallback((open: boolean): void => {
 		setSummaryOpen(open);

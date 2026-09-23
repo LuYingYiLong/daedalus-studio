@@ -12,6 +12,7 @@ import type { FlowLayoutUpdate } from "@/domain/flow/flow-node-layout";
 export type FlowNodeDetail = { node: FlowDocumentNode };
 export type FlowRunRequest = {
 	forceNodeIds?: string[];
+	forceAllSelected?: boolean;
 	entryNodeIds?: string[];
 	targetNodeIds?: string[];
 	inputValues?: Record<string, unknown>;
@@ -993,6 +994,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 					flowId: current.flow.flowId,
 					revision: current.flow.graphRevision,
 					...(request.forceNodeIds === undefined ? {} : { forceNodeIds: request.forceNodeIds }),
+					...(request.forceAllSelected === undefined ? {} : { forceAllSelected: request.forceAllSelected }),
 					...(request.entryNodeIds === undefined ? {} : { entryNodeIds: request.entryNodeIds }),
 					...(request.targetNodeIds === undefined ? {} : { targetNodeIds: request.targetNodeIds }),
 					...(request.inputValues === undefined ? {} : { inputValues: request.inputValues }),

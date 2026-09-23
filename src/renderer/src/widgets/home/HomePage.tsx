@@ -532,6 +532,7 @@ function HomePage({
 	const { workspaceLaunchTargets, selectedLaunchTarget, selectedLaunchTargetId, workspaceLaunchMenuItems, isOpeningLaunchTarget, handleWorkspaceLaunchMenuClick, openWorkspaceLaunchTarget } = launchController;
 	const summaryController = useHomePageSummaryController({
 		summarySessionId: workbenchScope.sessionId,
+		summaryFlowId: primarySurface === "flow" ? (flowController.snapshot?.flow.flowId ?? null) : null,
 		summaryScopeKey: workbenchScope.summaryScopeKey,
 		workspaceForActions,
 		effectiveGodotLaunchExecutablePath,

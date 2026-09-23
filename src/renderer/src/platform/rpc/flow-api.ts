@@ -88,6 +88,7 @@ export async function startFlowRun(params: {
 	flowId: string;
 	revision: number;
 	forceNodeIds?: string[];
+	forceAllSelected?: boolean;
 	entryNodeIds?: string[];
 	targetNodeIds?: string[];
 	inputValues?: Record<string, unknown>;
@@ -113,6 +114,10 @@ export async function exportFlowToSession(params: { flowId: string; outputNodeId
 
 export async function listFlowArtifacts(flowId: string, runId?: string): Promise<{ artifacts: FlowMediaArtifactRef[] }> {
 	return (await createBackendClient()).request("flow.artifact.list", { flowId, ...(runId === undefined ? {} : { runId }) });
+}
+
+export async function listFlowGeneratedArtifacts(flowId: string, limit = 3): Promise<{ artifacts: FlowMediaArtifactRef[]; total: number }> {
+	return (await createBackendClient()).request("flow.artifact.list", { flowId, aiGeneratedOnly: true, limit });
 }
 
 export async function getFlowArtifact(artifactId: string, includeData = false): Promise<{ ref: FlowMediaArtifactRef; dataBase64?: string }> {

@@ -8,7 +8,7 @@ import type {
 	SessionOverviewResult,
 	SessionOverviewSourceItem,
 } from "@/platform/rpc/session-overview-api";
-import { fetchSessionOverview } from "@/platform/rpc/session-overview-api";
+import { fetchFlowOverview, fetchSessionOverview } from "@/platform/rpc/session-overview-api";
 import {
 	getPlan,
 	type PlanResult,
@@ -43,6 +43,7 @@ type SummaryGitActionRequest = {
 
 export type HomePageSummaryControllerParams = {
 	summarySessionId: string | null;
+	summaryFlowId: string | null;
 	summaryScopeKey: string;
 	workspaceForActions: WorkspaceConfig | null;
 	effectiveGodotLaunchExecutablePath: string | null;
@@ -109,6 +110,7 @@ export type HomePageSummaryController = {
 
 function useHomePageSummaryController({
 	summarySessionId,
+	summaryFlowId,
 	summaryScopeKey,
 	workspaceForActions,
 	effectiveGodotLaunchExecutablePath,
@@ -172,6 +174,7 @@ function useHomePageSummaryController({
 	} = useSessionSummaryOverview({
 		scopeKey: summaryScopeKey,
 		sessionId: summarySessionId,
+		flowId: summaryFlowId,
 		workspace: workspaceForActions,
 		previewLimit: SUMMARY_PREVIEW_LIMIT,
 	});
@@ -294,7 +297,7 @@ function useHomePageSummaryController({
 	}, [plansModalOpen, summarySessionId, t]);
 
 	useEffect((): (() => void) | void => {
-		if (!sourcesModalOpen || summarySessionId === null) {
+		if (!sourcesModalOpen || (summarySessionId === null && summaryFlowId === null)) {
 			return;
 		}
 
@@ -302,12 +305,15 @@ function useHomePageSummaryController({
 		setIsSourcesDialogLoading(true);
 		setSourcesDialogError(null);
 		const frameId: number = window.requestAnimationFrame((): void => {
-			void fetchSessionOverview({
-				sessionId: summarySessionId,
-				planLimit: 0,
-				sourceLimit: SUMMARY_SEE_MORE_LIMIT,
-				includeSourceImages: false,
-			})
+			const request = summaryFlowId !== null
+				? fetchFlowOverview({ flowId: summaryFlowId, workspace: workspaceForActions, sourceLimit: SUMMARY_SEE_MORE_LIMIT })
+				: fetchSessionOverview({
+					sessionId: summarySessionId!,
+					planLimit: 0,
+					sourceLimit: SUMMARY_SEE_MORE_LIMIT,
+					includeSourceImages: false,
+				});
+			void request
 				.then((result: SessionOverviewResult): void => {
 					if (!cancelled) {
 						setSourcesDialogOverview(result);
@@ -337,7 +343,7 @@ function useHomePageSummaryController({
 			cancelled = true;
 			window.cancelAnimationFrame(frameId);
 		};
-	}, [sourcesModalOpen, summarySessionId, t]);
+	}, [sourcesModalOpen, summarySessionId, summaryFlowId, workspaceForActions, t]);
 
 	const handleDockGitStateChange = useCallback(async (): Promise<void> => {
 		setGitStateRevision((current: number): number => current + 1);
