@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { TimelineBodyPart, TimelineGeneratedImageArtifact } from "@/platform/rpc/types";
 import { fetchGeneratedImageDataUrl } from "@/platform/rpc/generated-image-api";
 import { Icon } from "@/assets/icons";
+import { imagePreviewCloseIcon, renderImagePreviewToolbar } from "@/ui/image-preview-toolbar";
 import { createStudioCopyableConfig } from "@/ui/typography-copyable";
 import styles from "./ImageGenerationPart.module.css";
 
@@ -191,14 +192,16 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 				items={previewItems}
 				classNames={{
 					popup: {
-						close: styles.previewClose,
-						footer: styles.previewFooter,
-						actions: styles.previewActions
+						close: "daedalus-image-preview-close",
+						footer: "daedalus-image-preview-footer",
+						actions: "daedalus-image-preview-actions"
 					}
 				}}
 				preview={{
 					open: previewOpen,
 					current: previewCurrent,
+					closeIcon: imagePreviewCloseIcon,
+					actionsRender: renderImagePreviewToolbar,
 					onOpenChange: (open: boolean): void => setPreviewOpen(open),
 					onChange: (current: number): void => setPreviewCurrent(current)
 				}}

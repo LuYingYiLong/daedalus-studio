@@ -105,12 +105,8 @@ body {
 	background: var(--ds-border) !important;
 }
 
-.ant-select-dropdown
-	.rc-virtual-list-scrollbar:hover
-	.rc-virtual-list-scrollbar-thumb,
-.ant-select-tree-dropdown
-	.rc-virtual-list-scrollbar:hover
-	.rc-virtual-list-scrollbar-thumb {
+.ant-select-dropdown .rc-virtual-list-scrollbar:hover .rc-virtual-list-scrollbar-thumb,
+.ant-select-tree-dropdown .rc-virtual-list-scrollbar:hover .rc-virtual-list-scrollbar-thumb {
 	background: var(--ds-text-muted) !important;
 }
 
@@ -153,6 +149,76 @@ body {
 .ant-table-wrapper .ant-table,
 .ant-table-wrapper .ant-table-container {
 	border-radius: var(--ds-radius-lg);
+}
+
+.daedalus-image-preview-close {
+	top: 44px !important;
+	right: 16px !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 32px !important;
+	height: 32px !important;
+	border: 1px solid var(--ds-border) !important;
+	border-radius: var(--ds-radius-lg) !important;
+	color: var(--ds-text-primary) !important;
+	background: var(--ds-surface-elevated) !important;
+	box-shadow: none !important;
+}
+
+.daedalus-image-preview-close:hover {
+	color: var(--ds-accent) !important;
+	background: var(--ds-surface-hover) !important;
+}
+
+.daedalus-image-preview-footer {
+	bottom: 16px !important;
+	padding: 0 !important;
+	color: var(--ds-text-primary) !important;
+	background: transparent !important;
+}
+
+.daedalus-image-preview-actions {
+	gap: 4px !important;
+	padding: 4px 8px !important;
+	border: 1px solid var(--ds-border) !important;
+	border-radius: var(--ds-radius-lg) !important;
+	color: var(--ds-text-primary) !important;
+	background: var(--ds-surface-elevated) !important;
+	box-shadow: none !important;
+}
+
+.daedalus-image-preview-actions .ant-image-preview-actions-action {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 28px !important;
+	height: 28px !important;
+	border-radius: var(--ds-radius-sm) !important;
+	color: var(--ds-text-secondary) !important;
+	background: transparent !important;
+	transition: color 120ms ease !important;
+}
+
+.daedalus-image-preview-actions .daedalus-icon {
+	width: 16px !important;
+	height: 16px !important;
+	min-width: 16px !important;
+	min-height: 16px !important;
+}
+
+.daedalus-image-preview-actions .ant-image-preview-actions-action:hover,
+.daedalus-image-preview-actions .ant-image-preview-actions-action:focus-visible {
+	color: var(--ds-accent) !important;
+	background: transparent !important;
+}
+
+.daedalus-image-preview-actions .ant-image-preview-actions-action:hover .anticon,
+.daedalus-image-preview-actions .ant-image-preview-actions-action:focus-visible .anticon,
+.daedalus-image-preview-actions .ant-image-preview-actions-action:hover svg,
+.daedalus-image-preview-actions .ant-image-preview-actions-action:focus-visible svg {
+	color: var(--ds-accent) !important;
+	fill: currentColor !important;
 }
 
 .daedalus-compact-menu {
@@ -265,8 +331,7 @@ body {
 	justify-content: center;
 	transform: rotate(-90deg);
 	transform-origin: center;
-	transition: transform var(--ant-motion-duration-mid)
-		var(--ant-motion-ease-in-out);
+	transition: transform var(--ant-motion-duration-mid) var(--ant-motion-ease-in-out);
 }
 
 .collapseExpandIconActive {
