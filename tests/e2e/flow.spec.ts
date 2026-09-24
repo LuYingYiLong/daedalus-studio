@@ -41,6 +41,31 @@ async function ensureFlowNodesInteractive(page: Page, nodes: Locator[]): Promise
 	for (const shell of shells) await expect(shell).toHaveAttribute("data-flow-render-mode", "full");
 }
 
+async function findBlankFlowCanvasPoint(page: Page): Promise<{ x: number; y: number }> {
+	const point = await page.evaluate((): { x: number; y: number } | null => {
+		const pane = document.querySelector<HTMLElement>(".react-flow__pane");
+		if (pane === null) return null;
+		const bounds = pane.getBoundingClientRect();
+		const candidates = [0.08, 0.2, 0.5, 0.8, 0.92];
+		for (const yRatio of candidates) {
+			for (const xRatio of candidates) {
+				const x = bounds.left + bounds.width * xRatio;
+				const y = bounds.top + bounds.height * yRatio;
+				const element = document.elementFromPoint(x, y);
+				if (
+					element instanceof Element &&
+					element.closest(".react-flow__pane") !== null &&
+					element.closest(".react-flow__node") === null
+				)
+					return { x, y };
+			}
+		}
+		return null;
+	});
+	expect(point, "Expected a visible blank point inside the Flow canvas").not.toBeNull();
+	return point!;
+}
+
 type Port = {
 	id: string;
 	label: string;
@@ -720,6 +745,8 @@ test.describe("Daedalus Flow node workflow", () => {
 		await expect(flowInputNode).toHaveCount(0);
 
 		const pane = mainWindow.locator(".react-flow__pane");
+		const paneBox = await pane.boundingBox();
+		expect(paneBox).not.toBeNull();
 		await mainWindow.locator('section[aria-labelledby="flow-welcome-title"]').click({ button: "right", position: { x: 460, y: 260 } });
 		await selectFlowNodeType(mainWindow, /Basic|基础/u, /Text|文本/u);
 		await expect.poll(() => mockBackend.getRequests("flow.patch.commit").length).toBeGreaterThanOrEqual(1);
@@ -734,12 +761,11 @@ test.describe("Daedalus Flow node workflow", () => {
 
 		const source = textNode.locator('[data-flow-port-id="output"]');
 		const sourceBox = await source.boundingBox();
-		const paneBox = await pane.boundingBox();
 		expect(sourceBox).not.toBeNull();
-		expect(paneBox).not.toBeNull();
+		const blankPoint = await findBlankFlowCanvasPoint(mainWindow);
 		await mainWindow.mouse.move(sourceBox!.x + sourceBox!.width / 2, sourceBox!.y + sourceBox!.height / 2);
 		await mainWindow.mouse.down();
-		await mainWindow.mouse.move(paneBox!.x + paneBox!.width * 0.12, paneBox!.y + paneBox!.height * 0.34, { steps: 12 });
+		await mainWindow.mouse.move(blankPoint.x, blankPoint.y, { steps: 12 });
 		await mainWindow.mouse.up();
 		await expect(mainWindow.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ })).toBeVisible();
 		await selectFlowNodeType(mainWindow, /Basic|基础/u, /Condition|条件/u);

@@ -7,7 +7,7 @@ process.stdin.on('data', chunk => {
     const size = buffer.readUInt32LE(0), request = JSON.parse(buffer.subarray(4, 4 + size)); buffer = buffer.subarray(4 + size);
     let result;
     if (request.method === 'hello') result = { version: 3, computerControl: true, inputTransports: ["uia", "keyboard"] };
-    else if (request.method === 'list') result = { sources: [{ sourceId: 'fixture-window', title: 'Local perception fixture' }] };
+    else if (request.method === 'list') result = { sources: [{ sourceId: 'fixture-window', title: 'Local perception fixture' }], diagnostics: { enumerated: 1, invalidOrOwn: 0, notVisible: 0, minimized: 0, notRoot: 0, protected: 0, cloaked: 0, otherSession: 0, processUnavailable: 0, tokenUnavailable: 0, elevated: 0, emptyTitle: 0, processStartUnavailable: 0, listed: 1 } };
     else if (request.method === 'select') { selected = true; result = { title: 'Local perception fixture' }; }
     else if (request.method === 'control.start' && ++starts === 1 && process.env.COMPUTER_FIXTURE_FAIL_ACTIVATION === '1') result = { active: false, code: 'computer_activation_required' };
     else if (request.method.startsWith('control.')) result = { active: true };

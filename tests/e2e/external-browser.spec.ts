@@ -94,7 +94,7 @@ test("external extension + native host: read, retained proposal, background acti
 		context = await chromium.launchPersistentContext(
 			join(userDataDir, "chromium-profile"),
 			{
-				channel: "chromium",
+				channel: process.env.DAEDALUS_E2E_BROWSER_CHANNEL === "msedge" ? "msedge" : "chromium",
 				headless: true,
 				args: [
 					`--disable-extensions-except=${extension}`,
