@@ -41,12 +41,17 @@ async function ensureFlowNodesInteractive(page: Page, nodes: Locator[]): Promise
 	for (const shell of shells) await expect(shell).toHaveAttribute("data-flow-render-mode", "full");
 }
 
-async function findBlankFlowCanvasPoint(page: Page): Promise<{ x: number; y: number }> {
-	const point = await page.evaluate((): { x: number; y: number } | null => {
+async function findBlankFlowCanvasPoint(
+	page: Page,
+	origin: { x: number; y: number },
+): Promise<{ x: number; y: number }> {
+	const point = await page.evaluate((origin): { x: number; y: number } | null => {
 		const pane = document.querySelector<HTMLElement>(".react-flow__pane");
 		if (pane === null) return null;
 		const bounds = pane.getBoundingClientRect();
-		const candidates = [0.08, 0.2, 0.5, 0.8, 0.92];
+		const candidates = [0.04, 0.16, 0.32, 0.5, 0.68, 0.84, 0.96];
+		let farthestPoint: { x: number; y: number } | null = null;
+		let farthestDistance = -1;
 		for (const yRatio of candidates) {
 			for (const xRatio of candidates) {
 				const x = bounds.left + bounds.width * xRatio;
@@ -56,12 +61,17 @@ async function findBlankFlowCanvasPoint(page: Page): Promise<{ x: number; y: num
 					element instanceof Element &&
 					element.closest(".react-flow__pane") !== null &&
 					element.closest(".react-flow__node") === null
-				)
-					return { x, y };
+				) {
+					const distance = (x - origin.x) ** 2 + (y - origin.y) ** 2;
+					if (distance > farthestDistance) {
+						farthestDistance = distance;
+						farthestPoint = { x, y };
+					}
+				}
 			}
 		}
-		return null;
-	});
+		return farthestPoint;
+	}, origin);
 	expect(point, "Expected a visible blank point inside the Flow canvas").not.toBeNull();
 	return point!;
 }
@@ -765,11 +775,17 @@ test.describe("Daedalus Flow node workflow", () => {
 		await expect(source).toBeVisible();
 		const sourceBox = await source.boundingBox();
 		expect(sourceBox).not.toBeNull();
-		await mainWindow.mouse.move(sourceBox!.x + sourceBox!.width / 2, sourceBox!.y + sourceBox!.height / 2);
+		const sourcePoint = {
+			x: sourceBox!.x + sourceBox!.width / 2,
+			y: sourceBox!.y + sourceBox!.height / 2,
+		};
+		const blankPoint = await findBlankFlowCanvasPoint(mainWindow, sourcePoint);
+		await source.hover();
 		await mainWindow.mouse.down();
-		const blankPoint = await findBlankFlowCanvasPoint(mainWindow);
-		await mainWindow.mouse.move(blankPoint.x, blankPoint.y, { steps: 20 });
+		await mainWindow.mouse.move(sourcePoint.x + 18, sourcePoint.y + 12, { steps: 2 });
+		await expect(source).toHaveClass(/connectingfrom/);
 		await expect(mainWindow.locator(".react-flow__connection")).toBeVisible();
+		await mainWindow.mouse.move(blankPoint.x, blankPoint.y, { steps: 12 });
 		await mainWindow.waitForTimeout(80);
 		await mainWindow.mouse.up();
 		await expect(mainWindow.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ })).toBeVisible();
