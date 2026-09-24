@@ -16,6 +16,11 @@
 	pointer-events: none;
 }
 
+.interactionShell .resizeControl:global(.top.left),
+.interactionShell .resizeControl:global(.top.right) {
+	color: var(--flow-resize-handle-color, #fff);
+}
+
 .interactionShell:hover .resizeControl,
 .interactionShell[data-flow-resizing="true"] .resizeControl {
 	opacity: 1;

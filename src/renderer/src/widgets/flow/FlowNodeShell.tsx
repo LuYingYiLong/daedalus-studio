@@ -1,10 +1,11 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, type CSSProperties } from "react";
 import { Handle, NodeResizeControl, Position, useReactFlow, type Node, type NodeProps, type OnResizeEnd, type ShouldResize } from "@xyflow/react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import { FLOW_NODE_MIN_HEIGHT, FLOW_NODE_MIN_WIDTH } from "@/domain/flow/flow-node-layout";
 import { FlowDocumentNodeView } from "./FlowNodes";
 import { FlowRenderContext, type FlowRenderRuntime } from "./flow-render-runtime";
+import { flowNodeResizeHandleColor } from "./flow-node-category-colors";
 import styles from "./FlowNodes.module.css";
 
 export type FlowInteractionNode = Node<{ nodeId: string; runtime: FlowRenderRuntime; layoutWidth?: number; layoutHeight?: number }, "flowNode">;
@@ -99,6 +100,12 @@ function FlowNodeShell({ data, selected }: NodeProps<FlowInteractionNode>): Reac
 		[runtime, nodeId],
 	);
 	if (!view) return null;
+	const shellStyle = {
+		...(mode === "outline"
+			? { width: geometry?.width ?? view.flowNode.width, height: geometry?.height ?? view.flowNode.height }
+			: { width: "100%", height: collapsed ? "auto" : "100%", minHeight: collapsed ? 0 : "inherit" }),
+		"--flow-resize-handle-color": flowNodeResizeHandleColor(view.definition?.category),
+	} as CSSProperties & { "--flow-resize-handle-color": string };
 	const edit = (): void => {
 		if (collapsed) toggleCollapsed();
 		runtime.canvas.pin(nodeId, true);
@@ -122,11 +129,7 @@ function FlowNodeShell({ data, selected }: NodeProps<FlowInteractionNode>): Reac
 				data-flow-shell={nodeId}
 				data-flow-render-mode={mode}
 				data-flow-collapsed={collapsed}
-				style={
-					mode === "outline"
-						? { width: geometry?.width ?? view.flowNode.width, height: geometry?.height ?? view.flowNode.height }
-						: { width: "100%", height: collapsed ? "auto" : "100%", minHeight: collapsed ? 0 : "inherit" }
-				}
+				style={shellStyle}
 				onDoubleClick={() => {
 					if (mode === "outline") edit();
 				}}
