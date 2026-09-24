@@ -370,23 +370,31 @@ function HomeFlowSurface({
 		return new Map(mutable);
 	}, [snapshot?.edges]);
 	const editorOptions = useMemo<FlowNodeEditorOptions>(
-		(): FlowNodeEditorOptions => ({
-			modelSelection: providerModelSelection,
-			modelsByProvider,
-			selectWorkspaceFile:
-				snapshot?.flow.workspaceId === null
-					? undefined
-					: async (): Promise<string | null> => {
-							const workspace = workspaceOptions.find(
-								(candidate): boolean => candidate.id === snapshot?.flow.workspaceId,
-							);
-							if (workspace === undefined || window.electronAPI === undefined) return null;
+		(): FlowNodeEditorOptions => {
+			const workspace = workspaceOptions.find(
+				(candidate): boolean => candidate.id === snapshot?.flow.workspaceId,
+			);
+			const canPickFiles = workspace !== undefined && window.electronAPI !== undefined;
+			return {
+				modelSelection: providerModelSelection,
+				modelsByProvider,
+				workspaceRoot: workspace?.rootPath,
+				selectWorkspaceFile: canPickFiles
+					? async (): Promise<string | null> => {
 							const entries = await window.electronAPI.workspaceFs.pickWorkspaceFiles({
 								workspaceRoot: workspace.rootPath,
 							});
 							return entries?.[0]?.relativePath ?? null;
-						},
-		}),
+						}
+					: undefined,
+				selectWorkspaceImage: canPickFiles
+					? async (): Promise<{ path: string; imported: boolean } | null> =>
+							await window.electronAPI.workspaceFs.pickFlowImageInput({
+								workspaceRoot: workspace.rootPath,
+							})
+					: undefined,
+			};
+		},
 		[modelsByProvider, providerModelSelection, snapshot?.flow.workspaceId, workspaceOptions],
 	);
 	const latestRun = snapshot?.runs[0];

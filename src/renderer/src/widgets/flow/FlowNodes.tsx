@@ -9,6 +9,7 @@ import {
 	Button,
 	Input,
 	InputNumber,
+	message,
 	Select,
 	Space,
 	Tooltip,
@@ -50,7 +51,9 @@ import { flowNodeCategoryColor } from "./flow-node-category-colors";
 export type FlowNodeEditorOptions = {
 	modelSelection: ProviderModelSelection | null;
 	modelsByProvider: Readonly<Record<string, ProviderModelInfo[]>>;
+	workspaceRoot?: string | undefined;
 	selectWorkspaceFile?: (() => Promise<string | null>) | undefined;
+	selectWorkspaceImage?: (() => Promise<{ path: string; imported: boolean } | null>) | undefined;
 };
 
 export type FlowCanvasNodeData = {
@@ -226,6 +229,28 @@ function readSchemaProperties(schema: Record<string, unknown>): Record<string, R
 	return properties !== null && typeof properties === "object" && !Array.isArray(properties)
 		? (properties as Record<string, Record<string, unknown>>)
 		: {};
+}
+
+type FlowWorkspaceMediaKind = "image" | "video" | "audio";
+
+function workspaceFileKind(
+	definition: FlowNodeTypeDefinition,
+	key: string,
+	schema: Record<string, unknown>,
+): FlowWorkspaceMediaKind | undefined {
+	const kind = schema["x-daedalus-file-kind"];
+	if (kind === "image" || kind === "video" || kind === "audio") return kind;
+	return definition.typeId === "builtin/image-input" && key === "path" ? "image" : undefined;
+}
+
+function workspaceFilePreviewKind(
+	definition: FlowNodeTypeDefinition,
+	key: string,
+	schema: Record<string, unknown>,
+): FlowWorkspaceMediaKind | undefined {
+	const kind = schema["x-daedalus-preview"];
+	if (kind === "image" || kind === "video" || kind === "audio") return kind;
+	return definition.typeId === "builtin/image-input" && key === "path" ? "image" : undefined;
 }
 
 function JsonField({
@@ -438,6 +463,11 @@ function SchemaEditor({
 			control === "workspace-file" ||
 			schema.format === "workspace-file" ||
 			(definition.typeId === "builtin/file-input" && key === "path");
+		const fileKind = workspaceFileKind(definition, key, schema);
+		const isImageFile = fileKind === "image";
+		const selectFile = isImageFile
+			? editorOptions.selectWorkspaceImage
+			: editorOptions.selectWorkspaceFile;
 		if (isWorkspaceFileControl)
 			return (
 				<Space.Compact block className="nodrag">
@@ -453,19 +483,55 @@ function SchemaEditor({
 						<Button
 							className="nodrag"
 							aria-label={t("flow.editor.chooseFile", { defaultValue: "Choose file" })}
-							disabled={disabled || editorOptions.selectWorkspaceFile === undefined}
+							disabled={disabled || selectFile === undefined}
 							icon={<Icon name="folder-open" />}
 							onClick={(): void => {
-								if (editorOptions.selectWorkspaceFile === undefined) return;
-								const generation = canvas.generation;
-								void editorOptions
-									.selectWorkspaceFile()
-									.then((path): void => {
-										if (path !== null && canvas.generation === generation) update(key, path);
-									})
-									.catch((): void => undefined);
-							}}
-						/>
+							if (selectFile === undefined) return;
+							const generation = canvas.generation;
+							const selectionPromise = isImageFile
+								? editorOptions.selectWorkspaceImage?.()
+								: editorOptions.selectWorkspaceFile?.();
+							void selectionPromise
+								?.then((selection): void => {
+									if (
+										selection === null ||
+										selection === undefined ||
+										canvas.generation !== generation
+									)
+									return;
+									if (typeof selection === "string") {
+									update(key, selection);
+									return;
+								}
+								update(key, selection.path);
+								if (selection.imported) {
+									message.success(
+										t("flow.editor.imageImported", {
+										defaultValue:
+										"Image copied into the Flow workspace input folder.",
+									}),
+								);
+								}
+							})
+							.catch((): void => {
+								if (isImageFile) {
+									message.error(
+										t("flow.editor.imageImportFailed", {
+										defaultValue:
+										"Could not import the image. Choose a PNG, JPEG, or WebP file up to 64 MiB.",
+									}),
+									);
+								} else {
+									message.error(
+										t("flow.editor.chooseFileFailed", {
+										defaultValue:
+										"Could not select the file. Choose a file from the Flow workspace.",
+									}),
+									);
+								}
+							});
+						}}
+					/>
 					</Tooltip>
 				</Space.Compact>
 			);
@@ -615,56 +681,159 @@ function SchemaEditor({
 		);
 	};
 	return (
-		<div className={styles.parameterList}>
-			{parameters.map((parameter): React.JSX.Element => {
-				const parameterLabel = flowNodeParameterLabel(t, definition.typeId, parameter.id, parameter.label);
-				const connectable = parameter.mode !== "fixed";
-				const connected = connectable && connectedInputIds.has(parameter.id);
-				const configField = parameter.mode === "connection" ? null : parameter.configField;
-				const schema = configField === null ? undefined : properties[configField];
-				const hidesControl =
-					parameter.mode === "connection" ||
-					(parameter.mode === "hybrid" && connected && parameter.hideControlWhenConnected);
-				const expandedControl =
-					schema?.["x-daedalus-control"] === "parameter-sets" ||
-					schema?.["x-daedalus-control"] === "typed-list";
-				return (
-					<div
-						key={parameter.id}
-						className={`${styles.parameterRow} ${hidesControl ? styles.parameterRowConnectionOnly : ""}`}
-						data-parameter-mode={parameter.mode}
-						data-parameter-connected={connected ? "true" : "false"}
-						style={expandedControl ? { flexWrap: "wrap" } : undefined}
-					>
-						<span className={styles.parameterSocket}>
-							{connectable ? (
-								<Handle
-									id={parameter.id}
-									type="target"
-									position={Position.Left}
-									className={styles.parameterHandle}
-									data-flow-port-id={parameter.id}
-									data-flow-port-kind={flowPortColorKind(parameter.dataTypes)}
-									style={{ "--flow-port-color": flowPortColor(parameter.dataTypes) } as CSSProperties}
-								/>
+		<div className={styles.schemaEditor}>
+			<div className={styles.parameterList}>
+				{parameters.map((parameter): React.JSX.Element => {
+					const parameterLabel = flowNodeParameterLabel(t, definition.typeId, parameter.id, parameter.label);
+					const connectable = parameter.mode !== "fixed";
+					const connected = connectable && connectedInputIds.has(parameter.id);
+					const configField = parameter.mode === "connection" ? null : parameter.configField;
+					const schema = configField === null ? undefined : properties[configField];
+					const hidesControl =
+						parameter.mode === "connection" ||
+						(parameter.mode === "hybrid" && connected && parameter.hideControlWhenConnected);
+					const expandedControl =
+						schema?.["x-daedalus-control"] === "parameter-sets" ||
+						schema?.["x-daedalus-control"] === "typed-list";
+					return (
+						<div
+							key={parameter.id}
+							className={`${styles.parameterRow} ${hidesControl ? styles.parameterRowConnectionOnly : ""}`}
+							data-parameter-mode={parameter.mode}
+							data-parameter-connected={connected ? "true" : "false"}
+							style={expandedControl ? { flexWrap: "wrap" } : undefined}
+						>
+							<span className={styles.parameterSocket}>
+								{connectable ? (
+									<Handle
+										id={parameter.id}
+										type="target"
+										position={Position.Left}
+										className={styles.parameterHandle}
+										data-flow-port-id={parameter.id}
+										data-flow-port-kind={flowPortColorKind(parameter.dataTypes)}
+										style={{ "--flow-port-color": flowPortColor(parameter.dataTypes) } as CSSProperties}
+									/>
+								) : null}
+							</span>
+							<span className={styles.parameterLabel} title={parameterLabel}>
+								{parameterLabel}
+								{connectable && parameter.cardinality && parameter.cardinality !== "one" ? " []" : ""}
+							</span>
+							{!hidesControl && configField !== null && schema !== undefined ? (
+								<div
+									className={styles.parameterControl}
+									style={expandedControl ? { flex: "1 1 100%", maxWidth: "100%" } : undefined}
+								>
+									{renderControl(configField, schema, parameterLabel)}
+								</div>
 							) : null}
-						</span>
-						<span className={styles.parameterLabel} title={parameterLabel}>
-							{parameterLabel}
-							{connectable && parameter.cardinality && parameter.cardinality !== "one" ? " []" : ""}
-						</span>
-						{!hidesControl && configField !== null && schema !== undefined ? (
-							<div
-								className={styles.parameterControl}
-								style={expandedControl ? { flex: "1 1 100%", maxWidth: "100%" } : undefined}
-							>
-								{renderControl(configField, schema, parameterLabel)}
-							</div>
-						) : null}
-					</div>
-				);
-			})}
+						</div>
+					);
+				})}
+			</div>
 		</div>
+	);
+}
+
+function SchemaMediaPreviews({
+	node,
+	definition,
+	editorOptions,
+}: {
+	node: FlowDocumentNode;
+	definition: FlowNodeTypeDefinition;
+	editorOptions: FlowNodeEditorOptions;
+}): React.JSX.Element | null {
+	const { t } = useTranslation();
+	const runtime = useContext(FlowRenderContext);
+	const [fallbackStore] = useState(() => new FlowCanvasStore());
+	const canvas = runtime?.canvas ?? fallbackStore;
+	const config = useSyncExternalStore(
+		useCallback((listener) => canvas.drafts.subscribe(node.nodeId, listener), [canvas, node.nodeId]),
+		() => canvas.drafts.get(node.nodeId) ?? node.config,
+	);
+	const properties = readSchemaProperties(definition.configSchema);
+	const previewFields = Object.entries(properties)
+		.filter(([key, schema]) =>
+			workspaceFilePreviewKind(definition, key, schema) !== undefined &&
+			(schema["x-daedalus-control"] === "workspace-file" || schema.format === "workspace-file"),
+		)
+		.map(([key, schema]) => ({
+			key,
+			path: typeof config[key] === "string" ? (config[key] as string) : "",
+			kind: workspaceFilePreviewKind(definition, key, schema)!,
+		}));
+	const previewKey = JSON.stringify(previewFields);
+	const [previews, setPreviews] = useState<Record<string, { path: string; url: string; mimeType: string } | null>>({});
+	useEffect((): void => {
+		canvas.acceptConfig(node.nodeId, node.config);
+	}, [canvas, node.nodeId, node.config]);
+	useEffect(() => () => fallbackStore.dispose(), [fallbackStore]);
+	useEffect((): (() => void) | void => {
+		let active = true;
+		const fields = JSON.parse(previewKey) as Array<{ key: string; path: string; kind: string }>;
+		if (editorOptions.workspaceRoot === undefined || window.electronAPI === undefined) {
+			setPreviews({});
+			return;
+		}
+		const entries = fields.filter((field) => field.path.length > 0);
+		if (entries.length === 0) {
+			setPreviews({});
+			return;
+		}
+		setPreviews((current) => Object.fromEntries(entries.map((field) => [field.key, current[field.key] ?? null])));
+		void Promise.all(
+			entries.map(async (field) => {
+				try {
+					const media = await window.electronAPI!.workspaceFs.createMediaUrl({
+						workspaceRoot: editorOptions.workspaceRoot!,
+						filePath: field.path,
+					});
+					return [
+						field.key,
+						media.supported &&
+							media.kind === field.kind &&
+							media.url !== undefined &&
+							media.mimeType !== undefined
+							? { path: field.path, url: media.url, mimeType: media.mimeType }
+							: null,
+					] as const;
+				} catch {
+					return [field.key, null] as const;
+				}
+			}),
+		).then((results) => {
+			if (active) setPreviews(Object.fromEntries(results));
+		});
+		return (): void => {
+			active = false;
+		};
+	}, [editorOptions.workspaceRoot, previewKey]);
+	const visiblePreviews = previewFields.flatMap((field) => {
+		const preview = previews[field.key];
+		return preview !== undefined && preview !== null && preview.path === field.path ? [{ field, preview }] : [];
+	});
+	if (visiblePreviews.length === 0) return null;
+	return (
+		<>
+			{visiblePreviews.map(({ field, preview }) => (
+				<div
+					key={field.key}
+					className={styles.schemaMediaPreview}
+					role="region"
+					aria-label={t("flow.editor.fileMediaPreview", { defaultValue: "Selected media preview" })}
+				>
+					<FlowMediaGallery
+						source={{
+							url: preview.url,
+							mimeType: preview.mimeType,
+							alt: t("flow.editor.fileMediaPreview", { defaultValue: "Selected media preview" }),
+						}}
+					/>
+				</div>
+			))}
+		</>
 	);
 }
 
@@ -1042,6 +1211,16 @@ function FlowNodeCard({
 		[flowNode.nodeId, handleLayoutKey, collapsed, updateNodeInternals],
 	);
 	const isOutputNode = flowNode.typeId === "builtin/output" || flowNode.typeId === "builtin/media-output";
+	const hasSchemaMediaPreview = useMemo(
+		(): boolean =>
+			definition?.ui.kind === "schema" &&
+			Object.entries(readSchemaProperties(definition.configSchema)).some(
+				([key, schema]) =>
+					workspaceFilePreviewKind(definition, key, schema) !== undefined &&
+					(schema["x-daedalus-control"] === "workspace-file" || schema.format === "workspace-file"),
+			),
+		[definition],
+	);
 	const mediaArtifacts = useMemo(
 		(): FlowMediaArtifactRef[] => collectMediaArtifacts(data.nodeRun?.output),
 		[data.nodeRun?.output],
@@ -1153,7 +1332,9 @@ function FlowNodeCard({
 						</div>
 					</header>
 					{!collapsed ? (
-						<div className={`${styles.body}${isOutputNode ? ` ${styles.outputBody}` : ""}`}>
+						<div
+							className={`${styles.body}${isOutputNode ? ` ${styles.outputBody}` : ""}${hasSchemaMediaPreview ? ` ${styles.schemaMediaBody}` : ""}`}
+						>
 							{typeof data.nodeRun?.progress === "number" && data.nodeRun.status === "running" ? (
 								<div
 									className={styles.progressTrack}
@@ -1194,6 +1375,13 @@ function FlowNodeCard({
 									onChange={updateConfig}
 								/>
 							)}
+							{definition?.ui.kind === "schema" ? (
+								<SchemaMediaPreviews
+									node={flowNode}
+									definition={definition}
+									editorOptions={data.editorOptions}
+								/>
+							) : null}
 							{definition?.ui.kind === "sandbox" ? (
 								<Button
 									size="small"

@@ -629,6 +629,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		pickWorkspaceFiles: (params: { workspaceRoot: string }): Promise<Array<{ name: string; relativePath: string; resourcePath: string; kind: "file" | "folder" }> | null> => {
 			return ipcRenderer.invoke("workspace-fs:pick-files", params);
 		},
+		pickFlowImageInput: (params: { workspaceRoot: string }): Promise<{ path: string; imported: boolean } | null> => {
+			return ipcRenderer.invoke("workspace-fs:pick-flow-image-input", params);
+		},
 		pickWorkspaceFolder: (params: { workspaceRoot: string }): Promise<Array<{ name: string; relativePath: string; resourcePath: string; kind: "file" | "folder" }> | null> => {
 			return ipcRenderer.invoke("workspace-fs:pick-folder", params);
 		},

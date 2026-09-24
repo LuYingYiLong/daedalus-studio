@@ -751,6 +751,10 @@
 			"closePluginEditor": "Finish plugin editing",
 			"outputPending": "Run the Flow to see its output here",
 			"chooseFile": "Choose file",
+			"chooseFileFailed": "Could not select the file. Choose a file from the Flow workspace.",
+			"imageImported": "Image copied into the Flow workspace input folder.",
+			"imageImportFailed": "Could not import the image. Choose a PNG, JPEG, or WebP file up to 64 MiB.",
+			"imageInputPreview": "Selected image preview",
 			"approvalModes": {
 				"manual": "Manual",
 				"auto-safe": "Auto safe",

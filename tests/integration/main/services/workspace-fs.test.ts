@@ -1,9 +1,9 @@
-import { mkdir, realpath, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtempSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, createWorkspaceMediaFileUrl, getPickedWorkspaceDirectory, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceFile, openWorkspaceLaunchTarget, readWorkspaceTextFile, revealWorkspaceFile, searchWorkspaceEntries, statWorkspaceFile, stopGodotRuntimeTestProcess, writeWorkspaceTextFile, type WorkspaceLaunchSpawnOptions } from "@main/services/workspace-fs";
+import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, createWorkspaceMediaFileUrl, getPickedWorkspaceDirectory, importFlowImageInput, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceFile, openWorkspaceLaunchTarget, readWorkspaceTextFile, revealWorkspaceFile, searchWorkspaceEntries, statWorkspaceFile, stopGodotRuntimeTestProcess, writeWorkspaceTextFile, type WorkspaceLaunchSpawnOptions } from "@main/services/workspace-fs";
 
 describe("workspace-fs", () => {
 	it("reads UTF-8 text with a stable fingerprint and rejects binary or oversized editor input", async () => {
@@ -121,6 +121,35 @@ describe("workspace-fs", () => {
 
 		await expect(createWorkspaceEntryFromAbsolutePath(root, join(outsideRoot, "project.godot"), "file")).rejects.toThrow("outside workspace");
 		await expect(createWorkspaceEntryFromAbsolutePath(root, filePath, "folder")).rejects.toThrow("not a folder");
+	});
+
+	it("imports external Flow image inputs into the workspace and reuses identical files", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const outsideRoot: string = mkdtempSync(join(tmpdir(), "daedalus-studio-image-"));
+		const sourcePath: string = join(outsideRoot, "source.jpg");
+		const bytes: Buffer = Buffer.from([0xff, 0xd8, 0xff, 0x00, 0x10]);
+		await writeFile(sourcePath, bytes);
+
+		const imported = await importFlowImageInput(root, sourcePath);
+		expect(imported.imported).toBe(true);
+		expect(imported.path).toMatch(/^\.daedalus\/flow-inputs\/[a-f0-9]{64}\.jpg$/u);
+		await expect(readFile(join(root, imported.path))).resolves.toEqual(bytes);
+		await expect(createWorkspaceMediaFileUrl({ workspaceRoot: root, filePath: imported.path })).resolves.toMatchObject({
+			supported: true,
+			kind: "image",
+			mimeType: "image/jpeg",
+			relativePath: imported.path,
+		});
+		await expect(importFlowImageInput(root, sourcePath)).resolves.toEqual(imported);
+	});
+
+	it("keeps selected images that are already inside the workspace in place", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
+		const sourcePath: string = join(root, "images", "source.png");
+		await mkdir(join(root, "images"));
+		await writeFile(sourcePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+
+		await expect(importFlowImageInput(root, sourcePath)).resolves.toEqual({ path: "images/source.png", imported: false });
 	});
 
 	it("creates workspace entries from dropped absolute paths", async () => {

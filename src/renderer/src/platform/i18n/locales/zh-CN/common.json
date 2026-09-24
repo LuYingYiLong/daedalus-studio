@@ -746,6 +746,10 @@
 			"closePluginEditor": "完成插件编辑",
 			"outputPending": "运行 Flow 后，输出内容会显示在这里",
 			"chooseFile": "选择文件",
+			"chooseFileFailed": "无法选择该文件，请确认文件位于当前工作区内。",
+			"imageImported": "已将图片导入工作区 Flow 输入目录",
+			"imageImportFailed": "无法导入所选图片，请选择不超过 64 MiB 的 PNG、JPEG 或 WebP 图片。",
+			"imageInputPreview": "所选图片预览",
 			"approvalModes": {
 				"manual": "手动",
 				"auto-safe": "自动安全",

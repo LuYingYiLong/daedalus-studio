@@ -253,7 +253,9 @@
         "path": {
           "type": "string",
           "maxLength": 4000,
-          "x-daedalus-control": "workspace-file"
+          "x-daedalus-control": "workspace-file",
+          "x-daedalus-file-kind": "image",
+          "x-daedalus-preview": "image"
         }
       },
       "required": [

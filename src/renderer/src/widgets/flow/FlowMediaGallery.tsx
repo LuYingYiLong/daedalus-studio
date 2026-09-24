@@ -7,14 +7,26 @@ import { getFlowPreviewSource } from "./flow-resource-cache";
 
 function Preview({
 	artifact,
+	mediaSource,
 	thumbnail = false,
 }: {
-	artifact: FlowMediaArtifactRef;
+	artifact?: FlowMediaArtifactRef;
+	mediaSource?: FlowMediaGallerySource;
 	thumbnail?: boolean;
 }): React.JSX.Element {
 	const [source, setSource] = useState<string | null>(null);
 	useEffect(() => {
 		let disposed = false;
+		if (mediaSource !== undefined) {
+			setSource(mediaSource.url);
+			return () => {
+				disposed = true;
+			};
+		}
+		if (artifact === undefined) {
+			setSource(null);
+			return;
+		}
 		setSource(null);
 		void getFlowPreviewSource(artifact.artifactId, artifact.mimeType, thumbnail)
 			.then((value) => {
@@ -24,34 +36,45 @@ function Preview({
 		return () => {
 			disposed = true;
 		};
-	}, [artifact.artifactId, artifact.mimeType, thumbnail]);
-	if (!source) return <Typography.Text type="secondary">{artifact.mimeType}</Typography.Text>;
-	if (artifact.mimeType.startsWith("image/"))
+	}, [artifact?.artifactId, artifact?.mimeType, mediaSource?.mimeType, mediaSource?.url, thumbnail]);
+	const mimeType = mediaSource?.mimeType ?? artifact?.mimeType;
+	if (!mimeType) return <></>;
+	if (!source) return <Typography.Text type="secondary">{mimeType}</Typography.Text>;
+	if (mimeType.startsWith("image/"))
 		return (
 			<Image
 				src={source}
-				alt=""
-				preview={thumbnail ? false : {
-					closeIcon: imagePreviewCloseIcon,
-					actionsRender: renderImagePreviewToolbar
-				}}
+				alt={mediaSource?.alt ?? ""}
+				preview={
+					thumbnail
+						? false
+						: {
+								closeIcon: imagePreviewCloseIcon,
+								actionsRender: renderImagePreviewToolbar,
+							}
+				}
 				classNames={{
 					popup: {
 						close: "daedalus-image-preview-close",
 						footer: "daedalus-image-preview-footer",
-						actions: "daedalus-image-preview-actions"
-					}
+						actions: "daedalus-image-preview-actions",
+					},
 				}}
 				style={{ width: "100%", height: "100%", objectFit: "contain" }}
 				styles={{ root: { width: "100%", height: "100%", minHeight: 0 } }}
 			/>
 		);
-	if (artifact.mimeType.startsWith("video/"))
+	if (mimeType.startsWith("video/"))
 		return <video src={source} controls preload="metadata" style={{ width: "100%", height: "100%" }} />;
 	return <audio src={source} controls preload="metadata" />;
 }
 
-export function FlowMediaGallery({ artifacts }: { artifacts: FlowMediaArtifactRef[] }): React.JSX.Element {
+export type FlowMediaGallerySource = { url: string; mimeType: string; alt?: string };
+type FlowMediaGalleryProps =
+	| { artifacts: FlowMediaArtifactRef[]; source?: never }
+	| { source: FlowMediaGallerySource; artifacts?: never };
+
+function ArtifactGallery({ artifacts }: { artifacts: FlowMediaArtifactRef[] }): React.JSX.Element {
 	const { t } = useTranslation();
 	const [selected, setSelected] = useState(0);
 	const [compare, setCompare] = useState<number | null>(null);
@@ -125,4 +148,14 @@ export function FlowMediaGallery({ artifacts }: { artifacts: FlowMediaArtifactRe
 			</Typography.Text>
 		</div>
 	);
+}
+
+export function FlowMediaGallery(props: FlowMediaGalleryProps): React.JSX.Element {
+	if ("source" in props && props.source !== undefined)
+		return (
+			<div className="nodrag" style={{ display: "flex", width: "100%", height: "100%", minHeight: 80 }}>
+				<Preview mediaSource={props.source} />
+			</div>
+		);
+	return <ArtifactGallery artifacts={props.artifacts} />;
 }

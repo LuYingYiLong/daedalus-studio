@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { existsSync } from "node:fs";
-import { access, lstat, readFile, readdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
+import { access, lstat, mkdir, readFile, readdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -38,6 +38,7 @@ export type WorkspaceFsPickEntriesParams = {
 	workspaceRoot: string;
 };
 export type WorkspaceFsPickEntriesResult = WorkspaceFsEntry[] | null;
+export type WorkspaceFsPickFlowImageInputResult = { path: string; imported: boolean } | null;
 export type WorkspaceFsCreateEntriesFromPathsParams = {
 	workspaceRoot: string;
 	paths: string[];
@@ -830,6 +831,64 @@ export async function pickWorkspaceFiles(owner: BrowserWindow | undefined, param
 	}));
 }
 
+const FLOW_IMAGE_INPUT_DIRECTORY: string = ".daedalus/flow-inputs";
+const FLOW_IMAGE_INPUT_EXTENSIONS: ReadonlySet<string> = new Set([".jpg", ".jpeg", ".png", ".webp"]);
+const FLOW_IMAGE_INPUT_MAX_BYTES: number = 64 * 1024 * 1024;
+
+export async function importFlowImageInput(workspaceRoot: string, selectedPath: string): Promise<{ path: string; imported: boolean }> {
+	const rootRealPath: string = await realpath(resolve(workspaceRoot));
+	const sourceRealPath: string = await realpath(selectedPath);
+	const sourceStats = await stat(sourceRealPath);
+	if (!sourceStats.isFile()) throw new Error("flow_image_input_not_file");
+	if (sourceStats.size > FLOW_IMAGE_INPUT_MAX_BYTES) throw new Error("flow_image_input_too_large");
+	const extension: string = extname(sourceRealPath).toLowerCase();
+	if (!FLOW_IMAGE_INPUT_EXTENSIONS.has(extension)) throw new Error("flow_image_input_unsupported_type");
+	if (isPathInside(rootRealPath, sourceRealPath)) {
+		return { path: relative(rootRealPath, sourceRealPath).replaceAll("\\", "/"), imported: false };
+	}
+
+	const bytes: Buffer = await readFile(sourceRealPath);
+	const digest: string = createHash("sha256").update(bytes).digest("hex");
+	const directoryPath: string = resolve(rootRealPath, FLOW_IMAGE_INPUT_DIRECTORY);
+	await mkdir(directoryPath, { recursive: true });
+	const directoryRealPath: string = await realpath(directoryPath);
+	if (!isPathInside(rootRealPath, directoryRealPath)) throw new Error("flow_image_input_path_invalid");
+	const targetPath: string = join(directoryRealPath, digest + extension);
+	try {
+		await writeFile(targetPath, bytes, { flag: "wx" });
+	} catch (error) {
+		const errorCode: unknown = error instanceof Error && "code" in error ? error.code : undefined;
+		if (errorCode !== "EEXIST") throw error;
+		const existingPath: string = await realpath(targetPath);
+		if (!isPathInside(rootRealPath, existingPath) || !(await stat(existingPath)).isFile()) {
+			throw new Error("flow_image_input_path_invalid");
+		}
+		const existingDigest: string = createHash("sha256").update(await readFile(existingPath)).digest("hex");
+		if (existingDigest !== digest) throw new Error("flow_image_input_conflict");
+	}
+	const importedPath: string = await realpath(targetPath);
+	if (!isPathInside(rootRealPath, importedPath)) throw new Error("flow_image_input_path_invalid");
+	return { path: relative(rootRealPath, importedPath).replaceAll("\\", "/"), imported: true };
+}
+
+export async function pickFlowImageInput(
+	owner: BrowserWindow | undefined,
+	params: WorkspaceFsPickEntriesParams,
+): Promise<WorkspaceFsPickFlowImageInputResult> {
+	const options: Electron.OpenDialogOptions = {
+		title: "Select image for Flow",
+		defaultPath: resolve(params.workspaceRoot),
+		properties: ["openFile"],
+		filters: [{ name: "Images", extensions: ["jpg", "jpeg", "png", "webp"] }],
+	};
+	const result: Electron.OpenDialogReturnValue = owner === undefined
+		? await dialog.showOpenDialog(options)
+		: await dialog.showOpenDialog(owner, options);
+	if (result.canceled) return null;
+	const selectedPath: string | undefined = result.filePaths[0];
+	return selectedPath === undefined ? null : await importFlowImageInput(params.workspaceRoot, selectedPath);
+}
+
 export async function pickWorkspaceFolder(owner: BrowserWindow | undefined, params: WorkspaceFsPickEntriesParams): Promise<WorkspaceFsPickEntriesResult> {
 	const options: Electron.OpenDialogOptions = {
 		title: "Add folder from workspace",
@@ -1050,6 +1109,9 @@ export function registerWorkspaceFsIpc(): void {
 	});
 	ipcMain.handle("workspace-fs:pick-files", async (event, params: WorkspaceFsPickEntriesParams): Promise<WorkspaceFsPickEntriesResult> => {
 		return pickWorkspaceFiles(BrowserWindow.fromWebContents(event.sender) ?? undefined, params);
+	});
+	ipcMain.handle("workspace-fs:pick-flow-image-input", async (event, params: WorkspaceFsPickEntriesParams): Promise<WorkspaceFsPickFlowImageInputResult> => {
+		return pickFlowImageInput(BrowserWindow.fromWebContents(event.sender) ?? undefined, params);
 	});
 	ipcMain.handle("workspace-fs:pick-folder", async (event, params: WorkspaceFsPickEntriesParams): Promise<WorkspaceFsPickEntriesResult> => {
 		return pickWorkspaceFolder(BrowserWindow.fromWebContents(event.sender) ?? undefined, params);
