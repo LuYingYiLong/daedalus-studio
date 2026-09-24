@@ -230,6 +230,24 @@
 	white-space: nowrap;
 }
 
+.roleInput:global(.ant-input) {
+	flex: 1 1 auto;
+	width: 100%;
+	min-width: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	color: inherit;
+	background: transparent;
+	box-shadow: none;
+}
+
+.roleInput:global(.ant-input):focus {
+	border-bottom-color: #fff;
+	background: transparent;
+	box-shadow: none;
+}
+
 .body {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);

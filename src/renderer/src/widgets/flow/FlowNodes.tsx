@@ -1232,6 +1232,42 @@ function FlowNodeCard({
 	const updateConfig = (config: Record<string, unknown>): void =>
 		data.onUpdate(flowNode.nodeId, { config, historyGroup: runtime?.canvas.editGroups.get(flowNode.nodeId) });
 	const nodeTitle = flowNodeTitle(t, flowNode, definition);
+	const [renamingTitle, setRenamingTitle] = useState(false);
+	const [titleDraft, setTitleDraft] = useState(nodeTitle);
+	const renameFinished = useRef(false);
+	const subscribeTitleRename = useCallback(
+		(listener: () => void): (() => void) =>
+			runtime?.canvas.titleRenameRequests.subscribe(flowNode.nodeId, listener) ?? (() => undefined),
+		[runtime, flowNode.nodeId],
+	);
+	const getTitleRenameRequest = useCallback(
+		(): number => runtime?.canvas.titleRenameRequests.get(flowNode.nodeId) ?? 0,
+		[runtime, flowNode.nodeId],
+	);
+	const titleRenameRequest = useSyncExternalStore(subscribeTitleRename, getTitleRenameRequest, () => 0);
+	const handledTitleRenameRequest = useRef(0);
+	const beginTitleRename = useCallback((): void => {
+		if (data.locked) return;
+		runtime?.canvas.pin(flowNode.nodeId, true);
+		renameFinished.current = false;
+		setTitleDraft(nodeTitle);
+		setRenamingTitle(true);
+	}, [data.locked, flowNode.nodeId, nodeTitle, runtime]);
+	useEffect((): void => {
+		if (titleRenameRequest <= handledTitleRenameRequest.current) return;
+		handledTitleRenameRequest.current = titleRenameRequest;
+		beginTitleRename();
+	}, [beginTitleRename, titleRenameRequest]);
+	const finishTitleRename = (commit: boolean): void => {
+		if (renameFinished.current) return;
+		renameFinished.current = true;
+		const nextTitle = titleDraft.trim();
+		setRenamingTitle(false);
+		setTitleDraft(nodeTitle);
+		runtime?.canvas.pin(flowNode.nodeId, false);
+		if (commit && !data.locked && nextTitle.length > 0 && nextTitle !== nodeTitle)
+			data.onUpdate(flowNode.nodeId, { title: nextTitle });
+	};
 	const nodeStatus = data.nodeRun?.status ?? flowNode.status;
 	const nodeError = data.nodeRun?.error?.trim() || t("flow.editor.nodeFailureFallback");
 	const runInputLabel =
@@ -1292,7 +1328,44 @@ function FlowNodeCard({
 							>
 								<Icon name="arrow-down" />
 							</button>
-							<span className={styles.role}>{nodeTitle}</span>
+							{renamingTitle ? (
+								<Input
+									autoFocus
+									className={`${styles.roleInput} nodrag nopan`}
+									aria-label={t("flow.editor.renameNode")}
+									maxLength={200}
+									value={titleDraft}
+									onChange={(event): void => setTitleDraft(event.target.value)}
+									onFocus={(event): void => event.currentTarget.select()}
+									onPointerDown={(event): void => event.stopPropagation()}
+									onClick={(event): void => event.stopPropagation()}
+									onDoubleClick={(event): void => event.stopPropagation()}
+									onBlur={(): void => finishTitleRename(true)}
+									onKeyDown={(event): void => {
+										event.stopPropagation();
+										if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+											event.preventDefault();
+											finishTitleRename(true);
+										} else if (event.key === "Escape") {
+											event.preventDefault();
+											finishTitleRename(false);
+										}
+									}}
+								/>
+							) : (
+								<span
+									className={styles.role}
+									data-flow-node-role
+									title={data.locked ? undefined : t("flow.editor.renameNode")}
+									onDoubleClick={(event): void => {
+										event.preventDefault();
+										event.stopPropagation();
+										beginTitleRename();
+									}}
+								>
+									{nodeTitle}
+								</span>
+							)}
 						</div>
 						<div className={styles.headerActions}>
 							{flowNode.typeId === "builtin/flow-input" ? (

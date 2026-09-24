@@ -104,7 +104,7 @@ export default function FlowNodePicker({
 				: target instanceof Node
 					? target.parentElement
 					: null;
-			if (element?.closest("[data-flow-node-picker-popup]") !== null) return;
+			if (element && element.closest("[data-flow-node-picker-popup], [data-flow-context-menu-popup]") !== null) return;
 			closePicker();
 		};
 		document.addEventListener("pointerdown", closeOnOutsidePointerDown, true);

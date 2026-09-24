@@ -93,6 +93,15 @@ type PickerState = {
 	definitions: FlowNodeTypeDefinition[];
 	connection: PickerConnection | null;
 };
+type CanvasContextMenuState = {
+	kind: "node" | "pane";
+	x: number;
+	y: number;
+	clientX: number;
+	clientY: number;
+	nodeId?: string;
+};
+type CanvasContextEvent = ReactMouseEvent | MouseEvent;
 type InteractionSample = {
 	kind: "node-drag" | "viewport";
 	startedAt: number;
@@ -217,7 +226,8 @@ function compatibleType(
 	source: FlowNodePortDefinition,
 	target: FlowNodePortDefinition,
 ): FlowNodePortDefinition["dataTypes"][number] | null {
-	if (target.cardinality !== "one-or-many" && (source.cardinality ?? "one") !== (target.cardinality ?? "one")) return null;
+	if (target.cardinality !== "one-or-many" && (source.cardinality ?? "one") !== (target.cardinality ?? "one"))
+		return null;
 	return source.dataTypes.find((dataType): boolean => target.dataTypes.includes(dataType)) ?? null;
 }
 
@@ -257,7 +267,11 @@ function reachableOutputNodeIds(
 	definitions: readonly FlowNodeTypeDefinition[],
 ): string[] {
 	const outputNodeIds = new Set(
-		nodes.filter((node): boolean => definitions.some(definition => definition.typeId === node.typeId && definition.terminal)).map((node): string => node.nodeId),
+		nodes
+			.filter((node): boolean =>
+				definitions.some((definition) => definition.typeId === node.typeId && definition.terminal),
+			)
+			.map((node): string => node.nodeId),
 	);
 	const outgoing = new Map<string, string[]>();
 	for (const edge of edges) {
@@ -310,6 +324,8 @@ function HomeFlowSurface({
 	}, [runtime]);
 	const [nodes, setNodes] = useState<FlowCanvasNode[]>([]);
 	const [picker, setPicker] = useState<PickerState | null>(null);
+	const [contextMenu, setContextMenu] = useState<CanvasContextMenuState | null>(null);
+	const [nodeClipboard, setNodeClipboard] = useState<FlowDocumentNode[]>([]);
 	const [searchOpen, setSearchOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchIndex, setSearchIndex] = useState(0);
@@ -325,9 +341,10 @@ function HomeFlowSurface({
 	const modelsByProvider = useMemo<Record<string, ProviderModelInfo[]>>(
 		(): Record<string, ProviderModelInfo[]> =>
 			Object.fromEntries(
-				(providerModelSelection?.providers ?? []).map(
-					(provider): [string, ProviderModelInfo[]] => [provider.provider, provider.models],
-				),
+				(providerModelSelection?.providers ?? []).map((provider): [string, ProviderModelInfo[]] => [
+					provider.provider,
+					provider.models,
+				]),
 			),
 		[providerModelSelection?.providers],
 	);
@@ -369,34 +386,29 @@ function HomeFlowSurface({
 		}
 		return new Map(mutable);
 	}, [snapshot?.edges]);
-	const editorOptions = useMemo<FlowNodeEditorOptions>(
-		(): FlowNodeEditorOptions => {
-			const workspace = workspaceOptions.find(
-				(candidate): boolean => candidate.id === snapshot?.flow.workspaceId,
-			);
-			const canPickFiles = workspace !== undefined && window.electronAPI !== undefined;
-			return {
-				modelSelection: providerModelSelection,
-				modelsByProvider,
-				workspaceRoot: workspace?.rootPath,
-				selectWorkspaceFile: canPickFiles
-					? async (): Promise<string | null> => {
-							const entries = await window.electronAPI.workspaceFs.pickWorkspaceFiles({
-								workspaceRoot: workspace.rootPath,
-							});
-							return entries?.[0]?.relativePath ?? null;
-						}
-					: undefined,
-				selectWorkspaceImage: canPickFiles
-					? async (): Promise<{ path: string; imported: boolean } | null> =>
-							await window.electronAPI.workspaceFs.pickFlowImageInput({
-								workspaceRoot: workspace.rootPath,
-							})
-					: undefined,
-			};
-		},
-		[modelsByProvider, providerModelSelection, snapshot?.flow.workspaceId, workspaceOptions],
-	);
+	const editorOptions = useMemo<FlowNodeEditorOptions>((): FlowNodeEditorOptions => {
+		const workspace = workspaceOptions.find((candidate): boolean => candidate.id === snapshot?.flow.workspaceId);
+		const canPickFiles = workspace !== undefined && window.electronAPI !== undefined;
+		return {
+			modelSelection: providerModelSelection,
+			modelsByProvider,
+			workspaceRoot: workspace?.rootPath,
+			selectWorkspaceFile: canPickFiles
+				? async (): Promise<string | null> => {
+						const entries = await window.electronAPI.workspaceFs.pickWorkspaceFiles({
+							workspaceRoot: workspace.rootPath,
+						});
+						return entries?.[0]?.relativePath ?? null;
+					}
+				: undefined,
+			selectWorkspaceImage: canPickFiles
+				? async (): Promise<{ path: string; imported: boolean } | null> =>
+						await window.electronAPI.workspaceFs.pickFlowImageInput({
+							workspaceRoot: workspace.rootPath,
+						})
+				: undefined,
+		};
+	}, [modelsByProvider, providerModelSelection, snapshot?.flow.workspaceId, workspaceOptions]);
 	const latestRun = snapshot?.runs[0];
 	const running =
 		latestRun?.status === "running" || latestRun?.status === "queued" || latestRun?.status === "waiting";
@@ -428,13 +440,18 @@ function HomeFlowSurface({
 		[controller.setApprovalMode, snapshot?.flow.approvalMode, t],
 	);
 	const runEntryGroups = useMemo(
-		(): FlowRunEntryGroup[] => groupFlowRunEntries(snapshot?.nodes ?? [], snapshot?.edges ?? [], controller.nodeDefinitions),
+		(): FlowRunEntryGroup[] =>
+			groupFlowRunEntries(snapshot?.nodes ?? [], snapshot?.edges ?? [], controller.nodeDefinitions),
 		[snapshot?.edges, snapshot?.nodes, controller.nodeDefinitions],
 	);
 	const outputNodeIds = useMemo(
 		(): string[] =>
 			snapshot?.nodes
-				.filter((node): boolean => controller.nodeDefinitions.some(definition => definition.typeId === node.typeId && definition.terminal))
+				.filter((node): boolean =>
+					controller.nodeDefinitions.some(
+						(definition) => definition.typeId === node.typeId && definition.terminal,
+					),
+				)
 				.map((node): string => node.nodeId) ?? [],
 		[snapshot?.nodes, controller.nodeDefinitions],
 	);
@@ -554,7 +571,14 @@ function HomeFlowSurface({
 			if (action === "retry-batch") void runSelectedEntry([]);
 			if (action === "run") void runSelectedEntry([nodeId]);
 		},
-		[controller.setNodeCollapsed, runSelectedEntry, snapshot?.edges, snapshot?.nodes, startRequestedRun, controller.nodeDefinitions],
+		[
+			controller.setNodeCollapsed,
+			runSelectedEntry,
+			snapshot?.edges,
+			snapshot?.nodes,
+			startRequestedRun,
+			controller.nodeDefinitions,
+		],
 	);
 	const actionRef = useRef(runCanvasNodeActionImpl);
 	actionRef.current = runCanvasNodeActionImpl;
@@ -862,6 +886,7 @@ function HomeFlowSurface({
 						.then(created);
 			}
 			setPicker(null);
+			setContextMenu(null);
 		},
 		[controller, picker, runtime, snapshot?.nodes],
 	);
@@ -909,6 +934,194 @@ function HomeFlowSurface({
 		for (const node of selectedNodes) void controller.deleteNode(node.id);
 		for (const edge of selectedEdges) void controller.deleteEdge(edge.id);
 	}, [controller.deleteEdge, controller.deleteNode, controller.isGraphLocked, flowInstance]);
+	const selectContextNode = useCallback(
+		(nodeId: string): void => {
+			const updateSelection = (current: FlowCanvasNode[]): FlowCanvasNode[] =>
+				current.map((node): FlowCanvasNode => ({ ...node, selected: node.id === nodeId }));
+			setNodes(updateSelection);
+			flowInstance?.setNodes((current): FlowCanvasNode[] =>
+				current.map((node): FlowCanvasNode => ({ ...node, selected: node.id === nodeId })),
+			);
+			runtime.selectedEdges.clear();
+			setOverlayEdgeIds((current): string[] => [...current]);
+		},
+		[flowInstance, runtime],
+	);
+	const pasteClipboardAt = useCallback(
+		(clientX: number, clientY: number): void => {
+			if (controller.isGraphLocked || flowInstance === null || nodeClipboard.length === 0) return;
+			const position = flowInstance.screenToFlowPosition(
+				{ x: clientX + FLOW_NODE_CREATE_OFFSET, y: clientY + FLOW_NODE_CREATE_OFFSET },
+				{ snapToGrid, snapGrid: FLOW_SNAP_GRID },
+			);
+			const pastedNodeIds = controller.pasteNodes(nodeClipboard, position.x, position.y);
+			if (pastedNodeIds.length > 0) runtime.layout?.added(pastedNodeIds);
+		},
+		[controller.isGraphLocked, controller.pasteNodes, flowInstance, nodeClipboard, runtime, snapToGrid],
+	);
+	const contextMenuItems = useMemo<MenuProps["items"]>(() => {
+		if (contextMenu?.kind === "node") {
+			const node = snapshot?.nodes.find((candidate): boolean => candidate.nodeId === contextMenu.nodeId);
+			if (node === undefined) return [];
+			const collapsed = node.collapsed ?? false;
+			return [
+				{
+					key: "rename",
+					label: t("flow.editor.renameNodeAction"),
+					disabled: controller.isGraphLocked,
+					icon: <Icon name="pencil" />,
+				},
+				{
+					key: collapsed ? "expand" : "collapse",
+					label: t(collapsed ? "flow.editor.expandNode" : "flow.editor.collapseNode"),
+					disabled: controller.isGraphLocked,
+					icon: collapsed ? <Icon name="distraction-free" /> : <Icon name="compress" />,
+				},
+				{ key: "copy", label: t("flow.editor.copyNode"), icon: <Icon name="copy" /> },
+				{
+					key: "duplicate",
+					label: t("flow.editor.duplicateNode"),
+					disabled: controller.isGraphLocked,
+					icon: <Icon name="duplicate" />,
+				},
+				{
+					key: "delete",
+					label: t("flow.editor.deleteNode"),
+					danger: true,
+					disabled: controller.isGraphLocked,
+					icon: <Icon name="remove" />,
+				},
+			];
+		}
+		if (contextMenu?.kind === "pane")
+			return [
+				{
+					key: "add-node",
+					label: (
+						<span
+							className={styles.contextMenuSubmenuLabel}
+							onMouseEnter={(event): void => {
+								const menuItem = event.currentTarget.closest<HTMLElement>(".ant-dropdown-menu-item");
+								const rect = menuItem?.getBoundingClientRect();
+								if (rect !== undefined) openPickerAt(rect.right, rect.top);
+							}}
+						>
+							{t("flow.editor.addNode")}
+							<Icon name="arrow-forward" />
+						</span>
+					),
+					icon: <Icon name="add" />,
+					disabled: controller.isGraphLocked,
+				},
+				{
+					key: "paste",
+					label: t("flow.editor.pasteNode"),
+					icon: <Icon name="paste" />,
+					disabled: controller.isGraphLocked || nodeClipboard.length === 0,
+				},
+			];
+		return [];
+	}, [contextMenu, controller.isGraphLocked, nodeClipboard.length, openPickerAt, snapshot?.nodes, t]);
+	const handleContextMenuAction = useCallback<NonNullable<MenuProps["onClick"]>>(
+		({ key }): void => {
+			const currentContext = contextMenu;
+			if (currentContext === null) return;
+			if (currentContext.kind === "pane") {
+				if (key === "add-node") {
+					if (picker === null) openPickerAt(currentContext.clientX + 168, currentContext.clientY - 8);
+				} else if (key === "paste") {
+					pasteClipboardAt(currentContext.clientX, currentContext.clientY);
+					setPicker(null);
+					setContextMenu(null);
+				}
+				return;
+			}
+			const nodeId = currentContext.nodeId;
+			if (nodeId === undefined) {
+				setContextMenu(null);
+				return;
+			}
+			const node = snapshot?.nodes.find((candidate): boolean => candidate.nodeId === nodeId);
+			if (node === undefined) {
+				setContextMenu(null);
+				return;
+			}
+			switch (key) {
+				case "rename":
+					runtime.canvas.requestTitleRename(nodeId);
+					break;
+				case "collapse":
+					controller.setNodeCollapsed(nodeId, true);
+					break;
+				case "expand":
+					controller.setNodeCollapsed(nodeId, false);
+					break;
+				case "copy":
+					setNodeClipboard([structuredClone(node)]);
+					break;
+				case "duplicate": {
+					const created = controller.duplicateNodes([nodeId]);
+					if (created.length > 0) runtime.layout?.added(created);
+					break;
+				}
+				case "delete":
+					void controller.deleteNode(nodeId);
+					setNodes((current): FlowCanvasNode[] =>
+						current.filter((candidate): boolean => candidate.id !== nodeId),
+					);
+					flowInstance?.setNodes((current): FlowCanvasNode[] =>
+						current.filter((candidate): boolean => candidate.id !== nodeId),
+					);
+					break;
+			}
+			setContextMenu(null);
+			setPicker(null);
+		},
+		[contextMenu, controller, flowInstance, openPickerAt, pasteClipboardAt, picker, runtime, snapshot?.nodes],
+	);
+	const hasContextMenu = contextMenu !== null;
+	useEffect((): (() => void) | undefined => {
+		if (!hasContextMenu) return undefined;
+		const closeOnOutsidePointerDown = (event: PointerEvent): void => {
+			const target = event.target;
+			const element = target instanceof Element ? target : target instanceof Node ? target.parentElement : null;
+			if (element && element.closest("[data-flow-context-menu-popup], [data-flow-node-picker-popup]") !== null)
+				return;
+			setContextMenu(null);
+			setPicker(null);
+		};
+		document.addEventListener("pointerdown", closeOnOutsidePointerDown, true);
+		return (): void => document.removeEventListener("pointerdown", closeOnOutsidePointerDown, true);
+	}, [hasContextMenu]);
+	const handleNodeContextMenu = useCallback(
+		(event: CanvasContextEvent, node: FlowCanvasNode): void => {
+			event.preventDefault();
+			selectContextNode(node.id);
+			const rect = canvasRef.current?.getBoundingClientRect();
+			if (rect === undefined) return;
+			setContextMenu({
+				kind: "node",
+				nodeId: node.id,
+				x: event.clientX - rect.left,
+				y: event.clientY - rect.top,
+				clientX: event.clientX,
+				clientY: event.clientY,
+			});
+		},
+		[selectContextNode],
+	);
+	const handlePaneContextMenu = useCallback((event: CanvasContextEvent): void => {
+		event.preventDefault();
+		const rect = canvasRef.current?.getBoundingClientRect();
+		if (rect === undefined) return;
+		setContextMenu({
+			kind: "pane",
+			x: event.clientX - rect.left,
+			y: event.clientY - rect.top,
+			clientX: event.clientX,
+			clientY: event.clientY,
+		});
+	}, []);
 	const matchesFlowShortcut = useCallback(
 		(event: KeyboardEvent, commandId: ShortcutCommandId): boolean =>
 			matchesShortcutKeyboardEvent(
@@ -1070,7 +1283,9 @@ function HomeFlowSurface({
 			const targetNode = snapshot.nodes.find((node): boolean => node.nodeId === connection.target);
 			const sourcePort = portFor(sourceNode, controller.nodeDefinitions, connection.sourceHandle, "output");
 			const targetPort = portFor(targetNode, controller.nodeDefinitions, connection.targetHandle, "input");
-			return sourcePort !== undefined && targetPort !== undefined && compatibleType(sourcePort, targetPort) !== null;
+			return (
+				sourcePort !== undefined && targetPort !== undefined && compatibleType(sourcePort, targetPort) !== null
+			);
 		},
 		[controller.nodeDefinitions, snapshot],
 	);
@@ -1441,12 +1656,6 @@ function HomeFlowSurface({
 				onPointerMove={(event): void => {
 					lastPointerPositionRef.current = { x: event.clientX, y: event.clientY };
 				}}
-				onContextMenu={(event): void => {
-					if (controller.isGraphLocked || (event.target as Element).closest(".react-flow__node") !== null)
-						return;
-					event.preventDefault();
-					openPickerAt(event.clientX, event.clientY);
-				}}
 			>
 				<ConversationSearchPanel
 					open={searchOpen}
@@ -1555,11 +1764,13 @@ function HomeFlowSurface({
 				<ReactFlow
 					key={snapshot.flow.flowId}
 					defaultNodes={nodes}
+					onNodeContextMenu={handleNodeContextMenu}
+					onPaneContextMenu={handlePaneContextMenu}
 					edges={edges
 						.filter((edge): boolean => overlayEdgeIds.includes(edge.id))
 						.map((edge) => ({
 							...edge,
-							reconnectable: controller.isGraphLocked ? false : "target" as const,
+							reconnectable: controller.isGraphLocked ? false : ("target" as const),
 							selected: runtime.selectedEdges.has(edge.id),
 						}))}
 					onEdgesChange={(changes) => {
@@ -1669,6 +1880,31 @@ function HomeFlowSurface({
 					onSelect={selectPickerNode}
 					onClose={closePicker}
 				/>
+				<Dropdown
+					open={contextMenu !== null}
+					trigger={[]}
+					placement="bottomLeft"
+					menu={{ items: contextMenuItems, onClick: handleContextMenuAction }}
+					popupRender={(menu): React.ReactNode => (
+						<div
+							data-flow-context-menu-popup
+							onKeyDown={(event): void => {
+								if (event.key !== "Escape") return;
+								event.preventDefault();
+								setContextMenu(null);
+								setPicker(null);
+							}}
+						>
+							{menu}
+						</div>
+					)}
+				>
+					<span
+						className={styles.contextMenuAnchor}
+						style={{ left: contextMenu?.x ?? -100, top: contextMenu?.y ?? -100 }}
+						aria-hidden="true"
+					/>
+				</Dropdown>
 			</div>
 		</section>
 	);

@@ -187,6 +187,7 @@ export function installFlowPerformanceScenario(
 			}
 			if (operation.kind === "node.update") {
 				const node = nodes.find(candidate => candidate.nodeId === operation.payload.nodeId);
+				if (node && typeof operation.payload.title === "string") node.title = operation.payload.title;
 				if (node && operation.payload.config) node.config = operation.payload.config as typeof node.config;
 				flow.graphRevision++;
 			}

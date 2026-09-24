@@ -113,6 +113,21 @@
 	background: var(--ds-bg);
 }
 
+.contextMenuAnchor {
+	position: absolute;
+	z-index: 20;
+	width: 1px;
+	height: 1px;
+	pointer-events: none;
+}
+
+.contextMenuSubmenuLabel {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ds-space-4);
+}
+
 .canvasRegion > :global(.react-flow) {
 	position: absolute;
 	inset: 0;

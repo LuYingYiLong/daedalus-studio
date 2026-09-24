@@ -63,6 +63,7 @@ export type HomeFlowController = {
 	exportFlowDataById: (flowId: string, destinationPath: string) => ReturnType<typeof exportFlowData>;
 	updateNodeLayouts: (layouts: readonly FlowLayoutUpdate[], createdNodeId?: string) => void;
 	duplicateNodes: (nodeIds: string[]) => string[];
+	pasteNodes: (nodes: readonly FlowDocumentNode[], x: number, y: number) => string[];
 	deleteNode: (nodeId: string) => Promise<void>;
 	createEdge: (sourceNodeId: string, targetNodeId: string, sourcePort?: string, targetPort?: string, dataType?: FlowDocumentNode["ports"][number]["dataTypes"][number]) => Promise<void>;
 	reconnectEdge: (edgeId: string, sourceNodeId: string, targetNodeId: string, sourcePort: string, targetPort: string, dataType: FlowDocumentNode["ports"][number]["dataTypes"][number]) => Promise<void>;
@@ -897,6 +898,48 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		if (operations.length) applyOperations(operations);
 		return created;
 	}, [applyOperations, isGraphLocked]);
+	const pasteNodes = useCallback((nodes: readonly FlowDocumentNode[], x: number, y: number): string[] => {
+		const current = snapshotRef.current;
+		if (!current || isGraphLocked || nodes.length === 0) return [];
+		const supportedTypes = new Set(nodeDefinitions.map((definition) => definition.typeId));
+		const minX = Math.min(...nodes.map((node) => node.x));
+		const minY = Math.min(...nodes.map((node) => node.y));
+		const operations: FlowOperation[] = [];
+		const created: string[] = [];
+		for (const node of nodes) {
+			if (!supportedTypes.has(node.typeId)) continue;
+			const nodeId = `node-${crypto.randomUUID()}`;
+			created.push(nodeId);
+			operations.push({
+				mutationId: createFlowMutationId(),
+				kind: "node.create",
+				baseGraphRevision: current.flow.graphRevision,
+				payload: {
+					nodeId,
+					typeId: node.typeId,
+					title: node.title,
+					config: structuredClone(node.config),
+					x: x + node.x - minX,
+					y: y + node.y - minY,
+				},
+			});
+			operations.push({
+				mutationId: createFlowMutationId(),
+				kind: "node.resize",
+				baseLayoutRevision: current.flow.layoutRevision,
+				payload: { nodeId, width: node.width, height: node.height },
+			});
+			if (node.collapsed)
+				operations.push({
+					mutationId: createFlowMutationId(),
+					kind: "node.collapse",
+					baseLayoutRevision: current.flow.layoutRevision,
+					payload: { nodeId, collapsed: true },
+				});
+		}
+		if (operations.length > 0) applyOperations(operations);
+		return created;
+	}, [applyOperations, isGraphLocked, nodeDefinitions]);
 
 	const deleteNode = useCallback(
 		async (nodeId: string): Promise<void> => {
@@ -1166,6 +1209,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		exportFlowDataById,
 		updateNodeLayouts,
 		duplicateNodes,
+		pasteNodes,
 		deleteNode,
 		createEdge,
 		reconnectEdge,

@@ -141,6 +141,7 @@ export class FlowCanvasStore extends FlowKeyedStore<FlowNodeRenderMode> {
 	readonly pluginEditors = new Set<string>();
 	readonly composing = new Set<string>();
 	readonly collapsed = new FlowKeyedStore<boolean>();
+	readonly titleRenameRequests = new FlowKeyedStore<number>();
 	readonly drafts = new FlowKeyedStore<Record<string, unknown>>();
 	readonly rawFields = new Map<string, string>();
 	private listItemKeys = new Map<string, string[]>();
@@ -159,6 +160,10 @@ export class FlowCanvasStore extends FlowKeyedStore<FlowNodeRenderMode> {
 	private pendingDrafts = new Map<string, Draft>();
 	private detail: boolean | null = null;
 	getMode = (id: string): FlowNodeRenderMode => this.get(id) ?? "outline";
+	requestTitleRename(id: string): void {
+		this.pin(id, true);
+		this.titleRenameRequests.set(id, (this.titleRenameRequests.get(id) ?? 0) + 1);
+	}
 	updateDetail(zoom: number): boolean {
 		// 初次打开，显示完整控件
 		if (this.detail === null) this.detail = zoom >= 0.5;
@@ -203,6 +208,7 @@ export class FlowCanvasStore extends FlowKeyedStore<FlowNodeRenderMode> {
 	}
 	removeNode(id: string): void {
 		this.collapsed.delete(id);
+		this.titleRenameRequests.delete(id);
 		for (const key of this.rawFields.keys()) if (key.startsWith(`${id}\u0000`)) this.rawFields.delete(key);
 		for (const key of this.listItemKeys.keys()) if (key.startsWith(`${id}\u0000`)) this.listItemKeys.delete(key);
 		const draft = this.pendingDrafts.get(id);
@@ -223,6 +229,7 @@ export class FlowCanvasStore extends FlowKeyedStore<FlowNodeRenderMode> {
 	dispose(): void {
 		this.flush();
 		this.collapsed.clear();
+		this.titleRenameRequests.clear();
 		this.generation++;
 		this.pendingDrafts.clear();
 		this.drafts.clear();
