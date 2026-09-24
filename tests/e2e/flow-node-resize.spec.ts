@@ -180,7 +180,7 @@ test("animates avoidance while alternately resizing two vertical output nodes", 
 		};
 		requestAnimationFrame(sample);
 	}));
-	const positions: number[] = [];
+	const sampledAnimations: number[][] = [];
 	for (const [anchor, target, corner, dy] of [
 		[node, neighbour, "bottom-right", 192],
 		[neighbour, node, "top-left", -260],
@@ -193,10 +193,14 @@ test("animates avoidance while alternately resizing two vertical output nodes", 
 		await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + dy, { steps: 10 });
 		await page.mouse.up();
 		const samples = await sampleY(target);
-		positions.push(new Set(samples.map(x => Math.round(x))).size);
+		sampledAnimations.push(samples);
 	}
-	expect(positions[0]).toBeGreaterThan(3);
-	expect(positions[1]).toBeGreaterThan(3);
+	for (const samples of sampledAnimations) {
+		const from = samples[0]!;
+		const to = samples.at(-1)!;
+		expect(Math.abs(to - from)).toBeGreaterThan(20);
+		expect(samples.some(position => Math.abs(position - from) > 2 && Math.abs(position - to) > 2)).toBe(true);
+	}
 });
 
 test("creates at the pointer's lower right and animates neighbours away without moving the new node", async ({ launchStudio, mockBackend }) => {

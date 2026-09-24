@@ -417,6 +417,7 @@ test.describe("Daedalus Flow node workflow", () => {
 		mockBackend.setHandler("flow.node.types.list", () => ({
 			nodes: nodeDefinitions,
 		}));
+		mockBackend.setHandler("flow.artifact.list", () => ({ artifacts: [], total: 0 }));
 		mockBackend.setHandler("flow.tools.list", () => ({
 			tools: [
 				{
@@ -759,13 +760,17 @@ test.describe("Daedalus Flow node workflow", () => {
 		await expect(textNode.getByRole("button", { name: /Delete node|删除节点/ })).toHaveCount(0);
 		await expect(mainWindow.locator(".react-flow__minimap")).toHaveCount(0);
 
+		await ensureFlowNodesInteractive(mainWindow, [textNode]);
 		const source = textNode.locator('[data-flow-port-id="output"]');
+		await expect(source).toBeVisible();
 		const sourceBox = await source.boundingBox();
 		expect(sourceBox).not.toBeNull();
-		const blankPoint = await findBlankFlowCanvasPoint(mainWindow);
 		await mainWindow.mouse.move(sourceBox!.x + sourceBox!.width / 2, sourceBox!.y + sourceBox!.height / 2);
 		await mainWindow.mouse.down();
-		await mainWindow.mouse.move(blankPoint.x, blankPoint.y, { steps: 12 });
+		const blankPoint = await findBlankFlowCanvasPoint(mainWindow);
+		await mainWindow.mouse.move(blankPoint.x, blankPoint.y, { steps: 20 });
+		await expect(mainWindow.locator(".react-flow__connection")).toBeVisible();
+		await mainWindow.waitForTimeout(80);
 		await mainWindow.mouse.up();
 		await expect(mainWindow.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ })).toBeVisible();
 		await selectFlowNodeType(mainWindow, /Basic|基础/u, /Condition|条件/u);
