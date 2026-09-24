@@ -8,6 +8,7 @@ import {
 	type SessionOverviewSourceItem
 } from "@/platform/rpc/session-overview-api";
 import { formatSourceSubtitle } from "@/domain/session/session-overview-formatters";
+import SessionSourceThumbnail from "./SessionSourceThumbnail";
 import styles from "./SessionSourcesDialog.module.css";
 
 type SessionSourcesDialogProps = {
@@ -111,7 +112,15 @@ function SessionSourceGridItem({ sessionId, source, open, onSelect }: SessionSou
 				}
 			}}
 		>
-			{imageDataUrl !== undefined ? (
+			{isVideoSource(source) ? (
+				<SessionSourceThumbnail
+					sessionId={sessionId}
+					source={source}
+					active={open}
+					className={styles.sourceGridThumbnail}
+					style={{ width: "100%", height: "auto" }}
+				/>
+			) : imageDataUrl !== undefined ? (
 				<img
 					src={imageDataUrl}
 					alt=""

@@ -60,7 +60,7 @@ import {
 	type FlowCanvasNodeData,
 	type FlowNodeEditorOptions,
 } from "./FlowNodes";
-import { flowPortColor } from "./flow-port-colors";
+import { flowPortColor } from "@/domain/flow/flow-value-presentation";
 import FlowNodeShell, { type FlowInteractionNode as FlowCanvasNode } from "./FlowNodeShell";
 import FlowCanvasLayer from "./FlowCanvasLayer";
 import { FlowRenderRuntime } from "./flow-render-runtime";

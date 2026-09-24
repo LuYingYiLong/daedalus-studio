@@ -285,7 +285,12 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	const [runStore] = useState(() => new FlowRunStore());
 	const setSnapshot = useCallback((next: FlowDocumentSnapshot | null): void => {
 		documentStore.replace(next);
-		runStore.replace(next?.runs[0]?.runId ?? null, next?.runs[0]?.nodes ?? []);
+		runStore.replace(
+			next?.flow.flowId ?? null,
+			next?.nodes.map((node) => node.nodeId) ?? [],
+			next?.latestNodeResults ?? [],
+			next?.runs[0]?.nodes ?? [],
+		);
 		setSnapshotState(next);
 	}, [documentStore, runStore]);
 	const [nodeDefinitions, setNodeDefinitions] = useState<FlowNodeTypeDefinition[]>([]);

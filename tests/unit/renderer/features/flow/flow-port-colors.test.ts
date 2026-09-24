@@ -5,7 +5,7 @@ import {
 	flowPortColorKind,
 	flowDefaultControl,
 	type FlowPortDataType,
-} from "@/widgets/flow/flow-port-colors";
+} from "@/domain/flow/flow-value-presentation";
 
 const ALL_DATA_TYPES: FlowPortDataType[] = [
 	"text",

@@ -21,6 +21,7 @@ import { useGitActionDialogController } from "@/features/git/useGitActionDialogC
 import { isGodotScenePath, getPathBasename } from "@/domain/session/home-layout-model";
 import useSessionSummaryOverview from "@/features/home/summary/useSessionSummaryOverview";
 import { formatSourceSubtitle } from "@/domain/session/session-overview-formatters";
+import SessionSourceThumbnail from "./SessionSourceThumbnail";
 import styles from "@/widgets/home/HomePage.module.css";
 
 export const SUMMARY_PREVIEW_LIMIT: number = 3;
@@ -827,19 +828,12 @@ function useHomePageSummaryController({
 											block
 											className={styles.sourceButton}
 											icon={
-												source.thumbnailDataUrl !== undefined ? (
-													<img
-														src={source.thumbnailDataUrl}
-														alt=""
-														className={styles.sourceThumbnail}
-													/>
-												) : (
-													<Icon
-														name="txt"
-														className={styles.sourceTextIcon}
-													/>
-												)
-												}
+												<SessionSourceThumbnail
+													sessionId={summaryOverview.sessionId}
+													source={source}
+													active={summaryOpen}
+												/>
+											}
 											onClick={(): void => {
 												setSummaryOpen(false);
 												setPreviewSource(source);
@@ -882,6 +876,7 @@ function useHomePageSummaryController({
 			openSourcesModal,
 			requestSummaryGitAction,
 			runGodotProject,
+			summaryOpen,
 			showGodotSummaryActions,
 			summaryEnvInfos,
 			summaryOverview,

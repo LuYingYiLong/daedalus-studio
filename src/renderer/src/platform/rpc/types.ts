@@ -303,6 +303,7 @@ export type FlowDocumentSnapshot = {
 	nodes: FlowDocumentNode[];
 	edges: FlowDocumentEdge[];
 	runs: FlowDocumentRun[];
+	latestNodeResults?: FlowDocumentNodeRun[];
 };
 export type AdditionalContextItem = {
 	id: string;

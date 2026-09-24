@@ -45,7 +45,7 @@ import { Icon } from "@/assets/icons";
 import MarkdownContent from "@/widgets/markdown/MarkdownContent";
 import styles from "./FlowNodes.module.css";
 import { flowNodeOutputLabel, flowNodeParameterLabel, flowNodeTitle, flowNodeTypeLabel } from "./flow-node-labels";
-import { flowDefaultControl, flowPortColor, flowPortColorKind, FLOW_PORT_COLORS } from "./flow-port-colors";
+import { flowDefaultControl, flowPortColor, flowPortColorKind, FLOW_PORT_COLORS } from "@/domain/flow/flow-value-presentation";
 import { flowNodeCategoryColor } from "./flow-node-category-colors";
 
 export type FlowNodeEditorOptions = {

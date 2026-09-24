@@ -7,7 +7,7 @@ const CATEGORY_COLORS: Readonly<Record<string, string>> = {
 	parameters: "#d46b08",
 	workspace: "#389e0d",
 	"workspace-media": "#52c41a",
-	basic: "#3ebadd",
+	basic: "#444444",
 	collections: "#08979c",
 	ai: "#722ed1",
 };

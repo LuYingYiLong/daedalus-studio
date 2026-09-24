@@ -10,7 +10,7 @@
 	height: 22px;
 	border: 0;
 	border-radius: 0;
-	color: var(--ant-color-text-secondary);
+	color: var(--ds-text-secondary);
 	background: transparent;
 	opacity: 0;
 	pointer-events: none;
@@ -82,7 +82,7 @@
 }
 
 .nodeCardMatched {
-	border-color: var(--ant-color-primary);
+	border-color: var(--ds-accent-active);
 }
 
 .nodeShellCollapsed,
@@ -155,7 +155,7 @@
 }
 
 .nodeCardSelected {
-	border-color: var(--ant-color-primary);
+	border-color: var(--ds-accent-active);
 }
 
 .header,
@@ -247,7 +247,7 @@
 .progressValue {
 	height: 100%;
 	border-radius: inherit;
-	background: var(--ant-color-primary);
+	background: var(--ds-accent-active);
 	transition: width 120ms ease-out;
 }
 
@@ -352,7 +352,7 @@
 }
 
 .toolDescription {
-	font-size: 11px;
+	font-size: 12px;
 }
 
 .bindingList {
@@ -443,7 +443,7 @@
 .nodeSummary {
 	min-height: 44px;
 	margin: 0 !important;
-	color: var(--ant-color-text-secondary);
+	color: var(--ds-text-secondary);
 	white-space: pre-wrap;
 }
 
@@ -460,7 +460,7 @@
 	width: 12px !important;
 	height: 12px !important;
 	border: 2px solid var(--ant-color-bg-container) !important;
-	background: var(--flow-port-color, var(--ant-color-primary)) !important;
+	background: var(--flow-port-color, var(--ds-accent-active)) !important;
 	pointer-events: auto;
 	transform: translate(-50%, -50%) !important;
 }

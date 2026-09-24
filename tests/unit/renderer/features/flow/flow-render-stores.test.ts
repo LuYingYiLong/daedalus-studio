@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FlowCanvasStore, FlowGeometryStore, FlowKeyedStore, FlowSpatialIndex } from "@/domain/flow/flow-render-stores";
+import type { FlowDocumentNodeRun } from "@/platform/rpc/types";
+import { FlowCanvasStore, FlowGeometryStore, FlowKeyedStore, FlowRunStore, FlowSpatialIndex } from "@/domain/flow/flow-render-stores";
 
 afterEach(() => vi.useRealTimers());
 describe("Flow rendering stores", () => {
@@ -27,6 +28,46 @@ describe("Flow rendering stores", () => {
 		store.set("a", value);
 		expect(a).toHaveBeenCalledTimes(1);
 		expect(b).not.toHaveBeenCalled();
+	});
+	it("keeps the latest successful node output across runs until that node succeeds again", () => {
+		const store = new FlowRunStore();
+		const previous: FlowDocumentNodeRun = {
+			runId: "run-1",
+			nodeId: "output-a",
+			typeId: "builtin/output",
+			pluginVersion: "1.0.0",
+			pluginFingerprint: "fingerprint",
+			configVersion: 1,
+			status: "completed",
+			inputFingerprint: "old-input",
+			output: { result: "old image" },
+			error: null,
+			startedAt: null,
+			finishedAt: null,
+		};
+		const previousSecondBranch: FlowDocumentNodeRun = {
+			...previous,
+			nodeId: "output-b",
+			output: { result: "independent branch image" },
+		};
+		store.replace("flow-1", ["output-a", "output-b"], [previous, previousSecondBranch], [previous, previousSecondBranch]);
+		const rerunning: FlowDocumentNodeRun = {
+			...previous,
+			runId: "run-2",
+			status: "running",
+			inputFingerprint: "new-input",
+			output: null,
+		};
+		store.replace("flow-1", ["output-a", "output-b"], [previous, previousSecondBranch], [rerunning]);
+		expect(store.get("output-a")).toMatchObject({ status: "running", output: { result: "old image" } });
+		expect(store.get("output-b")).toMatchObject({ status: "completed", output: { result: "independent branch image" } });
+		const refreshed: FlowDocumentNodeRun = { ...rerunning, status: "completed", output: { result: "new image" } };
+		store.set("output-a", refreshed);
+		expect(store.get("output-a")).toMatchObject({ status: "completed", output: { result: "new image" } });
+		store.replace("flow-1", ["output-a", "output-b"], [], []);
+		expect(store.get("output-a")?.output).toEqual({ result: "new image" });
+		store.replace("flow-2", ["output-a"], [], []);
+		expect(store.get("output-a")).toBeUndefined();
 	});
 	it("retains zoom detail within the hysteresis interval", () => {
 		const canvas = new FlowCanvasStore();

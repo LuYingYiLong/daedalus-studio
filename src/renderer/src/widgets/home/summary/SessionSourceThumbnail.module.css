@@ -1,0 +1,52 @@
+.frame {
+	position: relative;
+	display: grid;
+	flex: 0 0 auto;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	overflow: hidden;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-sm);
+	background: var(--ds-surface-secondary);
+	color: var(--ds-text-secondary);
+}
+
+.media {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.fallback {
+	display: grid;
+	position: absolute;
+	inset: 0;
+	place-items: center;
+	pointer-events: none;
+}
+
+.fallback :global(.daedalus-icon) {
+	width: 20px;
+	height: 20px;
+}
+
+.playBadge {
+	display: grid;
+	position: absolute;
+	right: 2px;
+	bottom: 2px;
+	place-items: center;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: rgb(0 0 0 / 62%);
+	color: white;
+	pointer-events: none;
+}
+
+.playBadge :global(.daedalus-icon) {
+	width: 9px;
+	height: 9px;
+}

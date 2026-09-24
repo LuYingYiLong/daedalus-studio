@@ -96,13 +96,30 @@ export class FlowDocumentStore extends FlowKeyedStore<FlowDocumentNode> {
 }
 
 export class FlowRunStore extends FlowKeyedStore<FlowDocumentNodeRun> {
-	private runId: string | null = null;
-	replace(runId: string | null, nodes: readonly FlowDocumentNodeRun[]): void {
-		if (this.runId !== runId) {
+	private flowId: string | null = null;
+	override set(nodeId: string, nodeRun: FlowDocumentNodeRun): void {
+		const previous = this.get(nodeId);
+		const hasPreviousOutput = previous?.output !== null && previous?.output !== undefined;
+		const hasAuthoritativeOutput = ["completed", "cached", "partial_failure"].includes(nodeRun.status);
+		super.set(
+			nodeId,
+			!hasAuthoritativeOutput && hasPreviousOutput ? { ...nodeRun, output: previous.output } : nodeRun,
+		);
+	}
+	replace(
+		flowId: string | null,
+		nodeIds: readonly string[],
+		latestNodeResults: readonly FlowDocumentNodeRun[],
+		currentRunNodes: readonly FlowDocumentNodeRun[],
+	): void {
+		if (this.flowId !== flowId) {
 			this.clear();
-			this.runId = runId;
+			this.flowId = flowId;
 		}
-		for (const node of nodes) this.set(node.nodeId, node);
+		const retainedNodeIds = new Set(nodeIds);
+		for (const [nodeId] of this.entries()) if (!retainedNodeIds.has(nodeId)) this.delete(nodeId);
+		for (const nodeRun of latestNodeResults) this.set(nodeRun.nodeId, nodeRun);
+		for (const nodeRun of currentRunNodes) this.set(nodeRun.nodeId, nodeRun);
 	}
 }
 
