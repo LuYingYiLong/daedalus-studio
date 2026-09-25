@@ -28,6 +28,7 @@ import {
 	useState,
 	type MouseEvent as ReactMouseEvent,
 	type MutableRefObject,
+	type PointerEvent as ReactPointerEvent,
 } from "react";
 import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -44,7 +45,9 @@ import {
 } from "@/platform/rpc/keyboard-shortcuts";
 import type {
 	FlowDocumentEdge,
+	FlowDocumentGroup,
 	FlowDocumentNode,
+	FlowDocumentSnapshot,
 	FlowNodeTypeId,
 	FlowNodePortDefinition,
 	FlowNodeTypeDefinition,
@@ -61,7 +64,10 @@ import {
 	type FlowNodeEditorOptions,
 } from "./FlowNodes";
 import { flowPortColor } from "@/domain/flow/flow-value-presentation";
-import FlowNodeShell, { type FlowInteractionNode as FlowCanvasNode } from "./FlowNodeShell";
+import FlowNodeShell, { type FlowInteractionNode } from "./FlowNodeShell";
+import FlowGroupShell, { type FlowGroupInteractionNode } from "./FlowGroupShell";
+import type { FlowCanvasNode } from "./flow-canvas-node";
+import { layoutFlowGroupFrames } from "@/domain/flow/flow-group-layout";
 import FlowCanvasLayer from "./FlowCanvasLayer";
 import { FlowRenderRuntime } from "./flow-render-runtime";
 import { useFlowNodeLayout } from "./useFlowNodeLayout";
@@ -94,27 +100,72 @@ type PickerState = {
 	connection: PickerConnection | null;
 };
 type CanvasContextMenuState = {
-	kind: "node" | "pane";
+	kind: "node" | "group" | "pane";
 	x: number;
 	y: number;
 	clientX: number;
 	clientY: number;
 	nodeId?: string;
+	groupId?: string;
 };
 type CanvasContextEvent = ReactMouseEvent | MouseEvent;
 type InteractionSample = {
 	kind: "node-drag" | "viewport";
 	startedAt: number;
 };
+type FlowGroupDragState = {
+	groupId: string;
+	origin: { x: number; y: number };
+	groupPositions: Map<string, { x: number; y: number }>;
+	nodePositions: Map<string, { x: number; y: number }>;
+};
+
+function collectFlowGroupDescendants(groupId: string, groups: readonly FlowDocumentGroup[]): { groupIds: Set<string>; nodeIds: Set<string> } {
+	const groupById = new Map(groups.map((group): [string, FlowDocumentGroup] => [group.groupId, group]));
+	const groupIds = new Set<string>();
+	const nodeIds = new Set<string>();
+	const visit = (id: string): void => {
+		if (groupIds.has(id)) return;
+		const group = groupById.get(id);
+		if (!group) return;
+		groupIds.add(id);
+		for (const nodeId of group.nodeIds) nodeIds.add(nodeId);
+		for (const child of groups)
+			if (child.parentGroupId === id) visit(child.groupId);
+	};
+	visit(groupId);
+	return { groupIds, nodeIds };
+}
 type DetachedConnectionSource = {
 	edgeId: string;
 	sourceNodeId: string;
 	sourcePort: string;
 };
 
-const nodeTypes = { flowNode: FlowNodeShell };
+const nodeTypes = { flowNode: FlowNodeShell, flowGroup: FlowGroupShell };
 type FlowEdgeData = { sourceColor: string; targetColor: string };
 export type FlowCanvasEdge = Edge<FlowEdgeData, "flowGradient">;
+
+function normalizeFlowGroupSelection(selected: readonly FlowCanvasNode[], snapshot: FlowDocumentSnapshot | null): { nodeIds: string[]; groupIds: string[] } {
+	const groups = snapshot?.groups ?? [];
+	const groupById = new Map(groups.map((group): [string, FlowDocumentGroup] => [group.groupId, group]));
+	const selectedGroups = new Set(selected.filter((node) => node.type === "flowGroup").map((node) => node.id));
+	const selectedNodeIds = selected.filter((node) => node.type === "flowNode").map((node) => node.id);
+	const hasSelectedAncestor = (groupId: string | null): boolean => {
+		let current = groupId;
+		while (current !== null) {
+			if (selectedGroups.has(current)) return true;
+			current = groupById.get(current)?.parentGroupId ?? null;
+		}
+		return false;
+	};
+	const groupIds = [...selectedGroups].filter((groupId) => !hasSelectedAncestor(groupById.get(groupId)?.parentGroupId ?? null));
+	const nodeIds = selectedNodeIds.filter((nodeId) => {
+		const parentGroupId = groups.find((group) => group.nodeIds.includes(nodeId))?.groupId ?? null;
+		return !hasSelectedAncestor(parentGroupId);
+	});
+	return { nodeIds, groupIds };
+}
 
 function oppositeFlowPosition(position: Position): Position {
 	switch (position) {
@@ -326,6 +377,7 @@ function HomeFlowSurface({
 	const [picker, setPicker] = useState<PickerState | null>(null);
 	const [contextMenu, setContextMenu] = useState<CanvasContextMenuState | null>(null);
 	const [nodeClipboard, setNodeClipboard] = useState<FlowDocumentNode[]>([]);
+	const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null);
 	const [searchOpen, setSearchOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchIndex, setSearchIndex] = useState(0);
@@ -367,6 +419,12 @@ function HomeFlowSurface({
 	const connectStartRef = useRef<OnConnectStartParams | null>(null);
 	const detachedConnectionSourceRef = useRef<DetachedConnectionSource | null>(null);
 	const interactionSampleRef = useRef<InteractionSample | null>(null);
+	const groupDragRef = useRef<FlowGroupDragState | null>(null);
+	const requestGroupRename = useCallback((groupId: string | null): void => setRenamingGroupId(groupId), []);
+	const commitGroupRename = useCallback((groupId: string, title: string): void => {
+		controller.renameGroup(groupId, title);
+		setRenamingGroupId(null);
+	}, [controller.renameGroup]);
 	const definitionsByType = useMemo(
 		(): Map<string, FlowNodeTypeDefinition> =>
 			new Map(
@@ -633,20 +691,43 @@ function HomeFlowSurface({
 		}
 		setNodes((current) => {
 			const byId = new Map((flowInstance?.getNodes() ?? current).map((node) => [node.id, node]));
-			const next = (snapshot?.nodes ?? []).map((node): FlowCanvasNode => {
-				const previous = byId.get(node.nodeId);
+			const groupFrames = layoutFlowGroupFrames(snapshot?.groups ?? [], snapshot?.nodes ?? []);
+			const groupsById = new Map((snapshot?.groups ?? []).map((group): [string, FlowDocumentGroup] => [group.groupId, group]));
+			const groupNodes: FlowGroupInteractionNode[] = groupFrames.flatMap((frame): FlowGroupInteractionNode[] => {
+				const group = groupsById.get(frame.groupId);
+				if (!group) return [];
+				const previous = byId.get(group.groupId);
+				return [{
+					...(previous?.type === "flowGroup" ? previous : {}),
+					id: group.groupId,
+					type: "flowGroup",
+					position: { x: frame.x, y: frame.y },
+					width: frame.width,
+					height: frame.height,
+					style: { width: frame.width, height: frame.height, zIndex: 0, pointerEvents: "none" },
+					selected: previous?.selected === true,
+					draggable: !controller.isGraphLocked,
+					dragHandle: ".flow-group-header",
+					selectable: true,
+					connectable: false,
+					data: {
+						group,
+						isRenaming: renamingGroupId === group.groupId,
+						onRenameRequest: requestGroupRename,
+						onRename: commitGroupRename,
+					},
+				} as FlowGroupInteractionNode];
+			});
+			const graphNodes = (snapshot?.nodes ?? []).map((node): FlowInteractionNode => {
+				const candidate = byId.get(node.nodeId);
+				const previous = candidate?.type === "flowNode" ? candidate : undefined;
 				if (
 					previous?.data.runtime === runtime &&
-					(previous.dragging ||
-						previous.resizing ||
-						runtime.resizingNodes.has(node.nodeId) ||
-						((runtime.animatingNodes.has(node.nodeId) ||
-							(previous.position.x === node.x && previous.position.y === node.y)) &&
-							previous.data.layoutWidth === node.width &&
-							previous.data.layoutHeight === node.height &&
+					(previous.dragging || previous.resizing || runtime.resizingNodes.has(node.nodeId) ||
+						((runtime.animatingNodes.has(node.nodeId) || previous.position.x === node.x && previous.position.y === node.y) &&
+							previous.data.layoutWidth === node.width && previous.data.layoutHeight === node.height &&
 							previous.style?.minHeight === (node.collapsed ? 0 : node.height)))
-				)
-					return previous;
+				) return previous;
 				return {
 					...previous,
 					id: node.nodeId,
@@ -654,23 +735,14 @@ function HomeFlowSurface({
 					position: { x: node.x, y: node.y },
 					width: node.width,
 					height: undefined,
-					style: {
-						...previous?.style,
-						width: undefined,
-						height: undefined,
-						minHeight: runtime.canvas.collapsed.get(node.nodeId) ? 0 : node.height,
-					},
-					data:
-						previous?.data.runtime === runtime &&
-						previous.data.layoutWidth === node.width &&
-						previous.data.layoutHeight === node.height
-							? previous.data
-							: { nodeId: node.nodeId, runtime, layoutWidth: node.width, layoutHeight: node.height },
+					style: { ...previous?.style, width: undefined, height: undefined, minHeight: runtime.canvas.collapsed.get(node.nodeId) ? 0 : node.height },
+					data: previous?.data.runtime === runtime && previous.data.layoutWidth === node.width && previous.data.layoutHeight === node.height
+						? previous.data
+						: { nodeId: node.nodeId, runtime, layoutWidth: node.width, layoutHeight: node.height },
 				};
 			});
-			return next.length === current.length && next.every((node, index) => node === current[index])
-				? current
-				: next;
+			const next: FlowCanvasNode[] = [...groupNodes, ...graphNodes];
+			return next.length === current.length && next.every((node, index) => node === current[index]) ? current : next;
 		});
 	}, [
 		runtime,
@@ -683,6 +755,10 @@ function HomeFlowSurface({
 		matchingIds,
 		runCanvasNodeAction,
 		snapshot?.nodes,
+		snapshot?.groups,
+		renamingGroupId,
+		requestGroupRename,
+		commitGroupRename,
 		updateCanvasNode,
 	]);
 	useEffect(() => {
@@ -921,19 +997,21 @@ function HomeFlowSurface({
 	}, [flowInstance, matchingNodes, searchIndex]);
 	const deleteSelectedElements = useCallback((): void => {
 		if (controller.isGraphLocked || flowInstance === null) return;
-		const selectedNodes = flowInstance.getNodes().filter((node): boolean => node.selected === true);
-		const selectedNodeIds = new Set(selectedNodes.map((node): string => node.id));
+		const selection = normalizeFlowGroupSelection(flowInstance.getNodes().filter((node): boolean => node.selected === true), snapshot);
+		const selectedNodeIds = new Set(selection.nodeIds);
 		const selectedEdges = flowInstance
 			.getEdges()
 			.filter(
 				(edge): boolean =>
 					edge.selected === true && !selectedNodeIds.has(edge.source) && !selectedNodeIds.has(edge.target),
 			);
-		if (selectedNodes.length === 0 && selectedEdges.length === 0) return;
-		setNodes((current): FlowCanvasNode[] => current.filter((node): boolean => !selectedNodeIds.has(node.id)));
-		for (const node of selectedNodes) void controller.deleteNode(node.id);
+		if (selection.nodeIds.length === 0 && selection.groupIds.length === 0 && selectedEdges.length === 0) return;
+		const selectedIds = new Set([...selection.nodeIds, ...selection.groupIds]);
+		setNodes((current): FlowCanvasNode[] => current.filter((node): boolean => !selectedIds.has(node.id)));
+		for (const nodeId of selection.nodeIds) void controller.deleteNode(nodeId);
+		for (const groupId of selection.groupIds) controller.dissolveGroup(groupId);
 		for (const edge of selectedEdges) void controller.deleteEdge(edge.id);
-	}, [controller.deleteEdge, controller.deleteNode, controller.isGraphLocked, flowInstance]);
+	}, [controller.deleteEdge, controller.deleteNode, controller.dissolveGroup, controller.isGraphLocked, flowInstance, snapshot]);
 	const selectContextNode = useCallback(
 		(nodeId: string): void => {
 			const updateSelection = (current: FlowCanvasNode[]): FlowCanvasNode[] =>
@@ -947,6 +1025,56 @@ function HomeFlowSurface({
 		},
 		[flowInstance, runtime],
 	);
+	const selectContextGroup = useCallback((groupId: string): void => {
+		const updateSelection = (current: FlowCanvasNode[]): FlowCanvasNode[] => current.map((node): FlowCanvasNode => ({ ...node, selected: node.id === groupId }));
+		setNodes(updateSelection);
+		flowInstance?.setNodes(updateSelection);
+		runtime.selectedEdges.clear();
+		setOverlayEdgeIds((current): string[] => [...current]);
+	}, [flowInstance, runtime]);
+	const createGroupFromSelection = useCallback((): void => {
+		if (!flowInstance || !snapshot) return;
+		const selection = normalizeFlowGroupSelection(flowInstance.getNodes().filter((node): boolean => node.selected === true), snapshot);
+		if (selection.nodeIds.length + selection.groupIds.length < 2) return;
+		const groups = snapshot.groups ?? [];
+		const groupsById = new Map(groups.map((group): [string, FlowDocumentGroup] => [group.groupId, group]));
+		const nodesById = new Map(snapshot.nodes.map((node): [string, FlowDocumentNode] => [node.nodeId, node]));
+		const frames = new Map(layoutFlowGroupFrames(groups, snapshot.nodes).map((frame) => [frame.groupId, frame]));
+		const parentIds = [
+			...selection.nodeIds.map((nodeId) => groups.find((group) => group.nodeIds.includes(nodeId))?.groupId ?? null),
+			...selection.groupIds.map((groupId) => groupsById.get(groupId)?.parentGroupId ?? null),
+		];
+		const parentGroupId = parentIds.every((parentId) => parentId === parentIds[0]) ? parentIds[0] ?? null : null;
+		const rects = [
+			...selection.nodeIds.flatMap((nodeId) => { const node = nodesById.get(nodeId); return node ? [{ x: node.x, y: node.y, width: node.width, height: node.collapsed ? 40 : node.height }] : []; }),
+			...selection.groupIds.flatMap((groupId) => { const frame = frames.get(groupId); return frame ? [frame] : []; }),
+		];
+		if (rects.length < 2) return;
+		const left = Math.min(...rects.map((rect) => rect.x));
+		const top = Math.min(...rects.map((rect) => rect.y));
+		const right = Math.max(...rects.map((rect) => rect.x + rect.width));
+		const bottom = Math.max(...rects.map((rect) => rect.y + rect.height));
+		const groupId = "group-" + crypto.randomUUID();
+		const colors = ["#7189a5", "#8a78a8", "#6f9b89", "#b28663", "#6e9ca5"];
+		controller.createGroup({
+			groupId,
+			title: t("flow.editor.groupDefaultTitle", { count: groups.length + 1 }),
+			color: colors[groups.length % colors.length]!,
+			parentGroupId,
+			x: left - 24,
+			y: top - 48,
+			width: right - left + 48,
+			height: bottom - top + 72,
+			nodeIds: selection.nodeIds,
+			groupIds: selection.groupIds,
+		});
+		requestAnimationFrame((): void => {
+			const selectGroup = (current: FlowCanvasNode[]): FlowCanvasNode[] => current.map((node): FlowCanvasNode => ({ ...node, selected: node.id === groupId }));
+			setNodes(selectGroup);
+			flowInstance.setNodes(selectGroup);
+		});
+		setContextMenu(null);
+	}, [controller.createGroup, flowInstance, snapshot, t]);
 	const pasteClipboardAt = useCallback(
 		(clientX: number, clientY: number): void => {
 			if (controller.isGraphLocked || flowInstance === null || nodeClipboard.length === 0) return;
@@ -960,10 +1088,19 @@ function HomeFlowSurface({
 		[controller.isGraphLocked, controller.pasteNodes, flowInstance, nodeClipboard, runtime, snapToGrid],
 	);
 	const contextMenuItems = useMemo<MenuProps["items"]>(() => {
+		if (contextMenu?.kind === "group") {
+			const selection = normalizeFlowGroupSelection(flowInstance?.getNodes().filter((node): boolean => node.selected === true) ?? [], snapshot);
+			return [
+				...(selection.nodeIds.length + selection.groupIds.length >= 2 ? [{ key: "create-group", label: t("flow.editor.createGroup"), icon: <Icon name="folder" /> }] : []),
+				{ key: "rename-group", label: t("flow.editor.renameGroupAction"), disabled: controller.isGraphLocked, icon: <Icon name="pencil" /> },
+				{ key: "dissolve-group", label: t("flow.editor.dissolveGroup"), icon: <Icon name="remove" /> },
+			];
+		}
 		if (contextMenu?.kind === "node") {
 			const node = snapshot?.nodes.find((candidate): boolean => candidate.nodeId === contextMenu.nodeId);
 			if (node === undefined) return [];
 			const collapsed = node.collapsed ?? false;
+			const selection = normalizeFlowGroupSelection(flowInstance?.getNodes().filter((candidate): boolean => candidate.selected === true) ?? [], snapshot);
 			return [
 				{
 					key: "rename",
@@ -991,9 +1128,11 @@ function HomeFlowSurface({
 					disabled: controller.isGraphLocked,
 					icon: <Icon name="remove" />,
 				},
+				...(selection.nodeIds.length + selection.groupIds.length >= 2 ? [{ key: "create-group", label: t("flow.editor.createGroup"), icon: <Icon name="folder" /> }] : []),
 			];
 		}
-		if (contextMenu?.kind === "pane")
+		if (contextMenu?.kind === "pane") {
+			const selection = normalizeFlowGroupSelection(flowInstance?.getNodes().filter((node): boolean => node.selected === true) ?? [], snapshot);
 			return [
 				{
 					key: "add-node",
@@ -1013,6 +1152,7 @@ function HomeFlowSurface({
 					icon: <Icon name="add" />,
 					disabled: controller.isGraphLocked,
 				},
+				...(selection.nodeIds.length + selection.groupIds.length >= 2 ? [{ key: "create-group", label: t("flow.editor.createGroup"), icon: <Icon name="folder" /> }] : []),
 				{
 					key: "paste",
 					label: t("flow.editor.pasteNode"),
@@ -1020,20 +1160,30 @@ function HomeFlowSurface({
 					disabled: controller.isGraphLocked || nodeClipboard.length === 0,
 				},
 			];
+		}
 		return [];
-	}, [contextMenu, controller.isGraphLocked, nodeClipboard.length, openPickerAt, snapshot?.nodes, t]);
+	}, [contextMenu, controller.isGraphLocked, flowInstance, nodeClipboard.length, openPickerAt, snapshot, t]);
 	const handleContextMenuAction = useCallback<NonNullable<MenuProps["onClick"]>>(
 		({ key }): void => {
 			const currentContext = contextMenu;
 			if (currentContext === null) return;
 			if (currentContext.kind === "pane") {
-				if (key === "add-node") {
+				if (key === "create-group") {
+					createGroupFromSelection();
+				} else if (key === "add-node") {
 					if (picker === null) openPickerAt(currentContext.clientX + 168, currentContext.clientY - 8);
 				} else if (key === "paste") {
 					pasteClipboardAt(currentContext.clientX, currentContext.clientY);
 					setPicker(null);
 					setContextMenu(null);
 				}
+				return;
+			}
+			if (currentContext.kind === "group") {
+				if (key === "create-group") createGroupFromSelection();
+				else if (key === "rename-group" && currentContext.groupId) setRenamingGroupId(currentContext.groupId);
+				else if (key === "dissolve-group" && currentContext.groupId) controller.dissolveGroup(currentContext.groupId);
+				setContextMenu(null);
 				return;
 			}
 			const nodeId = currentContext.nodeId;
@@ -1047,6 +1197,9 @@ function HomeFlowSurface({
 				return;
 			}
 			switch (key) {
+				case "create-group":
+					createGroupFromSelection();
+					break;
 				case "rename":
 					runtime.canvas.requestTitleRename(nodeId);
 					break;
@@ -1077,7 +1230,7 @@ function HomeFlowSurface({
 			setContextMenu(null);
 			setPicker(null);
 		},
-		[contextMenu, controller, flowInstance, openPickerAt, pasteClipboardAt, picker, runtime, snapshot?.nodes],
+		[contextMenu, controller, createGroupFromSelection, flowInstance, openPickerAt, pasteClipboardAt, picker, runtime, snapshot?.nodes],
 	);
 	const hasContextMenu = contextMenu !== null;
 	useEffect((): (() => void) | undefined => {
@@ -1096,19 +1249,22 @@ function HomeFlowSurface({
 	const handleNodeContextMenu = useCallback(
 		(event: CanvasContextEvent, node: FlowCanvasNode): void => {
 			event.preventDefault();
-			selectContextNode(node.id);
+			if (!node.selected) {
+				if (node.type === "flowGroup") selectContextGroup(node.id);
+				else selectContextNode(node.id);
+			}
 			const rect = canvasRef.current?.getBoundingClientRect();
 			if (rect === undefined) return;
 			setContextMenu({
-				kind: "node",
-				nodeId: node.id,
+				kind: node.type === "flowGroup" ? "group" : "node",
+				...(node.type === "flowGroup" ? { groupId: node.id } : { nodeId: node.id }),
 				x: event.clientX - rect.left,
 				y: event.clientY - rect.top,
 				clientX: event.clientX,
 				clientY: event.clientY,
 			});
 		},
-		[selectContextNode],
+		[selectContextGroup, selectContextNode],
 	);
 	const handlePaneContextMenu = useCallback((event: CanvasContextEvent): void => {
 		event.preventDefault();
@@ -1147,14 +1303,14 @@ function HomeFlowSurface({
 					controller.duplicateNodes(
 						flowInstance
 							?.getNodes()
-							.filter((node) => node.selected)
+							.filter((node) => node.selected && node.type === "flowNode")
 							.map((node) => node.id) ?? [],
 					),
 				);
 				return;
 			}
 			if (event.key === "Enter") {
-				const node = flowInstance?.getNodes().find((node) => node.selected);
+				const node = flowInstance?.getNodes().find((node) => node.selected && node.type === "flowNode");
 				if (node && flowInstance) {
 					event.preventDefault();
 					runtime.canvas.pin(node.id, true);
@@ -1476,19 +1632,78 @@ function HomeFlowSurface({
 		},
 		[finishInteractionSample],
 	);
+	const onNodeDragStart = useCallback<OnNodeDrag<FlowCanvasNode>>(
+		(_event, node): void => {
+			runtime.layout?.cancelAnimation(node.id);
+			startInteractionSample("node-drag");
+			if (node.type !== "flowGroup" || !snapshot) {
+				groupDragRef.current = null;
+				return;
+			}
+			const descendants = collectFlowGroupDescendants(node.id, snapshot.groups ?? []);
+			const positions = flowInstance?.getNodes() ?? nodes;
+			const groupPositions = new Map<string, { x: number; y: number }>();
+			const nodePositions = new Map<string, { x: number; y: number }>();
+			for (const candidate of positions) {
+				if (candidate.type === "flowGroup" && descendants.groupIds.has(candidate.id))
+					groupPositions.set(candidate.id, { ...candidate.position });
+				else if (candidate.type === "flowNode" && descendants.nodeIds.has(candidate.id))
+					nodePositions.set(candidate.id, { ...candidate.position });
+			}
+			groupDragRef.current = {
+				groupId: node.id,
+				origin: { ...node.position },
+				groupPositions,
+				nodePositions,
+			};
+		},
+		[flowInstance, nodes, runtime, snapshot, startInteractionSample],
+	);
+	const onNodeDrag = useCallback<OnNodeDrag<FlowCanvasNode>>(
+		(_event, node): void => {
+			const drag = groupDragRef.current;
+			if (!drag || node.id !== drag.groupId || node.type !== "flowGroup") return;
+			const dx = node.position.x - drag.origin.x;
+			const dy = node.position.y - drag.origin.y;
+			const positions = new Map<string, { x: number; y: number }>();
+			for (const [id, position] of drag.groupPositions) positions.set(id, { x: position.x + dx, y: position.y + dy });
+			for (const [id, position] of drag.nodePositions) positions.set(id, { x: position.x + dx, y: position.y + dy });
+			const translate = (current: FlowCanvasNode[]): FlowCanvasNode[] => current.map((candidate): FlowCanvasNode => {
+				const position = positions.get(candidate.id);
+				return position ? { ...candidate, position } : candidate;
+			});
+			setNodes(translate);
+			flowInstance?.setNodes(translate);
+		},
+		[flowInstance],
+	);
 	const onNodeDragStop = useCallback<OnNodeDrag<FlowCanvasNode>>(
-		(_event, _node, moved): void => {
+		(_event, node, moved): void => {
 			finishInteractionSample("node-drag");
+			const drag = groupDragRef.current;
+			if (drag && node.type === "flowGroup" && node.id === drag.groupId) {
+				const dx = node.position.x - drag.origin.x;
+				const dy = node.position.y - drag.origin.y;
+				selectContextGroup(node.id);
+				controller.moveGroupContents(
+					[...drag.nodePositions].map(([nodeId, position]) => ({ nodeId, x: position.x + dx, y: position.y + dy })),
+					[...drag.groupPositions].map(([groupId, position]) => ({ groupId, x: position.x + dx, y: position.y + dy })),
+				);
+				groupDragRef.current = null;
+				return;
+			}
+			groupDragRef.current = null;
 			controller.updateNodePositions(
 				moved
-					.filter((node) => {
-						const previous = runtime.document.get(node.id);
-						return previous && (previous.x !== node.position.x || previous.y !== node.position.y);
+					.filter((candidate) => candidate.type === "flowNode")
+					.filter((candidate) => {
+						const previous = runtime.document.get(candidate.id);
+						return previous && (previous.x !== candidate.position.x || previous.y !== candidate.position.y);
 					})
-					.map((node) => ({ nodeId: node.id, ...node.position })),
+					.map((candidate) => ({ nodeId: candidate.id, ...candidate.position })),
 			);
 		},
-		[controller.updateNodePositions, finishInteractionSample, runtime],
+		[controller.moveGroupContents, controller.updateNodePositions, finishInteractionSample, runtime, selectContextGroup],
 	);
 	const onMoveStart = useCallback((): void => {
 		startInteractionSample("viewport");
@@ -1764,6 +1979,13 @@ function HomeFlowSurface({
 				<ReactFlow
 					key={snapshot.flow.flowId}
 					defaultNodes={nodes}
+					onPointerDownCapture={(event: ReactPointerEvent<HTMLDivElement>): void => {
+						const target = event.target;
+						if (target instanceof Element && target.closest(".flow-group-header")) {
+							// Keep XYFlow's pane selection capture from taking over a group-header drag.
+						event.stopPropagation();
+					}
+				}}
 					onNodeContextMenu={handleNodeContextMenu}
 					onPaneContextMenu={handlePaneContextMenu}
 					edges={edges
@@ -1785,10 +2007,8 @@ function HomeFlowSurface({
 					edgeTypes={edgeTypes}
 					defaultViewport={snapshot.flow.viewport}
 					onInit={setFlowInstance}
-					onNodeDragStart={(_event, node): void => {
-						runtime.layout?.cancelAnimation(node.id);
-						startInteractionSample("node-drag");
-					}}
+					onNodeDragStart={onNodeDragStart}
+					onNodeDrag={onNodeDrag}
 					onNodeDragStop={onNodeDragStop}
 					onConnect={onConnect}
 					isValidConnection={isValidConnection}

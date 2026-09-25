@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { archiveFlow, commitFlowPatch, createFlow, exportFlowData, exportFlowToSession, fetchFlow, fetchFlows, importFlowFromSession, moveFlowToWorkspace, renameFlow, startFlowRun, stopFlowRun, updateFlowSettings, listFlowNodeTypes, listFlowTools, listFlowApprovals, resolveFlowApproval, updateFlowTreeOrder as persistFlowTreeOrder, type CreateFlowParams } from "@/platform/rpc/flow-api";
 import { onBackendEvent, onBackendReconnected } from "@/platform/rpc/transport/backend-client";
 import { BackendRpcError } from "@/platform/rpc/transport/backend-rpc-client";
-import type { FlowDocumentSummary, FlowDocument, FlowDocumentEdge, FlowDocumentNode, FlowDocumentNodeRun, FlowDocumentRun, FlowDocumentSnapshot, FlowNodeTypeId, FlowNodeTypeDefinition, FlowToolDefinition, FlowApproval, FlowOperation, FlowTreeOrder, FlowTreeOrderUpdate, SessionMetadata } from "@/platform/rpc/types";
+import type { FlowDocumentSummary, FlowDocument, FlowDocumentEdge, FlowDocumentGroup, FlowDocumentNode, FlowDocumentNodeRun, FlowDocumentRun, FlowDocumentSnapshot, FlowNodeTypeId, FlowNodeTypeDefinition, FlowToolDefinition, FlowApproval, FlowOperation, FlowTreeOrder, FlowTreeOrderUpdate, SessionMetadata } from "@/platform/rpc/types";
 import { createFlowMutationId, flowOperationOutbox } from "@/domain/flow/flow-operation-outbox";
 import { applyFlowRunFinished, markActiveFlowRead, removeUnreadFlows } from "@/domain/flow/flow-unread";
 import { FlowDocumentStore, FlowRunStore } from "@/domain/flow/flow-render-stores";
@@ -65,6 +65,10 @@ export type HomeFlowController = {
 	duplicateNodes: (nodeIds: string[]) => string[];
 	pasteNodes: (nodes: readonly FlowDocumentNode[], x: number, y: number) => string[];
 	deleteNode: (nodeId: string) => Promise<void>;
+	createGroup: (params: { groupId: string; title: string; color: string; parentGroupId: string | null; x: number; y: number; width: number; height: number; nodeIds: string[]; groupIds: string[] }) => void;
+	renameGroup: (groupId: string, title: string) => void;
+	moveGroupContents: (nodePositions: Array<{ nodeId: string; x: number; y: number }>, groupPositions: Array<{ groupId: string; x: number; y: number }>) => void;
+	dissolveGroup: (groupId: string) => void;
 	createEdge: (sourceNodeId: string, targetNodeId: string, sourcePort?: string, targetPort?: string, dataType?: FlowDocumentNode["ports"][number]["dataTypes"][number]) => Promise<void>;
 	reconnectEdge: (edgeId: string, sourceNodeId: string, targetNodeId: string, sourcePort: string, targetPort: string, dataType: FlowDocumentNode["ports"][number]["dataTypes"][number]) => Promise<void>;
 	deleteEdge: (edgeId: string) => Promise<void>;
@@ -209,21 +213,84 @@ function applyFlowOperation(snapshot: FlowDocumentSnapshot, operation: FlowOpera
 		const outputs = new Set(updatedPorts.filter((port): boolean => port.direction === "output").map((port): string => port.id));
 		return { ...snapshot, nodes, edges: snapshot.edges.filter((edge): boolean => edge.targetNodeId === operation.payload.nodeId ? inputs.has(edge.targetPort) : edge.sourceNodeId === operation.payload.nodeId ? outputs.has(edge.sourcePort) : true) };
 	}
-	if (operation.kind === "node.delete") return { ...snapshot, nodes: snapshot.nodes.filter((node): boolean => node.nodeId !== operation.payload.nodeId), edges: snapshot.edges.filter((edge): boolean => edge.sourceNodeId !== operation.payload.nodeId && edge.targetNodeId !== operation.payload.nodeId) };
+	if (operation.kind === "node.delete") return { ...snapshot, nodes: snapshot.nodes.filter((node): boolean => node.nodeId !== operation.payload.nodeId), groups: (snapshot.groups ?? []).map((group): FlowDocumentGroup => ({ ...group, nodeIds: group.nodeIds.filter((id): boolean => id !== operation.payload.nodeId) })), edges: snapshot.edges.filter((edge): boolean => edge.sourceNodeId !== operation.payload.nodeId && edge.targetNodeId !== operation.payload.nodeId) };
 	if (operation.kind === "node.move") return { ...snapshot, nodes: snapshot.nodes.map((node): FlowDocumentNode => node.nodeId === operation.payload.nodeId ? { ...node, x: operation.payload.x, y: operation.payload.y } : node) };
 	if (operation.kind === "node.collapse") return { ...snapshot, nodes: snapshot.nodes.map(node => node.nodeId === operation.payload.nodeId ? { ...node, collapsed: operation.payload.collapsed } : node) };
 	if (operation.kind === "node.resize") return { ...snapshot, nodes: snapshot.nodes.map((node): FlowDocumentNode => node.nodeId === operation.payload.nodeId ? { ...node, width: operation.payload.width, height: operation.payload.height } : node) };
+	if (operation.kind === "group.create") {
+		const timestamp = new Date().toISOString();
+		const group: FlowDocumentGroup = { ...operation.payload, flowId: snapshot.flow.flowId, nodeIds: [], createdAt: timestamp, updatedAt: timestamp };
+		return { ...snapshot, groups: [...(snapshot.groups ?? []), group] };
+	}
+	if (operation.kind === "group.rename") return { ...snapshot, groups: (snapshot.groups ?? []).map((group): FlowDocumentGroup => group.groupId === operation.payload.groupId ? { ...group, title: operation.payload.title, updatedAt: new Date().toISOString() } : group) };
+	if (operation.kind === "group.move") return { ...snapshot, groups: (snapshot.groups ?? []).map((group): FlowDocumentGroup => group.groupId === operation.payload.groupId ? { ...group, x: operation.payload.x, y: operation.payload.y, updatedAt: new Date().toISOString() } : group) };
+	if (operation.kind === "group.reparent") {
+		const assignments = new Map(operation.payload.nodes.map((item): [string, string | null] => [item.nodeId, item.groupId]));
+		const parentAssignments = new Map(operation.payload.groups.map((item): [string, string | null] => [item.groupId, item.parentGroupId]));
+		const groups = (snapshot.groups ?? []).map((group): FlowDocumentGroup => ({
+			...group,
+			nodeIds: group.nodeIds.filter((nodeId): boolean => !assignments.has(nodeId)),
+			parentGroupId: parentAssignments.has(group.groupId) ? parentAssignments.get(group.groupId)! : group.parentGroupId,
+		}));
+		for (const [nodeId, groupId] of assignments) {
+			if (groupId === null) continue;
+			const target = groups.find((group): boolean => group.groupId === groupId);
+			if (target && !target.nodeIds.includes(nodeId)) target.nodeIds.push(nodeId);
+		}
+		return { ...snapshot, groups };
+	}
+	if (operation.kind === "group.dissolve") {
+		const group = snapshot.groups?.find((candidate): boolean => candidate.groupId === operation.payload.groupId);
+		if (!group) return snapshot;
+		const groups = (snapshot.groups ?? []).filter((candidate): boolean => candidate.groupId !== group.groupId).map((candidate): FlowDocumentGroup => ({
+			...candidate,
+			...(candidate.parentGroupId === group.groupId ? { parentGroupId: group.parentGroupId } : {}),
+			...(candidate.groupId === group.parentGroupId ? { nodeIds: [...new Set([...candidate.nodeIds, ...group.nodeIds])] } : {}),
+		}));
+		return { ...snapshot, groups };
+	}
+	if (operation.kind === "group.delete") return { ...snapshot, groups: (snapshot.groups ?? []).filter((group): boolean => group.groupId !== operation.payload.groupId) };
 	if (operation.kind === "edge.create") {
 		const edge: FlowDocumentEdge = { flowId: snapshot.flow.flowId, ...operation.payload };
 		const target = snapshot.nodes.find((node): boolean => node.nodeId === edge.targetNodeId)?.ports.find((port): boolean => port.id === edge.targetPort && port.direction === "input");
 		return { ...snapshot, edges: [...snapshot.edges.filter((candidate): boolean => target?.multiple === true || !(candidate.targetNodeId === edge.targetNodeId && candidate.targetPort === edge.targetPort)), edge] };
 	}
 	if (operation.kind === "edge.delete") return { ...snapshot, edges: snapshot.edges.filter((edge): boolean => edge.edgeId !== operation.payload.edgeId) };
-	return { ...snapshot, flow: { ...snapshot.flow, viewport: operation.payload } };
+	if (operation.kind === "viewport.update") return { ...snapshot, flow: { ...snapshot.flow, viewport: operation.payload } };
+	return snapshot;
 }
 
 function inverseFlowOperations(snapshot: FlowDocumentSnapshot, operation: FlowOperation): FlowOperation[] {
 	const mutationId = "history";
+	if (operation.kind === "group.create") return [{ mutationId, kind: "group.delete", payload: { groupId: operation.payload.groupId } }];
+	if (operation.kind === "group.rename") {
+		const group = snapshot.groups?.find((candidate): boolean => candidate.groupId === operation.payload.groupId);
+		return group ? [{ mutationId, kind: "group.rename", payload: { groupId: group.groupId, title: group.title } }] : [];
+	}
+	if (operation.kind === "group.move") {
+		const group = snapshot.groups?.find((candidate): boolean => candidate.groupId === operation.payload.groupId);
+		return group ? [{ mutationId, kind: "group.move", payload: { groupId: group.groupId, x: group.x, y: group.y } }] : [];
+	}
+	if (operation.kind === "group.delete") {
+		const group = snapshot.groups?.find((candidate): boolean => candidate.groupId === operation.payload.groupId);
+		return group ? [{ mutationId, kind: "group.create", payload: { groupId: group.groupId, title: group.title, color: group.color, parentGroupId: group.parentGroupId, x: group.x, y: group.y, width: group.width, height: group.height } }] : [];
+	}
+	if (operation.kind === "group.reparent") {
+		const groups = snapshot.groups ?? [];
+		return [{ mutationId, kind: "group.reparent", payload: {
+			nodes: operation.payload.nodes.map((item) => ({ nodeId: item.nodeId, groupId: groups.find((group) => group.nodeIds.includes(item.nodeId))?.groupId ?? null })),
+			groups: operation.payload.groups.map((item) => ({ groupId: item.groupId, parentGroupId: groups.find((group) => group.groupId === item.groupId)?.parentGroupId ?? null })),
+		} }];
+	}
+	if (operation.kind === "group.dissolve") {
+		const group = snapshot.groups?.find((candidate): boolean => candidate.groupId === operation.payload.groupId);
+		if (!group) return [];
+		const children = (snapshot.groups ?? []).filter((candidate): boolean => candidate.parentGroupId === group.groupId);
+		return [
+			{ mutationId, kind: "group.create", payload: { groupId: group.groupId, title: group.title, color: group.color, parentGroupId: group.parentGroupId, x: group.x, y: group.y, width: group.width, height: group.height } },
+			{ mutationId, kind: "group.reparent", payload: { nodes: group.nodeIds.map((nodeId) => ({ nodeId, groupId: group.groupId })), groups: children.map((child) => ({ groupId: child.groupId, parentGroupId: group.groupId })) } },
+		];
+	}
 	if (operation.kind === "node.create") return [{ mutationId, kind: "node.delete", payload: { nodeId: operation.payload.nodeId } }];
 	if (operation.kind === "node.update") {
 		const node = snapshot.nodes.find((candidate): boolean => candidate.nodeId === operation.payload.nodeId);
@@ -270,7 +337,7 @@ function inverseFlowOperations(snapshot: FlowDocumentSnapshot, operation: FlowOp
 
 function materializeHistoryOperation(operation: FlowOperation, snapshot: FlowDocumentSnapshot): FlowOperation {
 	const mutationId = createFlowMutationId();
-	if (operation.kind === "node.move" || operation.kind === "node.resize" || operation.kind === "node.collapse" || operation.kind === "viewport.update") return { ...operation, mutationId, baseLayoutRevision: snapshot.flow.layoutRevision } as FlowOperation;
+	if (operation.kind === "node.move" || operation.kind === "node.resize" || operation.kind === "node.collapse" || operation.kind === "viewport.update" || operation.kind.startsWith("group.")) return { ...operation, mutationId, baseLayoutRevision: snapshot.flow.layoutRevision } as FlowOperation;
 	return { ...operation, mutationId, baseGraphRevision: snapshot.flow.graphRevision } as FlowOperation;
 }
 
@@ -941,6 +1008,48 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		return created;
 	}, [applyOperations, isGraphLocked, nodeDefinitions]);
 
+	const createGroup = useCallback((params: { groupId: string; title: string; color: string; parentGroupId: string | null; x: number; y: number; width: number; height: number; nodeIds: string[]; groupIds: string[] }): void => {
+		const current = snapshotRef.current;
+		if (!current || params.nodeIds.length + params.groupIds.length < 2) return;
+		applyOperations([
+			{ mutationId: createFlowMutationId(), kind: "group.create", baseLayoutRevision: current.flow.layoutRevision, payload: { groupId: params.groupId, title: params.title, color: params.color, parentGroupId: params.parentGroupId, x: params.x, y: params.y, width: params.width, height: params.height } },
+			{ mutationId: createFlowMutationId(), kind: "group.reparent", baseLayoutRevision: current.flow.layoutRevision, payload: { nodes: params.nodeIds.map((nodeId) => ({ nodeId, groupId: params.groupId })), groups: params.groupIds.map((groupId) => ({ groupId, parentGroupId: params.groupId })) } },
+		]);
+	}, [applyOperations]);
+	const dissolveGroup = useCallback((groupId: string): void => {
+		const current = snapshotRef.current;
+		if (!current?.groups?.some((group) => group.groupId === groupId)) return;
+		applyOperation({ mutationId: createFlowMutationId(), kind: "group.dissolve", baseLayoutRevision: current.flow.layoutRevision, payload: { groupId } });
+	}, [applyOperation]);
+	const renameGroup = useCallback((groupId: string, title: string): void => {
+		const current = snapshotRef.current;
+		const group = current?.groups?.find((candidate) => candidate.groupId === groupId);
+		const nextTitle = title.trim();
+		if (!current || !group || !nextTitle || group.title === nextTitle || isGraphLocked) return;
+		applyOperation({ mutationId: createFlowMutationId(), kind: "group.rename", baseLayoutRevision: current.flow.layoutRevision, payload: { groupId, title: nextTitle } });
+	}, [applyOperation, isGraphLocked]);
+	const moveGroupContents = useCallback((nodePositions: Array<{ nodeId: string; x: number; y: number }>, groupPositions: Array<{ groupId: string; x: number; y: number }>): void => {
+		const current = snapshotRef.current;
+		if (!current || isGraphLocked) return;
+		const nodes = new Map(current.nodes.map((node): [string, FlowDocumentNode] => [node.nodeId, node]));
+		const groups = new Map((current.groups ?? []).map((group): [string, FlowDocumentGroup] => [group.groupId, group]));
+		const operations: FlowOperation[] = [
+			...nodePositions.flatMap(({ nodeId, x, y }): FlowOperation[] => {
+				const node = nodes.get(nodeId);
+				return node && (node.x !== x || node.y !== y)
+					? [{ mutationId: createFlowMutationId(), kind: "node.move", baseLayoutRevision: current.flow.layoutRevision, payload: { nodeId, x, y } }]
+					: [];
+			}),
+			...groupPositions.flatMap(({ groupId, x, y }): FlowOperation[] => {
+				const group = groups.get(groupId);
+				return group && (group.x !== x || group.y !== y)
+					? [{ mutationId: createFlowMutationId(), kind: "group.move", baseLayoutRevision: current.flow.layoutRevision, payload: { groupId, x, y } }]
+					: [];
+			}),
+		];
+		if (operations.length) applyOperations(operations);
+	}, [applyOperations, isGraphLocked]);
+
 	const deleteNode = useCallback(
 		async (nodeId: string): Promise<void> => {
 			const current = snapshotRef.current;
@@ -1211,6 +1320,10 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		duplicateNodes,
 		pasteNodes,
 		deleteNode,
+		createGroup,
+		renameGroup,
+		moveGroupContents,
+		dissolveGroup,
 		createEdge,
 		reconnectEdge,
 		deleteEdge,

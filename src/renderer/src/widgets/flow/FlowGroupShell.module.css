@@ -1,0 +1,39 @@
+.frame {
+	position: relative;
+	box-sizing: border-box;
+	width: 100%;
+	height: 100%;
+	border: 2px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: transparent;
+	pointer-events: none;
+}
+
+.frame[data-selected="true"],
+.frame[data-dragging="true"] {
+	border-width: 2px;
+	border-color: var(--ant-color-primary);
+}
+
+.header {
+	position: absolute;
+	width: 100%;
+	padding: var(--ds-space-1);
+	overflow: hidden;
+	font-size: 16px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: grab;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	pointer-events: auto;
+}
+
+.frame[data-dragging="true"] .header {
+	cursor: grabbing;
+}
+
+.renameInput {
+	width: min(240px, 80%);
+}

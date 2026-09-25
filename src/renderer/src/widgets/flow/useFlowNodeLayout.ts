@@ -3,6 +3,7 @@ import type { ReactFlowInstance } from "@xyflow/react";
 import { avoidFlowNodeOverlap, FLOW_NODE_MIN_HEIGHT, type FlowLayoutRect, type FlowLayoutUpdate } from "@/domain/flow/flow-node-layout";
 import type { FlowRect } from "@/domain/flow/flow-render-stores";
 import type { FlowInteractionNode } from "./FlowNodeShell";
+import type { FlowCanvasNode } from "./flow-canvas-node";
 import type { FlowCanvasEdge } from "./HomeFlowSurface";
 import type { FlowLayoutActions, FlowRenderRuntime } from "./flow-render-runtime";
 
@@ -17,7 +18,7 @@ type FlowPosition = { x: number; y: number };
 
 export function useFlowNodeLayout(
 	runtime: FlowRenderRuntime,
-	flow: ReactFlowInstance<FlowInteractionNode, FlowCanvasEdge> | null,
+	flow: ReactFlowInstance<FlowCanvasNode, FlowCanvasEdge> | null,
 	snapToGrid: boolean,
 	commit: (layouts: readonly FlowLayoutUpdate[], createdNodeId?: string) => void,
 ): void {
@@ -92,7 +93,7 @@ export function useFlowNodeLayout(
 			if (animations.size) animationFrame = requestAnimationFrame(animate);
 		};
 		const settle = (id: string, resized?: FlowRect): void => {
-			const nodes = flow.getNodes();
+			const nodes = flow.getNodes().filter((candidate): candidate is FlowInteractionNode => candidate.type === "flowNode");
 			const node = nodes.find(candidate => candidate.id === id);
 			if (!node || disposed) return;
 			const anchor = { ...rect(node), ...(cachedPosition(node) ?? {}), ...resized };
@@ -145,7 +146,8 @@ export function useFlowNodeLayout(
 			creationFrame = 0;
 			if (disposed) return;
 			for (const [id, state] of pending) {
-				const node = flow.getNode(id);
+				const candidate = flow.getNode(id);
+				const node = candidate?.type === "flowNode" ? candidate : undefined;
 				state.attempts++;
 				// A newly mounted node may not have a measured DOM box yet while its
 				// persisted/default dimensions are already authoritative. Run the
@@ -178,7 +180,8 @@ export function useFlowNodeLayout(
 			},
 			startResize: id => {
 				cancelLayout(id);
-				const node = flow.getNode(id);
+				const candidate = flow.getNode(id);
+				const node = candidate?.type === "flowNode" ? candidate : undefined;
 				if (!node) return;
 				const initial = rect(node);
 				starts.set(id, initial);
@@ -192,7 +195,8 @@ export function useFlowNodeLayout(
 				starts.delete(id);
 				if (!start) return;
 				if (start.width === size.width && start.height === size.height && start.x === size.x && start.y === size.y) {
-					const node = flow.getNode(id);
+					const candidate = flow.getNode(id);
+					const node = candidate?.type === "flowNode" ? candidate : undefined;
 					if (node) flow.updateNode(id, {
 						height: undefined,
 						style: { ...node.style, height: undefined, minHeight: runtime.document.get(id)?.height ?? start.height },

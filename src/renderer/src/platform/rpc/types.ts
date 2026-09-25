@@ -259,6 +259,20 @@ export type FlowDocumentNode = {
 	createdAt: string;
 	updatedAt: string;
 };
+export type FlowDocumentGroup = {
+	groupId: string;
+	flowId: string;
+	parentGroupId: string | null;
+	title: string;
+	color: string;
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	nodeIds: string[];
+	createdAt: string;
+	updatedAt: string;
+};
 export type FlowDocumentEdge = {
 	edgeId: string;
 	flowId: string;
@@ -301,6 +315,7 @@ export type FlowDocumentRun = {
 export type FlowDocumentSnapshot = {
 	flow: FlowDocument;
 	nodes: FlowDocumentNode[];
+	groups?: FlowDocumentGroup[];
 	edges: FlowDocumentEdge[];
 	runs: FlowDocumentRun[];
 	latestNodeResults?: FlowDocumentNodeRun[];
@@ -759,6 +774,11 @@ export type FlowOperation =
 	| { mutationId: string; kind: "node.resize"; baseLayoutRevision?: number; payload: { nodeId: string; width: number; height: number } }
 	| { mutationId: string; kind: "edge.create"; baseGraphRevision?: number; payload: { edgeId: string; sourceNodeId: string; sourcePort: string; targetNodeId: string; targetPort: string; dataType: FlowDocumentEdge["dataType"] } }
 	| { mutationId: string; kind: "edge.delete"; baseGraphRevision?: number; payload: { edgeId: string } }
+	| { mutationId: string; kind: "group.create"; baseLayoutRevision?: number; payload: Omit<FlowDocumentGroup, "flowId" | "nodeIds" | "createdAt" | "updatedAt"> }
+	| { mutationId: string; kind: "group.rename"; baseLayoutRevision?: number; payload: { groupId: string; title: string } }
+	| { mutationId: string; kind: "group.move"; baseLayoutRevision?: number; payload: { groupId: string; x: number; y: number } }
+	| { mutationId: string; kind: "group.reparent"; baseLayoutRevision?: number; payload: { nodes: Array<{ nodeId: string; groupId: string | null }>; groups: Array<{ groupId: string; parentGroupId: string | null }> } }
+	| { mutationId: string; kind: "group.dissolve" | "group.delete"; baseLayoutRevision?: number; payload: { groupId: string } }
 	| { mutationId: string; kind: "viewport.update"; baseLayoutRevision?: number; payload: FlowDocument["viewport"] };
 export type FlowPatchAck = { flowId: string; graphRevision: number; layoutRevision: number; acceptedMutationIds: string[]; operations: FlowOperation[] };
 export type FlowToolDefinition = {

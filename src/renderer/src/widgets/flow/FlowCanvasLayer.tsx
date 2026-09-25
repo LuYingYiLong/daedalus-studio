@@ -2,7 +2,7 @@ import { memo, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { getBezierPath, Position, useStoreApi } from "@xyflow/react";
 import type { FlowCanvasEdge } from "./HomeFlowSurface";
-import type { FlowInteractionNode } from "./FlowNodeShell";
+import type { FlowCanvasNode } from "./flow-canvas-node";
 import type { FlowRenderRuntime } from "./flow-render-runtime";
 import { flowNodeCategoryColor } from "./flow-node-category-colors";
 import { flowNodeTitle } from "./flow-node-labels";
@@ -32,7 +32,7 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 	const translateRef = useRef(t);
 	translateRef.current = t;
 	const canvasRef = useRef<HTMLCanvasElement>(null);
-	const xyStore = useStoreApi<FlowInteractionNode, FlowCanvasEdge>();
+	const xyStore = useStoreApi<FlowCanvasNode, FlowCanvasEdge>();
 	const propsRef = useRef({ edges, excludedEdgeId, nodeCategories, onOverlayChange });
 	propsRef.current = { edges, excludedEdgeId, nodeCategories, onOverlayChange };
 	const invalidateRef = useRef<() => void>(() => undefined);
@@ -359,12 +359,27 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 				gridPattern = context.createPattern(gridTile, "repeat");
 				gridPattern?.setTransform(new DOMMatrix().scale(0.5));
 			}
+			const background = canvasStyle.getPropertyValue("--ant-color-bg-container").trim() || "#fff";
+			const groupBackground = canvasStyle.getPropertyValue("--ds-bg").trim() || background;
+			const radius = parseFloat(canvasStyle.getPropertyValue("--ds-radius-lg")) || 8;
+			const region = viewRect(padding);
 			if (gridPattern) {
-				const region = viewRect(padding);
 				context.fillStyle = gridPattern;
 				context.fillRect(region.x, region.y, region.width, region.height);
 			}
-			for (const id of runtime.geometry.edges.query(viewRect(padding))) {
+			for (const node of xyStore.getState().nodeLookup.values()) {
+				if (node.type !== "flowGroup") continue;
+				const x = node.internals.positionAbsolute.x;
+				const y = node.internals.positionAbsolute.y;
+				const width = node.measured.width ?? node.width ?? 0;
+				const height = node.measured.height ?? node.height ?? 0;
+				if (!width || !height || x + width < region.x || y + height < region.y || x > region.x + region.width || y > region.y + region.height) continue;
+				context.beginPath();
+				context.roundRect(x, y, width, height, radius);
+				context.fillStyle = groupBackground;
+				context.fill();
+			}
+			for (const id of runtime.geometry.edges.query(region)) {
 				// 悬浮和选择只启用 SVG 命中层，不交接绘制，避免异步切层导致空帧或线条变色
 				if (id === propsRef.current.excludedEdgeId) continue;
 				const curve = curves.get(id);
@@ -381,8 +396,6 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 				context.lineWidth = 2;
 				context.stroke(curve.path);
 			}
-			const background = canvasStyle.getPropertyValue("--ant-color-bg-container").trim() || "#fff";
-			const radius = parseFloat(canvasStyle.getPropertyValue("--ds-radius-lg")) || 8;
 			const headerPadding = parseFloat(canvasStyle.getPropertyValue("--ds-space-2")) || 8;
 			const titlePadding = parseFloat(canvasStyle.getPropertyValue("--ds-space-3")) || 12;
 			const fontSize = parseFloat(canvasStyle.fontSize) || 14;
@@ -537,7 +550,10 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 		};
 		const unsubscribe = xyStore.subscribe((state, previous) => {
 			// 平移只改变 transform，不重新遍历节点和连线几何
-			if (state.transform === previous.transform) geometryDirty = true;
+			if (state.transform === previous.transform) {
+				geometryDirty = true;
+				visualDirty = true;
+			}
 			scheduleDraw();
 		});
 		const unsubscribeViews = runtime.views.subscribeAll(() => {
