@@ -843,8 +843,8 @@
 				"builtin/output": { "input": "输入值", "format": "输出格式" },
 				"builtin/text-to-image": { "prompt": "提示词", "provider": "供应商", "model": "模型", "negativePrompt": "反向提示词", "aspectRatio": "宽高比", "style": "风格", "seed": "种子", "count": "数量", "outputFormat": "输出格式" },
 				"builtin/image-to-image": { "image": "输入图像", "prompt": "提示词", "provider": "供应商", "model": "模型", "negativePrompt": "反向提示词", "seed": "种子", "count": "数量", "outputFormat": "输出格式" },
-				"builtin/text-to-video": { "prompt": "提示词", "provider": "供应商", "model": "模型", "negativePrompt": "反向提示词", "width": "宽度", "height": "高度", "durationMs": "时长", "fps": "帧率", "seed": "种子", "count": "数量", "outputFormat": "输出格式" },
-				"builtin/image-to-video": { "image": "输入图像", "prompt": "提示词", "provider": "供应商", "model": "模型", "negativePrompt": "反向提示词", "width": "宽度", "height": "高度", "durationMs": "时长", "fps": "帧率", "seed": "种子", "count": "数量", "outputFormat": "输出格式" },
+				"builtin/text-to-video": { "prompt": "提示词", "provider": "供应商", "model": "模型", "negativePrompt": "反向提示词", "size": "尺寸", "durationMs": "时长", "fps": "帧率", "seed": "种子", "count": "数量", "outputFormat": "输出格式" },
+				"builtin/image-to-video": { "image": "输入图像", "prompt": "提示词", "provider": "供应商", "model": "模型", "negativePrompt": "反向提示词", "size": "尺寸", "durationMs": "时长", "fps": "帧率", "seed": "种子", "count": "数量", "outputFormat": "输出格式" },
 				"builtin/media-output": { "format": "展示方式" },
 				"builtin/note": { "text": "内容" },
 				"builtin/number": {

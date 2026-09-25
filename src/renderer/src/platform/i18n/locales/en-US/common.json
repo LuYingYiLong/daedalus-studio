@@ -848,8 +848,8 @@
 				"builtin/output": { "input": "Input", "format": "Output format" },
 				"builtin/text-to-image": { "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "aspectRatio": "Aspect ratio", "style": "Style", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
 				"builtin/image-to-image": { "image": "Input image", "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
-				"builtin/text-to-video": { "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "width": "Width", "height": "Height", "durationMs": "Duration", "fps": "Frame rate", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
-				"builtin/image-to-video": { "image": "Input image", "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "width": "Width", "height": "Height", "durationMs": "Duration", "fps": "Frame rate", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
+				"builtin/text-to-video": { "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "size": "Size", "durationMs": "Duration", "fps": "Frame rate", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
+				"builtin/image-to-video": { "image": "Input image", "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "size": "Size", "durationMs": "Duration", "fps": "Frame rate", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
 				"builtin/media-output": { "format": "Display mode" },
 				"builtin/note": { "text": "Content" },
 				"builtin/number": {
