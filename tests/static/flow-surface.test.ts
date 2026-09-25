@@ -49,7 +49,7 @@ describe("Flow home surface", (): void => {
 		expect(surface).not.toContain("detachedEdgeIdRef.current");
 		expect(surface).toContain("detachedConnectionSourceRef.current");
 		expect(surface).toContain("connectionLineComponent={connectionLineComponent}");
-		expect(surface).toContain('reconnectable: controller.isGraphLocked ? false : "target" as const');
+		expect(surface).toMatch(/reconnectable:\s*controller\.isGraphLocked\s*\?\s*false\s*:\s*\(?\s*"target"\s+as\s+const\s*\)?/);
 		expect(surface).not.toContain("edge.id !== reconnectingEdgeId && overlayEdgeIds.includes(edge.id)");
 		expect(surface).toContain("createConnectedNode");
 		expect(surface).toContain("onMoveEnd={onMoveEnd}");
@@ -113,7 +113,7 @@ describe("Flow home surface", (): void => {
 		expect(nodes).toContain('control === "workspace-file"');
 		expect(nodes).toContain('name="folder-open"');
 		expect(surface).toContain("commitActiveEditor");
-		expect(surface).toContain("provider.provider, provider.models");
+		expect(surface).toMatch(/provider\.provider,\s*provider\.models/);
 		expect(surface).not.toContain("listProviderModels");
 		expect(nodes).toContain("id={parameter.id}");
 		expect(nodes).toContain("id={output.id}");
@@ -158,7 +158,7 @@ describe("Flow home surface", (): void => {
 		expect(picker).toContain('destroyOnHidden={false}');
 		expect(picker).toContain("trigger={[]}");
 		expect(picker).toContain('document.addEventListener("pointerdown", closeOnOutsidePointerDown, true);');
-		expect(picker).toContain('element?.closest("[data-flow-node-picker-popup]")');
+		expect(picker).toContain('element.closest("[data-flow-node-picker-popup], [data-flow-context-menu-popup]")');
 		expect(picker).toContain("open ? openCategoryKeys : []");
 		expect(picker).toContain("setOpenCategoryKeys([]);");
 		expect(picker).toContain("motion: submenuMotion");
