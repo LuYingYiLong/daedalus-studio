@@ -481,7 +481,7 @@ function FlowCanvasLayer({
 			// Group titles stay at a readable screen size while the graph is zoomed out.
 			context.save();
 			context.setTransform(dpr, 0, 0, dpr, 0, 0);
-			context.font = `16px ${canvasStyle.fontFamily}`;
+			context.font = `32px ${canvasStyle.fontFamily}`;
 			context.fillStyle = canvasStyle.getPropertyValue("--ant-color-text").trim() || "#1f1f1f";
 			context.textAlign = "center";
 			context.textBaseline = "middle";
