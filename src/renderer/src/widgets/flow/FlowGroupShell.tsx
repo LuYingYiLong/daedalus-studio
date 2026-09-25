@@ -57,7 +57,7 @@ function FlowGroupShell({ data, selected, dragging }: NodeProps<FlowGroupInterac
 						onPointerDown={(event): void => event.stopPropagation()}
 						onDoubleClick={(event): void => event.stopPropagation()}
 					/>
-				) : data.group.title}
+			) : null}
 			</div>
 		</div>
 	);

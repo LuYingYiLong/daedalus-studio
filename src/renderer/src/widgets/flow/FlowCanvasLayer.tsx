@@ -1,11 +1,9 @@
 import { memo, useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
 import { getBezierPath, Position, useStoreApi } from "@xyflow/react";
 import type { FlowCanvasEdge } from "./HomeFlowSurface";
 import type { FlowCanvasNode } from "./flow-canvas-node";
 import type { FlowRenderRuntime } from "./flow-render-runtime";
 import { flowNodeCategoryColor } from "./flow-node-category-colors";
-import { flowNodeTitle } from "./flow-node-labels";
 import type { FlowHandleGeometry, FlowNodeGeometry, FlowRect } from "@/domain/flow/flow-render-stores";
 import type { FlowNodeTypeDefinition } from "@/platform/rpc/types";
 
@@ -27,10 +25,13 @@ type Props = {
 	onOverlayChange: (ids: readonly string[]) => void;
 };
 
-function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOverlayChange }: Props): React.JSX.Element {
-	const { t } = useTranslation();
-	const translateRef = useRef(t);
-	translateRef.current = t;
+function FlowCanvasLayer({
+	runtime,
+	edges,
+	excludedEdgeId,
+	nodeCategories,
+	onOverlayChange,
+}: Props): React.JSX.Element {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const xyStore = useStoreApi<FlowCanvasNode, FlowCanvasEdge>();
 	const propsRef = useRef({ edges, excludedEdgeId, nodeCategories, onOverlayChange });
@@ -38,7 +39,7 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 	const invalidateRef = useRef<() => void>(() => undefined);
 	useEffect(() => {
 		invalidateRef.current();
-	}, [edges, excludedEdgeId, nodeCategories, t]);
+	}, [edges, excludedEdgeId, nodeCategories]);
 	useEffect(() => {
 		const canvas = canvasRef.current!;
 		const host = canvas.parentElement!;
@@ -62,7 +63,8 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 			let fitted = text;
 			if (context.measureText(text).width > width) {
 				const characters = Array.from(text);
-				let low = 0, high = characters.length;
+				let low = 0,
+					high = characters.length;
 				while (low < high) {
 					const mid = Math.ceil((low + high) / 2);
 					if (context.measureText(`${characters.slice(0, mid).join("")}…`).width <= width) low = mid;
@@ -196,7 +198,9 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 					const typeId = runtime.views.get(next.id)?.flowNode.typeId;
 					// Markdown、媒体和插件表单的挂载/卸载占满本帧名额，避免两棵重 DOM 同帧提交
 					const expensive =
-						typeId === "builtin/output" || typeId === "builtin/media-output" || !typeId?.startsWith("builtin/");
+						typeId === "builtin/output" ||
+						typeId === "builtin/media-output" ||
+						!typeId?.startsWith("builtin/");
 					if (expensive && count) break;
 					const { id, mode } = pending.shift()!;
 					if (runtime.geometry.get(id)) runtime.canvas.set(id, mode);
@@ -363,22 +367,37 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 			const groupBackground = canvasStyle.getPropertyValue("--ds-bg").trim() || background;
 			const radius = parseFloat(canvasStyle.getPropertyValue("--ds-radius-lg")) || 8;
 			const region = viewRect(padding);
+			const groupHeaders: Array<{ id: string; title: string; x: number; y: number; width: number }> = [];
+			const groupTitleKeys = new Set<string>();
 			if (gridPattern) {
 				context.fillStyle = gridPattern;
 				context.fillRect(region.x, region.y, region.width, region.height);
 			}
 			for (const node of xyStore.getState().nodeLookup.values()) {
-				if (node.type !== "flowGroup") continue;
+				if (node.type !== "flowGroup" || !("group" in node.data)) continue;
 				const x = node.internals.positionAbsolute.x;
 				const y = node.internals.positionAbsolute.y;
 				const width = node.measured.width ?? node.width ?? 0;
 				const height = node.measured.height ?? node.height ?? 0;
-				if (!width || !height || x + width < region.x || y + height < region.y || x > region.x + region.width || y > region.y + region.height) continue;
+				if (
+					!width ||
+					!height ||
+					x + width < region.x ||
+					y + height < region.y ||
+					x > region.x + region.width ||
+					y > region.y + region.height
+				)
+					continue;
+				const titleKey = `group:${node.id}`;
+				groupHeaders.push({ id: titleKey, title: node.data.group.title, x, y, width });
+				groupTitleKeys.add(titleKey);
 				context.beginPath();
 				context.roundRect(x, y, width, height, radius);
 				context.fillStyle = groupBackground;
 				context.fill();
 			}
+			for (const key of titles.keys())
+				if (key.startsWith("group:") && !groupTitleKeys.has(key)) titles.delete(key);
 			for (const id of runtime.geometry.edges.query(region)) {
 				// 悬浮和选择只启用 SVG 命中层，不交接绘制，避免异步切层导致空帧或线条变色
 				if (id === propsRef.current.excludedEdgeId) continue;
@@ -408,7 +427,9 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 				const node = runtime.geometry.get(id)!;
 				const view = runtime.views.get(id);
 				const categoryColor = flowNodeCategoryColor(
-					view === undefined ? undefined : propsRef.current.nodeCategories.get(view.flowNode.typeId)?.category,
+					view === undefined
+						? undefined
+						: propsRef.current.nodeCategories.get(view.flowNode.typeId)?.category,
 				);
 				if (node.color !== categoryColor) node.color = categoryColor;
 				const collapsed = runtime.canvas.collapsed.get(id) === true;
@@ -423,7 +444,8 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 				context.fillStyle = node.color;
 				context.fill();
 				if (view) {
-					const arrowX = node.x + titlePadding + 8, arrowY = node.y + height / 2;
+					const arrowX = node.x + titlePadding + 8,
+						arrowY = node.y + height / 2;
 					context.beginPath();
 					context.moveTo(arrowX - (collapsed ? 2 : 4), arrowY - (collapsed ? 4 : 2));
 					context.lineTo(arrowX + (collapsed ? 2 : 0), arrowY + (collapsed ? 0 : 2));
@@ -431,12 +453,6 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 					context.strokeStyle = "#fff";
 					context.lineWidth = 1.5;
 					context.stroke();
-					context.fillStyle = "#fff";
-					context.fillText(
-						fitTitle(id, flowNodeTitle(translateRef.current, view.flowNode, view.definition), Math.max(0, node.width - titlePadding * 2 - 28)),
-						node.x + titlePadding + 28,
-						node.y + height / 2,
-					);
 				}
 				context.beginPath();
 				context.roundRect(node.x, node.y, node.width, node.height, corner);
@@ -445,9 +461,15 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 				context.stroke();
 				if (collapsed) {
 					for (const side of ["target", "source"] as const) {
-						if (!node.handles.some(handle => handle.type === side)) continue;
+						if (!node.handles.some((handle) => handle.type === side)) continue;
 						context.beginPath();
-						context.roundRect(node.x + (side === "target" ? -4 : node.width - 6), node.y + node.height / 2 - 10, 10, 20, 5);
+						context.roundRect(
+							node.x + (side === "target" ? -4 : node.width - 6),
+							node.y + node.height / 2 - 10,
+							10,
+							20,
+							5,
+						);
 						context.fillStyle = "#8c8c8c";
 						context.fill();
 						context.strokeStyle = background;
@@ -456,6 +478,21 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 					}
 				}
 			}
+			// Group titles stay at a readable screen size while the graph is zoomed out.
+			context.save();
+			context.setTransform(dpr, 0, 0, dpr, 0, 0);
+			context.font = `16px ${canvasStyle.fontFamily}`;
+			context.fillStyle = canvasStyle.getPropertyValue("--ant-color-text").trim() || "#1f1f1f";
+			context.textAlign = "center";
+			context.textBaseline = "middle";
+			for (const group of groupHeaders) {
+				const screenWidth = group.width * zoom;
+				const titleWidth = Math.max(0, screenWidth - 32);
+				const screenX = x + padding + (group.x + group.width / 2) * zoom;
+				const screenY = y + padding + (group.y + 24) * zoom;
+				context.fillText(fitTitle(group.id, group.title, titleWidth), screenX, screenY);
+			}
+			context.restore();
 		}
 		function scheduleDraw(): void {
 			if (!disposed && !frame) frame = requestAnimationFrame(draw);
@@ -535,10 +572,7 @@ function FlowCanvasLayer({ runtime, edges, excludedEdgeId, nodeCategories, onOve
 			// SVG overlay and Canvas hit-testing share the same selection owner. Prevent the later
 			// pane/edge click from applying a second, stale XYFlow selection transition.
 			const element = event.target as Element;
-			if (
-				event.button === 0 &&
-				(element.closest(".react-flow__edge") !== null || hit(event) !== null)
-			)
+			if (event.button === 0 && (element.closest(".react-flow__edge") !== null || hit(event) !== null))
 				event.stopPropagation();
 		};
 		const wheel = (): void => {
