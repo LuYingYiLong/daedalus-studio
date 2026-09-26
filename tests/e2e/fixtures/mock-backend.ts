@@ -101,6 +101,10 @@ function createDefaultHandlers(): Record<string, MockRpcHandler> {
 	};
 
 	return {
+		"flow.run.preflight": ({ params }) => ({ flowId: (params as { flowId: string }).flowId, revision: (params as { revision: number }).revision, blockers: [], warnings: [], plannedRequests: null }),
+		"flow.artifact.usage": () => ({ byteSize: 0, freeBytes: 100 * 1024 ** 3, warning: false, warningThresholdBytes: 20 * 1024 ** 3 }),
+		"flow.artifact.health": () => ({ checked: 0, issues: [], stagingFiles: 0 }),
+		"flow.artifact.list": () => ({ artifacts: [], total: 0 }),
 		"backend.health": () => ({
 			name: "godot-daedalus-backend",
 			version: "e2e",

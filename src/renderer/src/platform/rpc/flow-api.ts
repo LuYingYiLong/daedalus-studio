@@ -100,7 +100,7 @@ export async function stopFlowRun(flowId: string, runId: string): Promise<FlowDo
 	return (await createBackendClient()).request("flow.run.stop", { flowId, runId });
 }
 
-export async function retryFlowRun(params: { flowId: string; runId: string; nodeId?: string }): Promise<FlowDocumentRun> {
+export async function retryFlowRun(params: { flowId: string; runId: string; nodeId?: string; confirmPossibleDuplicateCharge?: boolean }): Promise<FlowDocumentRun> {
 	return (await createBackendClient()).request("flow.run.retry", params);
 }
 
@@ -116,6 +116,25 @@ export async function listFlowArtifacts(flowId: string, runId?: string): Promise
 	return (await createBackendClient()).request("flow.artifact.list", { flowId, ...(runId === undefined ? {} : { runId }) });
 }
 
+export type FlowPreflightIssue = { code: string; nodeId: string | null; message: string };
+export type FlowPreflightResult = { flowId: string; revision: number; blockers: FlowPreflightIssue[]; warnings: FlowPreflightIssue[]; plannedRequests: number | null };
+export async function preflightFlowRun(params: { flowId: string; revision: number; entryNodeIds?: string[]; targetNodeIds?: string[]; inputValues?: Record<string, unknown> }): Promise<FlowPreflightResult> {
+	return (await createBackendClient()).request("flow.run.preflight", params);
+}
+
+export type FlowRunReport = { flowId: string; runId: string; status: string; startedAt: string | null; finishedAt: string | null; nodes: Array<{ nodeId: string; typeId: string; status: string; startedAt: string | null; finishedAt: string | null; errorCode: string | null; events: Array<{ sequence: number; type: string; at: string; details: Record<string, string | number | boolean | null> }> }> };
+export async function fetchFlowRunReport(flowId: string, runId: string): Promise<FlowRunReport> {
+	return (await createBackendClient()).request("flow.run.report", { flowId, runId });
+}
+
+export async function fetchFlowArtifactUsage(flowId?: string): Promise<{ byteSize: number; freeBytes: number | null; warning: boolean; warningThresholdBytes: number }> {
+	return (await createBackendClient()).request("flow.artifact.usage", flowId === undefined ? {} : { flowId });
+}
+
+export async function fetchFlowArtifactHealth(flowId?: string): Promise<{ checked: number; stagingFiles: number; issues: Array<{ artifactId: string; flowId: string; code: string }> }> {
+	return (await createBackendClient()).request("flow.artifact.health", flowId === undefined ? {} : { flowId });
+}
+
 export async function importFlowInputArtifact(params: { flowId: string; nodeId: string; sourcePath: string; kind: "image" | "video" | "audio" | "mask" | "frames" | "artifact" }): Promise<{ ref: FlowMediaArtifactRef }> {
 	return (await createBackendClient()).request("flow.artifact.import", params);
 }
@@ -124,40 +143,41 @@ export async function listFlowGeneratedArtifacts(flowId: string, limit = 3): Pro
 	return (await createBackendClient()).request("flow.artifact.list", { flowId, aiGeneratedOnly: true, limit });
 }
 
-export async function getFlowArtifact(artifactId: string, includeData = false): Promise<{ ref: FlowMediaArtifactRef; dataBase64?: string }> {
-	return (await createBackendClient()).request("flow.artifact.get", { artifactId, includeData });
+export async function getFlowArtifact(flowId: string, artifactId: string, includeData = false): Promise<{ ref: FlowMediaArtifactRef; dataBase64?: string }> {
+	return (await createBackendClient()).request("flow.artifact.get", { flowId, artifactId, includeData });
 }
 
-export async function previewFlowArtifact(artifactId: string): Promise<{ ref: FlowMediaArtifactRef; dataBase64: string }> {
-	return (await createBackendClient()).request("flow.artifact.preview", { artifactId });
+export async function previewFlowArtifact(flowId: string, artifactId: string): Promise<{ ref: FlowMediaArtifactRef; dataBase64: string }> {
+	return (await createBackendClient()).request("flow.artifact.preview", { flowId, artifactId });
 }
 
-export async function thumbnailFlowArtifact(artifactId: string): Promise<{ ref: FlowMediaArtifactRef; dataBase64: string }> {
-	return (await createBackendClient()).request("flow.artifact.thumbnail", { artifactId });
+export async function thumbnailFlowArtifact(flowId: string, artifactId: string): Promise<{ ref: FlowMediaArtifactRef; dataBase64: string }> {
+	return (await createBackendClient()).request("flow.artifact.thumbnail", { flowId, artifactId });
 }
 
-export async function downloadFlowArtifact(artifactId: string): Promise<{ ref: FlowMediaArtifactRef; dataBase64: string }> {
-	return (await createBackendClient()).request("flow.artifact.download", { artifactId });
+export async function downloadFlowArtifact(flowId: string, artifactId: string): Promise<{ ref: FlowMediaArtifactRef; dataBase64: string }> {
+	return (await createBackendClient()).request("flow.artifact.download", { flowId, artifactId });
 }
 
 export async function exportFlowArtifacts(params: { flowId: string; artifactIds: string[]; destinationPath: string; directory: boolean }): Promise<{ exportedPaths: string[] }> {
 	return (await createBackendClient()).request("flow.artifact.export", params);
 }
 
-export async function deleteFlowArtifact(artifactId: string): Promise<{ deleted: boolean }> {
-	return (await createBackendClient()).request("flow.artifact.delete", { artifactId });
-}
-
-export async function cleanupFlowArtifacts(flowId: string, keepRunIds?: string[]): Promise<{ removed: number }> {
-	return (await createBackendClient()).request("flow.artifact.cleanup", { flowId, ...(keepRunIds === undefined ? {} : { keepRunIds }) });
+export type FlowCleanupPlan = { runs: Array<{ runId: string; status: string }>; artifacts: Array<{ artifactId: string; byteSize: number }>; removed: number };
+export async function cleanupFlowArtifacts(params: { flowId: string; runIds: string[]; dryRun: boolean; expectedArtifactIds?: string[] }): Promise<FlowCleanupPlan> {
+	return (await createBackendClient()).request("flow.artifact.cleanup", params);
 }
 
 export type FlowImportResult = { imported: true; flowId: string; title: string; workspaceId: string | null; archived: boolean; restoredArtifactCount: number; missingArtifactCount: number };
-export async function importFlowData(sourcePath: string): Promise<FlowImportResult> {
-	return (await createBackendClient()).request("flow.import", { sourcePath });
+export async function importFlowData(sourcePath: string, operationId?: string): Promise<FlowImportResult> {
+	return (await createBackendClient()).request("flow.import", { sourcePath, ...(operationId === undefined ? {} : { operationId }) });
 }
 
 export type FlowExportResult = { exported: true; flowId: string; destinationPath: string; byteSize: number; tableCounts: Record<string, number>; embeddedFileCount: number; missingFileCount: number };
-export async function exportFlowData(flowId: string, destinationPath: string): Promise<FlowExportResult> {
-	return (await createBackendClient()).request("flow.export", { flowId, destinationPath });
+export async function exportFlowData(flowId: string, destinationPath: string, operationId?: string): Promise<FlowExportResult> {
+	return (await createBackendClient()).request("flow.export", { flowId, destinationPath, ...(operationId === undefined ? {} : { operationId }) });
+}
+
+export async function cancelFlowTransfer(operationId: string): Promise<{ cancelled: true }> {
+	return (await createBackendClient()).request("flow.transfer.cancel", { operationId });
 }

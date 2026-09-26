@@ -72,7 +72,8 @@ describe("Flow home surface", (): void => {
 		expect(surface).toContain('action === "run-input"');
 		expect(surface).toContain("reachableOutputNodeIds([nodeId]");
 		expect(surface).toContain("groupFlowRunEntries");
-		expect(surface).not.toContain("<Modal");
+		expect(surface).toContain("<Modal open={reportOpen}");
+		expect(surface).toContain("<Modal open={cleanupPlan !== null}");
 		expect(surface).not.toContain("runSetup");
 		expect(surface).toContain('matchesFlowShortcut(event, "flow.deleteSelection")');
 		expect(surface).toContain("snapToGrid={snapToGrid}");

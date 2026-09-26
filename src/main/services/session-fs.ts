@@ -2,7 +2,9 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import type { OpenDialogOptions, OpenDialogReturnValue, SaveDialogOptions, SaveDialogReturnValue } from "electron";
 import { stat } from "node:fs/promises";
 import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { createFlowArtifactMediaUrl } from "./workspace-media";
 
 export type SessionFsOpenDirectoryResult = {
 	opened: true;
@@ -31,6 +33,7 @@ export type SessionFsPickExportDestinationOptions = {
 export type SessionFsPickImportSourceParams = {
 	dialogTitle?: string;
 	buttonLabel?: string;
+	kind?: "session" | "flow";
 };
 
 export type SessionFsPickImportSourceOptions = {
@@ -56,6 +59,10 @@ function sanitizeExportFileName(title: string, sessionId: string): string {
 
 function ensureSqliteExtension(filePath: string): string {
 	return extname(filePath).toLocaleLowerCase() === ".sqlite" ? filePath : `${filePath}.sqlite`;
+}
+
+function ensureFlowExtension(filePath: string): string {
+	return filePath.toLocaleLowerCase().endsWith(".daedalus-flow") ? filePath : `${filePath}.daedalus-flow`;
 }
 
 async function showSessionExportSaveDialog(
@@ -139,15 +146,15 @@ async function pickDocumentExportDestination(params: SessionFsPickExportDestinat
 	const showSaveDialog = options.showSaveDialog ?? showSessionExportSaveDialog;
 	const result: SaveDialogReturnValue = await showSaveDialog(owner, {
 		title: params.dialogTitle?.trim() || (kind === "flow" ? "Export Flow data" : "Export session data"),
-		defaultPath: join(documentsDirectory, sanitizeExportFileName(params.title, params.sessionId)),
+		defaultPath: join(documentsDirectory, kind === "flow" ? sanitizeExportFileName(params.title, params.sessionId).replace(/\.sqlite$/u, ".daedalus-flow") : sanitizeExportFileName(params.title, params.sessionId)),
 		buttonLabel: params.buttonLabel?.trim() || "Export",
-		filters: [{ name: "SQLite Database", extensions: ["sqlite"] }],
+		filters: [kind === "flow" ? { name: "Daedalus Flow", extensions: ["daedalus-flow"] } : { name: "SQLite Database", extensions: ["sqlite"] }],
 		properties: ["createDirectory", "showOverwriteConfirmation"]
 	});
 	if (result.canceled || typeof result.filePath !== "string" || result.filePath.trim().length === 0) {
 		return null;
 	}
-	return resolve(ensureSqliteExtension(result.filePath));
+	return resolve(kind === "flow" ? ensureFlowExtension(result.filePath) : ensureSqliteExtension(result.filePath));
 }
 
 export async function pickSessionImportSource(
@@ -167,7 +174,7 @@ export async function pickSessionImportSource(
 		title: params.dialogTitle?.trim() || "Import session data",
 		defaultPath: documentsDirectory,
 		buttonLabel: params.buttonLabel?.trim() || "Import",
-		filters: [{ name: "SQLite Database", extensions: ["sqlite", "db", "sqlite3"] }],
+		filters: [params.kind === "flow" ? { name: "Daedalus Flow", extensions: ["daedalus-flow"] } : { name: "SQLite Database", extensions: ["sqlite", "db", "sqlite3"] }],
 		properties: ["openFile"]
 	});
 	if (result.canceled || result.filePaths.length === 0 || typeof result.filePaths[0] !== "string") {
@@ -177,16 +184,33 @@ export async function pickSessionImportSource(
 }
 
 export function registerSessionFsIpc(): void {
-	ipcMain.handle("session-fs:open-directory", async (_event, sessionId: string): Promise<SessionFsOpenDirectoryResult> => {
+	const assertMainFrame = (event: Electron.IpcMainInvokeEvent): BrowserWindow => {
+		const owner = BrowserWindow.fromWebContents(event.sender);
+		if (owner === null || owner.isDestroyed() || event.senderFrame !== owner.webContents.mainFrame)
+			throw new Error("session_fs_sender_invalid");
+		const senderUrl = new URL(event.senderFrame.url);
+		const devUrl = process.env.ELECTRON_RENDERER_URL;
+		const validOrigin = devUrl
+			? senderUrl.origin === new URL(devUrl).origin
+			: senderUrl.protocol === "file:" && resolve(fileURLToPath(senderUrl)) === resolve(join(__dirname, "../renderer/index.html"));
+		if (!validOrigin) throw new Error("session_fs_sender_invalid");
+		return owner;
+	};
+	ipcMain.handle("session-fs:open-directory", async (event, sessionId: string): Promise<SessionFsOpenDirectoryResult> => {
+		assertMainFrame(event);
 		return openSessionDirectory(sessionId);
 	});
 	ipcMain.handle("flow-fs:pick-export-destination", async (event, params: Parameters<typeof pickFlowExportDestination>[0]): Promise<string | null> => {
-		return pickFlowExportDestination(params, BrowserWindow.fromWebContents(event.sender) ?? undefined);
+		return pickFlowExportDestination(params, assertMainFrame(event));
 	});
 	ipcMain.handle("session-fs:pick-export-destination", async (event, params: SessionFsPickExportDestinationParams): Promise<string | null> => {
-		return pickSessionExportDestination(params, BrowserWindow.fromWebContents(event.sender) ?? undefined);
+		return pickSessionExportDestination(params, assertMainFrame(event));
 	});
 	ipcMain.handle("session-fs:pick-import-source", async (event, params?: SessionFsPickImportSourceParams): Promise<string | null> => {
-		return pickSessionImportSource(params ?? {}, BrowserWindow.fromWebContents(event.sender) ?? undefined);
+		return pickSessionImportSource(params ?? {}, assertMainFrame(event));
+	});
+	ipcMain.handle("flow-fs:artifact-media-url", async (event, params: { artifactId: string; mimeType: string; byteSize: number }): Promise<string> => {
+		assertMainFrame(event);
+		return createFlowArtifactMediaUrl(params);
 	});
 }

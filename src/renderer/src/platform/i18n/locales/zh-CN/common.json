@@ -622,8 +622,21 @@
 		}
 	},
 	"flow": {
+		"diagnostics": { "title": "运行诊断", "export": "导出诊断 JSON" },
+		"storage": {
+			"title": "Flow 存储用量",
+			"free": "剩余",
+			"warning": "Flow 媒体已超过 20 GiB，或磁盘剩余空间不足。已有结果仍可使用。",
+			"selectRuns": "选择要删除的已结束运行及其产物",
+			"reviewCleanup": "预览清理内容",
+			"confirmCleanup": "删除所选 Flow 运行？",
+			"cleanupSummary": "将删除 {{runs}} 次运行及 {{artifacts}} 个产物（{{size}} MiB）。",
+			"moreArtifacts": "另有 {{count}} 个产物"
+		},
 		"exportData": {
 			"exporting": "正在导出…",
+			"cancel": "取消导出",
+			"cancelled": "Flow 导出已取消",
 			"dialogTitle": "导出 Flow 数据",
 			"success": "Flow 数据已导出",
 			"missing": "Flow 数据已导出，但有 {{count}} 个媒体文件缺失",
@@ -3264,8 +3277,11 @@
 				},
 				"importFlow": {
 					"title": "导入 Flow 会话",
-					"description": "选择从 FlowTree 导出的 SQLite 文件，将工作流、节点布局、运行记录和媒体产物导入本机。重复的 Flow ID 会被拒绝。",
-					"action": "选择 Flow SQLite 文件",
+					"cancel": "取消导入",
+					"cancelled": "Flow 导入已取消",
+					"description": "选择新版 .daedalus-flow 归档，导入工作流、节点布局、运行记录和媒体产物。旧版 SQLite 导出文件不再支持导入。重复的 Flow ID 会被拒绝。",
+					"action": "选择 Flow 归档文件",
+					"unsupportedFormat": "Flow 包版本不兼容。请在最新版 Daedalus 中重新导出为 .daedalus-flow 文件。",
 					"dialogTitle": "导入 Flow 会话",
 					"dialogButton": "导入",
 					"success": "已导入 Flow：{{title}}",
