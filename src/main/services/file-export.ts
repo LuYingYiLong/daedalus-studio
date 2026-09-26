@@ -25,6 +25,26 @@ function normalizeFileName(value: unknown): string {
 }
 
 export function registerFileExportIpc(): void {
+	ipcMain.handle("file-export:pick-artifact-destination", async (event, params: unknown): Promise<string | null> => {
+		const owner = BrowserWindow.fromWebContents(event.sender);
+		if (owner === null || owner.isDestroyed()) throw new Error("file_export_not_allowed");
+		if (typeof params !== "object" || params === null || Array.isArray(params)) throw new Error("file_export_params_invalid");
+		const record = params as Record<string, unknown>;
+		if (typeof record.directory !== "boolean" || typeof record.defaultFileName !== "string") throw new Error("file_export_params_invalid");
+		if (record.directory) {
+			const result = await dialog.showOpenDialog(owner, {
+				title: "Choose a folder for Flow output",
+				properties: ["openDirectory", "createDirectory"]
+			});
+			return result.canceled ? null : result.filePaths[0] ?? null;
+		}
+		const result = await dialog.showSaveDialog(owner, {
+			title: "Save Flow output",
+			defaultPath: join(app.getPath("documents"), normalizeFileName(record.defaultFileName)),
+			properties: ["createDirectory", "showOverwriteConfirmation"]
+		});
+		return result.canceled ? null : result.filePath ?? null;
+	});
 	ipcMain.handle("file-export:save-text", async (event, params: unknown): Promise<SaveTextFileResult> => {
 		const owner: BrowserWindow | null = BrowserWindow.fromWebContents(event.sender);
 		if (owner === null || owner.isDestroyed()) {

@@ -708,6 +708,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	},
 
 	fileExport: {
+		pickArtifactDestination: (params: { directory: boolean; defaultFileName: string }): Promise<string | null> => {
+			return ipcRenderer.invoke("file-export:pick-artifact-destination", params);
+		},
 		saveText: (params: { defaultFileName: string; content: string; dialogTitle?: string; buttonLabel?: string }): Promise<{ saved: true; filePath: string } | { saved: false }> => {
 			return ipcRenderer.invoke("file-export:save-text", params);
 		}

@@ -212,13 +212,13 @@
 	overflow-wrap: anywhere;
 }
 
-.runInputButton {
+.headerActionButton {
 	flex: none;
 	color: inherit !important;
 }
 
-.runInputButton:not(:disabled):hover,
-.runInputButton:not(:disabled):focus-visible {
+.headerActionButton:not(:disabled):hover,
+.headerActionButton:not(:disabled):focus-visible {
 	color: inherit !important;
 	background: rgb(255 255 255 / 18%) !important;
 }

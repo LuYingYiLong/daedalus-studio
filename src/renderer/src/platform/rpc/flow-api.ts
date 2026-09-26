@@ -140,6 +140,10 @@ export async function downloadFlowArtifact(artifactId: string): Promise<{ ref: F
 	return (await createBackendClient()).request("flow.artifact.download", { artifactId });
 }
 
+export async function exportFlowArtifacts(params: { flowId: string; artifactIds: string[]; destinationPath: string; directory: boolean }): Promise<{ exportedPaths: string[] }> {
+	return (await createBackendClient()).request("flow.artifact.export", params);
+}
+
 export async function deleteFlowArtifact(artifactId: string): Promise<{ deleted: boolean }> {
 	return (await createBackendClient()).request("flow.artifact.delete", { artifactId });
 }

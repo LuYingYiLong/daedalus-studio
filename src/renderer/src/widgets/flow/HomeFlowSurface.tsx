@@ -683,6 +683,7 @@ function HomeFlowSurface({
 				nodeRun: null,
 				definition,
 				editorOptions: usesEditorResources(definition) ? editorOptions : EMPTY_EDITOR_OPTIONS,
+				workspaceRoot: editorOptions.workspaceRoot,
 				connectedInputIds,
 				matched: matchingIds.has(flowNode.nodeId),
 				locked: controller.isGraphLocked,
@@ -908,6 +909,7 @@ function HomeFlowSurface({
 			clientY: number,
 			definitions = controller.nodeDefinitions,
 			connection: PickerConnection | null = null,
+			creationPoint: { x: number; y: number } = { x: clientX, y: clientY },
 		): void => {
 			const rect = canvasRef.current?.getBoundingClientRect();
 			if (rect === undefined || flowInstance === null) return;
@@ -917,7 +919,7 @@ function HomeFlowSurface({
 					y: clientY - rect.top + 8,
 				},
 				flowPosition: flowInstance.screenToFlowPosition(
-					{ x: clientX + FLOW_NODE_CREATE_OFFSET, y: clientY + FLOW_NODE_CREATE_OFFSET },
+					{ x: creationPoint.x + FLOW_NODE_CREATE_OFFSET, y: creationPoint.y + FLOW_NODE_CREATE_OFFSET },
 					{ snapToGrid, snapGrid: FLOW_SNAP_GRID },
 				),
 				definitions,
@@ -1150,7 +1152,11 @@ function HomeFlowSurface({
 							onMouseEnter={(event): void => {
 								const menuItem = event.currentTarget.closest<HTMLElement>(".ant-dropdown-menu-item");
 								const rect = menuItem?.getBoundingClientRect();
-								if (rect !== undefined) openPickerAt(rect.right, rect.top);
+								if (rect !== undefined)
+									openPickerAt(rect.right, rect.top, controller.nodeDefinitions, null, {
+										x: contextMenu.clientX,
+										y: contextMenu.clientY,
+									});
 							}}
 						>
 							{t("flow.editor.addNode")}
@@ -1170,7 +1176,7 @@ function HomeFlowSurface({
 			];
 		}
 		return [];
-	}, [contextMenu, controller.isGraphLocked, flowInstance, nodeClipboard.length, openPickerAt, snapshot, t]);
+	}, [contextMenu, controller.isGraphLocked, controller.nodeDefinitions, flowInstance, nodeClipboard.length, openPickerAt, snapshot, t]);
 	const handleContextMenuAction = useCallback<NonNullable<MenuProps["onClick"]>>(
 		({ key }): void => {
 			const currentContext = contextMenu;
@@ -1179,7 +1185,11 @@ function HomeFlowSurface({
 				if (key === "create-group") {
 					createGroupFromSelection();
 				} else if (key === "add-node") {
-					if (picker === null) openPickerAt(currentContext.clientX + 168, currentContext.clientY - 8);
+					if (picker === null)
+						openPickerAt(currentContext.clientX + 168, currentContext.clientY - 8, controller.nodeDefinitions, null, {
+							x: currentContext.clientX,
+							y: currentContext.clientY,
+						});
 				} else if (key === "paste") {
 					pasteClipboardAt(currentContext.clientX, currentContext.clientY);
 					setPicker(null);
