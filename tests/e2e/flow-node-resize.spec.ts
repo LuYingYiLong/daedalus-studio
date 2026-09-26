@@ -217,6 +217,8 @@ test("creates at the pointer's lower right and animates neighbours away without 
 	const box = (await first.boundingBox())!;
 	const pointer = { x: box.x + box.width + 22, y: box.y + 80 };
 	await page.mouse.click(pointer.x, pointer.y, { button: "right" });
+	await page.getByRole("menuitem", { name: /Add node|添加节点/ }).hover();
+	await expect(page.locator("[data-flow-node-picker-popup]")).toBeVisible();
 	await page.getByRole("menuitem", { name: /Basic|基础/ }).hover();
 	await page.getByRole("menuitem", { name: /^(Text|文本)$/ }).click();
 	const created = page.locator('.react-flow__node:not([data-id^="perf-"])');
