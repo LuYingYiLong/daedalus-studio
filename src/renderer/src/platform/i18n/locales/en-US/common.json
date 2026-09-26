@@ -624,8 +624,21 @@
 		}
 	},
 	"flow": {
+		"diagnostics": { "title": "Run diagnostics", "export": "Export diagnostic JSON" },
+		"storage": {
+			"title": "Flow storage",
+			"free": "free",
+			"warning": "Flow media storage is above 20 GiB or free disk space is low. Existing results remain available.",
+			"selectRuns": "Select finished runs to remove with their artifacts",
+			"reviewCleanup": "Review cleanup",
+			"confirmCleanup": "Remove selected Flow runs?",
+			"cleanupSummary": "This will remove {{runs}} runs and {{artifacts}} artifacts ({{size}} MiB).",
+			"moreArtifacts": "{{count}} more artifacts"
+		},
 		"exportData": {
 			"exporting": "Exporting…",
+			"cancel": "Cancel export",
+			"cancelled": "Flow export cancelled",
 			"dialogTitle": "Export Flow data",
 			"success": "Flow data exported",
 			"missing": "Flow data exported, but {{count}} media files are missing",
@@ -3274,8 +3287,11 @@
 				},
 				"importFlow": {
 					"title": "Import Flow session",
-					"description": "Choose a SQLite file exported from FlowTree to import the workflow, node layout, run history, and media artifacts. Duplicate Flow IDs are rejected.",
-					"action": "Choose Flow SQLite file",
+					"cancel": "Cancel import",
+					"cancelled": "Flow import cancelled",
+					"description": "Choose a new .daedalus-flow archive to import the workflow, layout, run history, and media artifacts. Legacy SQLite exports are no longer supported. Duplicate Flow IDs are rejected.",
+					"action": "Choose Flow archive",
+					"unsupportedFormat": "This Flow package version is incompatible. Re-export it as a .daedalus-flow file with the latest Daedalus.",
 					"dialogTitle": "Import Flow session",
 					"dialogButton": "Import",
 					"success": "Imported Flow: {{title}}",

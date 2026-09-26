@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { archiveFlow, commitFlowPatch, createFlow, exportFlowData, exportFlowToSession, fetchFlow, fetchFlows, importFlowFromSession, moveFlowToWorkspace, renameFlow, startFlowRun, stopFlowRun, updateFlowSettings, listFlowNodeTypes, listFlowTools, listFlowApprovals, resolveFlowApproval, updateFlowTreeOrder as persistFlowTreeOrder, type CreateFlowParams } from "@/platform/rpc/flow-api";
+import { archiveFlow, commitFlowPatch, createFlow, exportFlowData, exportFlowToSession, fetchFlow, fetchFlows, importFlowFromSession, moveFlowToWorkspace, preflightFlowRun, renameFlow, startFlowRun, stopFlowRun, updateFlowSettings, listFlowNodeTypes, listFlowTools, listFlowApprovals, resolveFlowApproval, updateFlowTreeOrder as persistFlowTreeOrder, type CreateFlowParams, type FlowPreflightResult } from "@/platform/rpc/flow-api";
 import { onBackendEvent, onBackendReconnected } from "@/platform/rpc/transport/backend-client";
 import { BackendRpcError } from "@/platform/rpc/transport/backend-rpc-client";
 import type { FlowDocumentSummary, FlowDocument, FlowDocumentEdge, FlowDocumentGroup, FlowDocumentNode, FlowDocumentNodeRun, FlowDocumentRun, FlowDocumentSnapshot, FlowNodeTypeId, FlowNodeTypeDefinition, FlowToolDefinition, FlowApproval, FlowOperation, FlowTreeOrder, FlowTreeOrderUpdate, SessionMetadata } from "@/platform/rpc/types";
@@ -42,6 +42,7 @@ export type HomeFlowController = {
 	isMutating: boolean;
 	runRequestStage: FlowRunRequestStage;
 	error: string | null;
+	preflight: FlowPreflightResult | null;
 	refresh: () => Promise<void>;
 	createNewFlow: (workspaceId?: string | null) => Promise<boolean>;
 	createFromChat: (session: SessionMetadata) => Promise<boolean>;
@@ -60,7 +61,7 @@ export type HomeFlowController = {
 	updateNodePosition: (nodeId: string, x: number, y: number) => Promise<void>;
 	updateNodePositions: (positions: Array<{ nodeId: string; x: number; y: number }>) => void;
 	setNodeCollapsed: (nodeId: string, collapsed: boolean) => void;
-	exportFlowDataById: (flowId: string, destinationPath: string) => ReturnType<typeof exportFlowData>;
+	exportFlowDataById: (flowId: string, destinationPath: string, operationId?: string) => ReturnType<typeof exportFlowData>;
 	updateNodeLayouts: (layouts: readonly FlowLayoutUpdate[], createdNodeId?: string) => void;
 	duplicateNodes: (nodeIds: string[]) => string[];
 	pasteNodes: (nodes: readonly FlowDocumentNode[], x: number, y: number) => string[];
@@ -369,6 +370,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 	const [isMutating, setIsMutating] = useState<boolean>(false);
 	const [runRequestStage, setRunRequestStage] = useState<FlowRunRequestStage>("idle");
 	const [error, setError] = useState<string | null>(null);
+	const [preflight, setPreflight] = useState<FlowPreflightResult | null>(null);
 	const [historyRevision, setHistoryRevision] = useState<number>(0);
 	const snapshotRef = useRef<FlowDocumentSnapshot | null>(null);
 	const nodeDefinitionsRef = useRef<FlowNodeTypeDefinition[]>([]);
@@ -925,10 +927,10 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		if (!current || !node || (node.collapsed ?? false) === collapsed) return;
 		applyOperation({ mutationId: createFlowMutationId(), kind: "node.collapse", baseLayoutRevision: current.flow.layoutRevision, payload: { nodeId, collapsed } });
 	}, [applyOperation]);
-	const exportFlowDataById = useCallback(async (flowId: string, destinationPath: string) => {
+	const exportFlowDataById = useCallback(async (flowId: string, destinationPath: string, operationId?: string) => {
 		documentStore.flushEditors();
 		await flowOperationOutbox.flushFully(flowId);
-		return exportFlowData(flowId, destinationPath);
+		return exportFlowData(flowId, destinationPath, operationId);
 	}, [documentStore]);
 	const updateNodeLayouts = useCallback((layouts: readonly FlowLayoutUpdate[], createdNodeId?: string): void => {
 		const current = snapshotRef.current;
@@ -1134,6 +1136,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			let current = snapshotRef.current;
 			if (current === null || runRequestStage !== "idle") return false;
 			setError(null);
+			setPreflight(null);
 			setRunRequestStage("saving");
 			try {
 				await waitWithTimeout(
@@ -1151,6 +1154,18 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 				applySnapshot(saved);
 				current = saved;
 				setRunRequestStage("starting");
+				const preflightResult = await preflightFlowRun({
+					flowId: current.flow.flowId,
+					revision: current.flow.graphRevision,
+					...(request.entryNodeIds === undefined ? {} : { entryNodeIds: request.entryNodeIds }),
+					...(request.targetNodeIds === undefined ? {} : { targetNodeIds: request.targetNodeIds }),
+					...(request.inputValues === undefined ? {} : { inputValues: request.inputValues }),
+				});
+				setPreflight(preflightResult);
+				if (preflightResult.blockers.length > 0) {
+					const issue = preflightResult.blockers[0]!;
+					throw new Error(`${issue.nodeId ?? "Flow"} · ${issue.code}: ${issue.message}`);
+				}
 				const run = await startFlowRun({
 					flowId: current.flow.flowId,
 					revision: current.flow.graphRevision,
@@ -1301,6 +1316,7 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 		isMutating,
 		runRequestStage,
 		error,
+		preflight,
 		refresh,
 		createNewFlow,
 		createFromChat,

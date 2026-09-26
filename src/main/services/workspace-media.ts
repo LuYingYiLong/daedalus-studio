@@ -2,8 +2,9 @@ import { protocol } from "electron";
 import { createReadStream } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
 import { Readable } from "node:stream";
-import { basename, extname } from "node:path";
+import { basename, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
+import { homedir } from "node:os";
 
 export type WorkspaceMediaKind = "image" | "audio" | "video";
 
@@ -95,6 +96,22 @@ export function createWorkspaceMediaUrl(params: {
 		expiresAt: Date.now() + MEDIA_TOKEN_TTL_MS
 	});
 	return `${MEDIA_SCHEME}://file/${token}/${encodeURIComponent(basename(params.relativePath))}`;
+}
+
+export async function createFlowArtifactMediaUrl(params: { artifactId: string; mimeType: string; byteSize: number }): Promise<string> {
+	if (!/^flow-artifact-[A-Za-z0-9_-]+$/u.test(params.artifactId) || !/^(image|video|audio)\/[A-Za-z0-9.+-]+$/u.test(params.mimeType) || !Number.isSafeInteger(params.byteSize) || params.byteSize <= 0 || params.byteSize > MAX_MEDIA_BYTE_SIZE)
+		throw new Error("flow_artifact_media_invalid");
+	const extension = params.mimeType.split("/")[1]!.replace(/[^a-z0-9]+/giu, "").slice(0, 12) || "bin";
+	const home = process.env.USERPROFILE?.trim() || (process.platform === "win32" ? undefined : process.env.HOME?.trim());
+	if (!home) throw new Error("flow_artifact_media_home_unavailable");
+	const root = await realpath(resolve(home, ".daedalus", "flow-artifacts"));
+	const fileName = `${params.artifactId}.${extension}`;
+	const target = await realpath(join(root, fileName));
+	const inside = relative(root, target);
+	if (inside.startsWith("..") || isAbsolute(inside) || inside !== fileName) throw new Error("flow_artifact_media_scope_invalid");
+	const info = await stat(target);
+	if (!info.isFile() || info.size !== params.byteSize) throw new Error("flow_artifact_media_changed");
+	return createWorkspaceMediaUrl({ target, relativePath: fileName, descriptor: { kind: params.mimeType.startsWith("image/") ? "image" : params.mimeType.startsWith("video/") ? "video" : "audio", mimeType: params.mimeType }, byteSize: info.size, modifiedAtMs: info.mtimeMs });
 }
 
 function getRange(rangeHeader: string | null, byteSize: number): { start: number; end: number } | null {

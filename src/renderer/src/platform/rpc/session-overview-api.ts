@@ -91,10 +91,11 @@ export async function fetchSessionOverview(
 
 export async function fetchSessionOverviewSourceImageDataUrl(
 	sessionId: string,
-	source: Pick<SessionOverviewSourceItem, "id" | "kind">,
+	source: Pick<SessionOverviewSourceItem, "id" | "kind" | "flowId">,
 ): Promise<string> {
 	if (source.kind === "flow_media_artifact") {
-		const { dataBase64 } = await thumbnailFlowArtifact(source.id);
+		if (!source.flowId) throw new Error("Flow source is missing its Flow ID.");
+		const { dataBase64 } = await thumbnailFlowArtifact(source.flowId, source.id);
 		return `data:image/png;base64,${dataBase64}`;
 	}
 	if (source.kind === "generated_image") {
@@ -106,9 +107,12 @@ export async function fetchSessionOverviewSourceImageDataUrl(
 	throw new Error("Text sources do not have image data.");
 }
 
-export async function fetchFlowOverviewSourcePreviewDataUrl(source: Pick<SessionOverviewSourceItem, "id" | "mimeType" | "kind">): Promise<string> {
+export async function fetchFlowOverviewSourcePreviewDataUrl(source: Pick<SessionOverviewSourceItem, "id" | "mimeType" | "kind" | "byteSize" | "flowId">): Promise<string> {
 	if (source.kind !== "flow_media_artifact") throw new Error("Source is not a Flow artifact.");
-	const { dataBase64 } = await previewFlowArtifact(source.id);
+	if (!source.flowId) throw new Error("Flow source is missing its Flow ID.");
+	if (window.electronAPI?.sessionFs?.createFlowArtifactMediaUrl)
+		return window.electronAPI.sessionFs.createFlowArtifactMediaUrl({ artifactId: source.id, mimeType: source.mimeType, byteSize: source.byteSize });
+	const { dataBase64 } = await previewFlowArtifact(source.flowId, source.id);
 	return `data:${source.mimeType};base64,${dataBase64}`;
 }
 

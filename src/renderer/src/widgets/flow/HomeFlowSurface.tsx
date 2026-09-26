@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Dropdown, Flex, Input, Space, Spin, Tooltip, Typography } from "antd";
+import { Alert, Badge, Button, Checkbox, Dropdown, Flex, Input, Modal, Space, Spin, Tooltip, Typography } from "antd";
 import type { InputRef, MenuProps } from "antd";
 import {
 	BaseEdge,
@@ -64,7 +64,7 @@ import {
 	type FlowNodeEditorOptions,
 } from "./FlowNodes";
 import { flowPortColor } from "@/domain/flow/flow-value-presentation";
-import { importFlowInputArtifact } from "@/platform/rpc/flow-api";
+import { cleanupFlowArtifacts, fetchFlowArtifactUsage, fetchFlowRunReport, importFlowInputArtifact, type FlowCleanupPlan, type FlowRunReport } from "@/platform/rpc/flow-api";
 import FlowNodeShell, { type FlowInteractionNode } from "./FlowNodeShell";
 import FlowGroupShell, { type FlowGroupInteractionNode } from "./FlowGroupShell";
 import type { FlowCanvasNode } from "./flow-canvas-node";
@@ -380,6 +380,13 @@ function HomeFlowSurface({
 	const [nodeClipboard, setNodeClipboard] = useState<FlowDocumentNode[]>([]);
 	const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null);
 	const [searchOpen, setSearchOpen] = useState(false);
+	const [reportOpen, setReportOpen] = useState(false);
+	const [runReport, setRunReport] = useState<FlowRunReport | null>(null);
+	const [reportError, setReportError] = useState<string | null>(null);
+	const [artifactUsage, setArtifactUsage] = useState<{ byteSize: number; freeBytes: number | null; warning: boolean } | null>(null);
+	const [cleanupRunIds, setCleanupRunIds] = useState<string[]>([]);
+	const [cleanupPlan, setCleanupPlan] = useState<FlowCleanupPlan | null>(null);
+	const [cleanupBusy, setCleanupBusy] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchIndex, setSearchIndex] = useState(0);
 	const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<FlowCanvasNode, FlowCanvasEdge> | null>(null);
@@ -476,6 +483,50 @@ function HomeFlowSurface({
 		};
 	}, [modelsByProvider, providerModelSelection, snapshot?.flow.flowId, snapshot?.flow.workspaceId, workspaceOptions]);
 	const latestRun = snapshot?.runs[0];
+	useEffect((): (() => void) | void => {
+		if (!reportOpen || snapshot === null || latestRun === undefined) return;
+		let disposed = false;
+		void fetchFlowRunReport(snapshot.flow.flowId, latestRun.runId).then((report): void => {
+			if (!disposed) { setRunReport(report); setReportError(null); }
+		}).catch((error: unknown): void => {
+			if (!disposed) setReportError(error instanceof Error ? error.message : String(error));
+		});
+		return (): void => { disposed = true; };
+	}, [reportOpen, snapshot?.flow.flowId, latestRun?.runId, latestRun?.status]);
+	useEffect((): (() => void) | void => {
+		if (!reportOpen || snapshot === null) return;
+		let disposed = false;
+		void fetchFlowArtifactUsage().then((usage): void => { if (!disposed) setArtifactUsage(usage); }).catch((error: unknown): void => { if (!disposed) setReportError(error instanceof Error ? error.message : String(error)); });
+		return (): void => { disposed = true; };
+	}, [reportOpen, snapshot?.flow.flowId]);
+	const previewCleanup = useCallback(async (): Promise<void> => {
+		if (snapshot === null || cleanupRunIds.length === 0) return;
+		setCleanupBusy(true);
+		try { setCleanupPlan(await cleanupFlowArtifacts({ flowId: snapshot.flow.flowId, runIds: cleanupRunIds, dryRun: true })); setReportError(null); }
+		catch (error: unknown) { setReportError(error instanceof Error ? error.message : String(error)); }
+		finally { setCleanupBusy(false); }
+	}, [cleanupRunIds, snapshot?.flow.flowId]);
+	const confirmCleanup = useCallback(async (): Promise<void> => {
+		if (snapshot === null || cleanupPlan === null) return;
+		setCleanupBusy(true);
+		try {
+			await cleanupFlowArtifacts({ flowId: snapshot.flow.flowId, runIds: cleanupPlan.runs.map((run) => run.runId), dryRun: false, expectedArtifactIds: cleanupPlan.artifacts.map((artifact) => artifact.artifactId) });
+			setCleanupPlan(null); setCleanupRunIds([]);
+			setArtifactUsage(await fetchFlowArtifactUsage());
+			await controller.refresh();
+			setReportError(null);
+		} catch (error: unknown) { setReportError(error instanceof Error ? error.message : String(error)); }
+		finally { setCleanupBusy(false); }
+	}, [cleanupPlan, controller.refresh, snapshot?.flow.flowId]);
+	const exportRunReport = useCallback((): void => {
+		if (runReport === null) return;
+		const url = URL.createObjectURL(new Blob([JSON.stringify(runReport, null, 2)], { type: "application/json" }));
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `flow-${runReport.runId}-diagnostics.json`;
+		link.click();
+		window.setTimeout((): void => URL.revokeObjectURL(url), 60_000);
+	}, [runReport]);
 	const running =
 		latestRun?.status === "running" || latestRun?.status === "queued" || latestRun?.status === "waiting";
 	const shortcutPlatform = useMemo(() => detectShortcutPlatform(), []);
@@ -1812,6 +1863,9 @@ function HomeFlowSurface({
 							onClick={(): void => openSearch()}
 						/>
 					</Tooltip>
+					<Tooltip title={t("flow.diagnostics.title", { defaultValue: "Run diagnostics" })} placement="bottom">
+						<Button type="text" shape="circle" disabled={latestRun === undefined} icon={<Icon name="list-check" />} aria-label={t("flow.diagnostics.title", { defaultValue: "Run diagnostics" })} onClick={(): void => setReportOpen(true)} />
+					</Tooltip>
 					<Tooltip title={t("composer.tooltips.approvalMode")} placement="bottom">
 						<Dropdown menu={approvalModeMenu} trigger={["click"]}>
 							<Button
@@ -1882,6 +1936,33 @@ function HomeFlowSurface({
 			{controller.error !== null ? (
 				<Alert className={styles.flowAlert} type="error" showIcon title={controller.error} />
 			) : null}
+			{controller.preflight !== null && controller.preflight.warnings.length > 0 ? (
+				<Alert className={styles.flowAlert} type="warning" showIcon title={controller.preflight.warnings.map((issue) => `${issue.nodeId ?? "Flow"}: ${issue.message}`).join(" · ")} />
+			) : null}
+			<Modal open={reportOpen} title={t("flow.diagnostics.title", { defaultValue: "Run diagnostics" })} onCancel={(): void => setReportOpen(false)} footer={<Button onClick={exportRunReport} disabled={runReport === null}>{t("flow.diagnostics.export", { defaultValue: "Export diagnostic JSON" })}</Button>} width={760}>
+				{reportError !== null ? <Alert type="error" showIcon title={reportError} /> : null}
+				{runReport?.nodes.map((node) => (
+					<div key={node.nodeId} style={{ marginBottom: 16 }}>
+						<Typography.Text strong>{snapshot.nodes.find((candidate) => candidate.nodeId === node.nodeId)?.title ?? node.typeId}</Typography.Text>
+						<Typography.Text type="secondary"> · {node.status}{node.errorCode === null ? "" : ` · ${node.errorCode}`}</Typography.Text>
+						{node.events.map((event) => <div key={event.sequence} style={{ marginLeft: 16 }}><Typography.Text type="secondary">{event.at} · {event.type}</Typography.Text></div>)}
+					</div>
+				))}
+				<Typography.Title level={5}>{t("flow.storage.title", { defaultValue: "Flow storage" })}</Typography.Title>
+				<Typography.Text>{artifactUsage === null ? "…" : `${(artifactUsage.byteSize / 1024 ** 3).toFixed(2)} GiB`}{artifactUsage?.freeBytes === null || artifactUsage?.freeBytes === undefined ? "" : ` · ${(artifactUsage.freeBytes / 1024 ** 3).toFixed(2)} GiB ${t("flow.storage.free", { defaultValue: "free" })}`}</Typography.Text>
+				{artifactUsage?.warning ? <Alert type="warning" showIcon title={t("flow.storage.warning", { defaultValue: "Flow media storage is above 20 GiB or free disk space is low. Existing results will remain available." })} /> : null}
+				<div style={{ marginTop: 12 }}><Typography.Text>{t("flow.storage.selectRuns", { defaultValue: "Select finished runs to remove with their artifacts" })}</Typography.Text></div>
+				<Checkbox.Group style={{ display: "flex", flexDirection: "column", maxHeight: 140, overflowY: "auto" }} value={cleanupRunIds} options={snapshot.runs.filter((run) => !["queued", "running", "waiting"].includes(run.status)).map((run) => ({ value: run.runId, label: `${run.runId} · ${run.status}` }))} onChange={(values): void => setCleanupRunIds(values.map(String))} />
+				<Button danger loading={cleanupBusy} disabled={cleanupRunIds.length === 0} onClick={(): void => { void previewCleanup(); }}>{t("flow.storage.reviewCleanup", { defaultValue: "Review cleanup" })}</Button>
+			</Modal>
+			<Modal open={cleanupPlan !== null} title={t("flow.storage.confirmCleanup", { defaultValue: "Remove selected Flow runs?" })} okButtonProps={{ danger: true, loading: cleanupBusy }} onOk={(): void => { void confirmCleanup(); }} onCancel={(): void => setCleanupPlan(null)}>
+				<Typography.Paragraph>{t("flow.storage.cleanupSummary", { defaultValue: "This will remove {{runs}} runs and {{artifacts}} artifacts ({{size}} MiB).", runs: cleanupPlan?.runs.length ?? 0, artifacts: cleanupPlan?.artifacts.length ?? 0, size: ((cleanupPlan?.artifacts.reduce((sum, artifact) => sum + artifact.byteSize, 0) ?? 0) / 1024 ** 2).toFixed(1) })}</Typography.Paragraph>
+				{cleanupPlan?.runs.map((run) => <div key={run.runId}>{run.runId} · {run.status}</div>)}
+				{cleanupPlan !== null && cleanupPlan.artifacts.length > 0 ? <div style={{ marginTop: 12, maxHeight: 160, overflowY: "auto" }}>
+					{cleanupPlan.artifacts.slice(0, 100).map((artifact) => <div key={artifact.artifactId}><Typography.Text type="secondary">{artifact.artifactId} · {(artifact.byteSize / 1024 ** 2).toFixed(1)} MiB</Typography.Text></div>)}
+					{cleanupPlan.artifacts.length > 100 ? <Typography.Text type="secondary">{t("flow.storage.moreArtifacts", { count: cleanupPlan.artifacts.length - 100 })}</Typography.Text> : null}
+				</div> : null}
+			</Modal>
 			<div
 				ref={canvasRef}
 				className={styles.canvasRegion}

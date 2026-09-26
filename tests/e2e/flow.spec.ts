@@ -863,7 +863,7 @@ test.describe("Daedalus Flow node workflow", () => {
 		await expect(disabledSnapButton).toHaveAttribute("aria-pressed", "false");
 		await disabledSnapButton.click();
 
-		await mainWindow.getByRole("button", { name: /Run|运\s*行/ }).click();
+		await mainWindow.getByRole("button", { name: /^(?:Run|运\s*行)(?:\s+(?!diagnostics\b).+)?$/i }).click();
 		await expect(mainWindow.getByRole("button", { name: /Stop|停\s*止/ })).toBeVisible();
 		await expect(mainWindow.getByText(/Pending approvals|待审批操作/)).toBeVisible();
 		await mainWindow.getByRole("button", { name: /Approve|批\s*准/ }).click();
@@ -874,7 +874,7 @@ test.describe("Daedalus Flow node workflow", () => {
 		await expect(foldedOutput.locator('[data-flow-collapsed-ports="input"]')).toHaveCount(1);
 		await expect(foldedOutput.locator('[data-flow-collapsed-ports="output"]')).toHaveCount(0);
 		await foldedOutput.getByRole("button", { name: /Expand node|展开节点/ }).click();
-		await mainWindow.getByRole("button", { name: /Run|运\s*行/ }).click();
+		await mainWindow.getByRole("button", { name: /^(?:Run|运\s*行)(?:\s+(?!diagnostics\b).+)?$/i }).click();
 		await expect(mainWindow.locator('.react-flow__node:has([data-node-type="builtin/output"])')).toContainText("cached result");
 		const flowTreeItem = mainWindow.locator(".ant-tree-treenode").filter({ hasText: "E2E Workflow" });
 		await expect(flowTreeItem.locator(".ant-badge-dot")).toHaveCount(0);

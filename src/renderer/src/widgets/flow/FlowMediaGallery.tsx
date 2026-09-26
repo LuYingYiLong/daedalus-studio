@@ -28,7 +28,7 @@ function Preview({
 			return;
 		}
 		setSource(null);
-		void getFlowPreviewSource(artifact.artifactId, artifact.mimeType, thumbnail)
+		void getFlowPreviewSource(artifact.flowId, artifact.artifactId, artifact.mimeType, artifact.byteSize, thumbnail)
 			.then((value) => {
 				if (!disposed) setSource(value);
 			})

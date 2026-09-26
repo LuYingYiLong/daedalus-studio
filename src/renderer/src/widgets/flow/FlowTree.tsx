@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/assets/icons";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
+import { cancelFlowTransfer } from "@/platform/rpc/flow-api";
 import type {
 	FlowDocumentSummary,
 	FlowTreeOrder,
@@ -17,7 +18,7 @@ import { workspaceSupportsWorktrees } from "@/domain/workspace/worktree-capabili
 import styles from "./FlowTree.module.css";
 
 export type FlowTreeProps = {
-	onExport: (flowId: string, destinationPath: string) => Promise<{ missingFileCount: number }>;
+	onExport: (flowId: string, destinationPath: string, operationId?: string) => Promise<{ missingFileCount: number }>;
 	flows: FlowDocumentSummary[];
 	workspaces: WorkspaceConfig[];
 	selectedFlowId: string | null;
@@ -244,6 +245,7 @@ function FlowTree({
 	const { t } = useTranslation();
 	const [messageApi, messageContext] = message.useMessage();
 	const [exportingFlowId, setExportingFlowId] = useState<string | null>(null);
+	const [exportOperationId, setExportOperationId] = useState<string | null>(null);
 	const [movingFlowId, setMovingFlowId] = useState<string | null>(null);
 	const exportBusy = useRef(false);
 	const handleExport = async (flow: FlowDocumentSummary): Promise<void> => {
@@ -258,18 +260,30 @@ function FlowTree({
 				buttonLabel: t("workspaceTree.exportDialog.button"),
 			});
 			if (destinationPath === null) return;
-			const result = await onExport(flow.flowId, destinationPath);
+			const operationId = crypto.randomUUID();
+			setExportOperationId(operationId);
+			const result = await onExport(flow.flowId, destinationPath, operationId);
 			if (result.missingFileCount > 0)
 				void messageApi.warning(t("flow.exportData.missing", { count: result.missingFileCount }));
 			else void messageApi.success(t("flow.exportData.success"));
 		} catch (error: unknown) {
+			if (error !== null && typeof error === "object" && "code" in error && error.code === "flow_transfer_cancelled") {
+				void messageApi.info(t("flow.exportData.cancelled"));
+				return;
+			}
 			void messageApi.error(
 				`${t("flow.exportData.failed")}: ${error instanceof Error ? error.message : String(error)}`,
 			);
 		} finally {
 			exportBusy.current = false;
 			setExportingFlowId(null);
+			setExportOperationId(null);
 		}
+	};
+	const handleCancelExport = async (): Promise<void> => {
+		if (exportOperationId === null) return;
+		try { await cancelFlowTransfer(exportOperationId); }
+		catch (error: unknown) { void messageApi.error(error instanceof Error ? error.message : String(error)); }
 	};
 	const handleCopyFlowId = async (flow: FlowDocumentSummary): Promise<void> => {
 		try {
@@ -648,6 +662,8 @@ function FlowTree({
 							<FlowTreeItem
 								onExport={handleExport}
 								exportingFlowId={exportingFlowId}
+								exportOperationId={exportOperationId}
+								onCancelExport={handleCancelExport}
 								flow={flow}
 								isSelected={flow.flowId === selectedFlowId}
 								isUnread={unreadFlowIdSet.has(flow.flowId)}
@@ -868,6 +884,8 @@ function sourceForUnpinnedFlow(flow: FlowDocumentSummary): FlowBucket {
 type FlowTreeItemProps = {
 	onExport: (flow: FlowDocumentSummary) => Promise<void>;
 	exportingFlowId: string | null;
+	exportOperationId: string | null;
+	onCancelExport: () => Promise<void>;
 	flow: FlowDocumentSummary;
 	workspaces: WorkspaceConfig[];
 	isSelected: boolean;
@@ -886,6 +904,8 @@ type FlowTreeItemProps = {
 function FlowTreeItem({
 	onExport,
 	exportingFlowId,
+	exportOperationId,
+	onCancelExport,
 	flow,
 	workspaces,
 	isSelected,
@@ -962,6 +982,7 @@ function FlowTreeItem({
 				icon: exportingFlowId === flow.flowId ? <Spin size="small" /> : <Icon name="export" />,
 				disabled: exportingFlowId !== null,
 			},
+			...(exportingFlowId === flow.flowId && exportOperationId !== null ? [{ key: "cancel-export", label: t("flow.exportData.cancel") }] : []),
 		],
 		onClick: ({ key, domEvent }): void => {
 			domEvent.preventDefault();
@@ -970,6 +991,7 @@ function FlowTreeItem({
 			if (key === "rename") onRenameStart();
 			if (key === "archive") onArchive(flow);
 			if (key === "export") void onExport(flow);
+			if (key === "cancel-export") void onCancelExport();
 			if (key === "copy-id") onCopy();
 			if (key === "move:unbound") onMoveWorkspace(null);
 			if (key.startsWith("move:workspace:")) onMoveWorkspace(key.slice("move:workspace:".length));

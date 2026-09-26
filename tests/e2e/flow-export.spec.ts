@@ -10,7 +10,7 @@ test("Flow tree exports after saved edits and restores collapsed layout on reloa
 		return { exported: true, missingFileCount: 0 };
 	});
 	const { mainWindow: page, electronApp } = await launchStudio();
-	const destination = join(userDataDir, "workflow.sqlite");
+	const destination = join(userDataDir, "workflow.daedalus-flow");
 	await electronApp.evaluate(({ dialog, app }, filePath) => {
 		app.setPath("documents", app.getPath("userData"));
 		dialog.showSaveDialog = (async () => ({ canceled: false, filePath })) as typeof dialog.showSaveDialog;
@@ -29,7 +29,9 @@ test("Flow tree exports after saved edits and restores collapsed layout on reloa
 	await expect(page.getByRole("menuitem").last()).toHaveText(/Export Flow data|导出 Flow 数据/);
 	await exportItem.click();
 	await expect.poll(() => exports.length).toBe(1);
-	expect(exports[0]).toEqual({ flowId: "flow-performance", destinationPath: destination });
+	const exportParams = exports[0] as Record<string, unknown>;
+	expect(exportParams).toMatchObject({ flowId: "flow-performance", destinationPath: destination });
+	expect(exportParams.operationId).toMatch(/^[0-9a-f-]{36}$/u);
 	const exportTime = mockBackend.getRequests("flow.export")[0]!.receivedAt;
 	const commits = mockBackend.getRequests("flow.patch.commit").filter(request => request.receivedAt <= exportTime);
 	const operations = commits.flatMap(request => (request.params as { operations: Array<{ kind: string; payload: Record<string, unknown> }> }).operations);

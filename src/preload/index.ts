@@ -611,6 +611,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	},
 
 	sessionFs: {
+		createFlowArtifactMediaUrl: (params: { artifactId: string; mimeType: string; byteSize: number }): Promise<string> => ipcRenderer.invoke("flow-fs:artifact-media-url", params),
 		pickFlowExportDestination: (params: { flowId: string; title: string; dialogTitle?: string; buttonLabel?: string }): Promise<string | null> => ipcRenderer.invoke("flow-fs:pick-export-destination", params),
 		openSessionDirectory: (sessionId: string): Promise<{ opened: true }> => {
 			return ipcRenderer.invoke("session-fs:open-directory", sessionId);
@@ -618,7 +619,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		pickExportDestination: (params: { sessionId: string; title: string; dialogTitle?: string; buttonLabel?: string }): Promise<string | null> => {
 			return ipcRenderer.invoke("session-fs:pick-export-destination", params);
 		},
-		pickImportSource: (params?: { dialogTitle?: string; buttonLabel?: string }): Promise<string | null> => {
+		pickImportSource: (params?: { dialogTitle?: string; buttonLabel?: string; kind?: "session" | "flow" }): Promise<string | null> => {
 			return ipcRenderer.invoke("session-fs:pick-import-source", params);
 		}
 	},

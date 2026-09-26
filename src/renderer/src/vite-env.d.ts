@@ -349,6 +349,7 @@ declare global {
 	}
 
 	interface SessionFsAPI {
+		createFlowArtifactMediaUrl: (params: { artifactId: string; mimeType: string; byteSize: number }) => Promise<string>;
 		pickFlowExportDestination: (params: { flowId: string; title: string; dialogTitle?: string; buttonLabel?: string }) => Promise<string | null>;
 		openSessionDirectory: (sessionId: string) => Promise<{ opened: true }>;
 		pickExportDestination: (params: {
@@ -360,6 +361,7 @@ declare global {
 		pickImportSource: (params?: {
 			dialogTitle?: string;
 			buttonLabel?: string;
+			kind?: "session" | "flow";
 		}) => Promise<string | null>;
 	}
 

@@ -10,11 +10,11 @@ describe("session-fs", () => {
 		const options = {
 			documentsDirectory: "C:/Users/test/Documents",
 			showSaveDialog: async (_owner: unknown, dialog: { defaultPath?: string }) => {
-				expect(dialog.defaultPath).toBe(join("C:/Users/test/Documents", "My Flow-flow-test.sqlite"));
+				expect(dialog.defaultPath).toBe(join("C:/Users/test/Documents", "My Flow-flow-test.daedalus-flow"));
 				return { canceled: false, filePath: "C:/Users/test/Documents/flow-data" };
 			},
 		};
-		await expect(pickFlowExportDestination({ flowId: "flow-test", title: "My Flow" }, undefined, options)).resolves.toBe(resolve("C:/Users/test/Documents/flow-data.sqlite"));
+		await expect(pickFlowExportDestination({ flowId: "flow-test", title: "My Flow" }, undefined, options)).resolves.toBe(resolve("C:/Users/test/Documents/flow-data.daedalus-flow"));
 		await expect(pickFlowExportDestination({ flowId: "../escape", title: "Flow" }, undefined, options)).rejects.toThrow();
 		await expect(pickFlowExportDestination({ flowId: "flow-test", title: "Flow" }, undefined, {
 			...options, showSaveDialog: async () => ({ canceled: true, filePath: "" }),

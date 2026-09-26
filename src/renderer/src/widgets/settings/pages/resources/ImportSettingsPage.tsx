@@ -6,6 +6,7 @@ import {
 	type ImportSessionResult,
 } from "@/platform/rpc/session-api";
 import {
+	cancelFlowTransfer,
 	importFlowData,
 	type FlowImportResult,
 } from "@/platform/rpc/flow-api";
@@ -36,6 +37,7 @@ function ImportSettingsPage(): React.JSX.Element {
 	const [isImportingSession, setIsImportingSession] =
 		useState<boolean>(false);
 	const [isImportingFlow, setIsImportingFlow] = useState<boolean>(false);
+	const [flowImportOperationId, setFlowImportOperationId] = useState<string | null>(null);
 	const [isScanningPlugin, setIsScanningPlugin] = useState<boolean>(false);
 	const [isInstallingPlugin, setIsInstallingPlugin] =
 		useState<boolean>(false);
@@ -101,9 +103,12 @@ function ImportSettingsPage(): React.JSX.Element {
 			const sourcePath = await window.electronAPI.sessionFs.pickImportSource({
 				dialogTitle: t("settings.import.session.importFlow.dialogTitle"),
 				buttonLabel: t("settings.import.session.importFlow.dialogButton"),
+				kind: "flow",
 			});
 			if (sourcePath === null) return;
-			const result = await importFlowData(sourcePath);
+			const operationId = crypto.randomUUID();
+			setFlowImportOperationId(operationId);
+			const result = await importFlowData(sourcePath, operationId);
 			setFlowImportResult(result);
 			if (result.missingArtifactCount > 0) {
 				void message.warning(
@@ -123,14 +128,19 @@ function ImportSettingsPage(): React.JSX.Element {
 				);
 			}
 		} catch (error: unknown) {
-			const nextErrorMessage = getErrorMessage(
-				error,
-				t("settings.import.errors.import"),
-			);
+			const errorCode = error !== null && typeof error === "object" && "code" in error ? String(error.code) : "";
+			if (errorCode === "flow_transfer_cancelled") {
+				void message.info(t("settings.import.session.importFlow.cancelled"));
+				return;
+			}
+			const nextErrorMessage = errorCode === "flow_import_unsupported_format" || error instanceof Error && error.message.includes("Unsupported Flow archive format")
+				? t("settings.import.session.importFlow.unsupportedFormat")
+				: getErrorMessage(error, t("settings.import.errors.import"));
 			setErrorMessage(nextErrorMessage);
 			void message.error(nextErrorMessage);
 		} finally {
 			setIsImportingFlow(false);
+			setFlowImportOperationId(null);
 		}
 	};
 
@@ -255,6 +265,13 @@ function ImportSettingsPage(): React.JSX.Element {
 						>
 							{t("settings.import.session.importFlow.action")}
 						</Button>
+						{flowImportOperationId !== null && (
+							<Button onClick={(): void => {
+								void cancelFlowTransfer(flowImportOperationId).catch((error: unknown): void => {
+									void message.error(getErrorMessage(error, t("settings.import.errors.import")));
+								});
+							}}>{t("settings.import.session.importFlow.cancel")}</Button>
+						)}
 					</SettingsItem>
 				</SettingsList>
 				<SettingsList title={t("settings.import.plugin.sectionTitle")}>
