@@ -54,6 +54,7 @@ export type FlowNodeEditorOptions = {
 	workspaceRoot?: string | undefined;
 	selectWorkspaceFile?: (() => Promise<string | null>) | undefined;
 	selectWorkspaceImage?: (() => Promise<{ path: string; imported: boolean } | null>) | undefined;
+	selectFlowInputMedia?: ((nodeId: string, kind: "image" | "video" | "audio" | "mask" | "frames" | "artifact") => Promise<FlowMediaArtifactRef | null>) | undefined;
 };
 
 export type FlowCanvasNodeData = {
@@ -205,7 +206,12 @@ export function resolveFlowDefinitionPorts(
 		});
 	if (definition.typeId === "builtin/flow-input")
 		for (const port of ports)
-			if (port.direction === "output") port.dataTypes = [config.dataType === "json" ? "json" : "text"];
+			if (port.direction === "output") {
+				port.dataTypes = [typeof config.dataType === "string" && Object.prototype.hasOwnProperty.call(FLOW_PORT_COLORS, config.dataType)
+					? config.dataType as FlowNodePortDefinition["dataTypes"][number]
+					: "text"];
+				port.cardinality = config.cardinality === "many" ? "many" : "one";
+			}
 	if (
 		typeof config.elementType === "string" &&
 		Object.prototype.hasOwnProperty.call(FLOW_PORT_COLORS, config.elementType)
@@ -299,6 +305,18 @@ function JsonField({
 	);
 }
 
+function defaultFlowInputValue(type: string, cardinality: string): unknown {
+	if (cardinality === "many") return [];
+	switch (type) {
+		case "text": return "";
+		case "number": return 0;
+		case "boolean": return false;
+		case "color": return { r: 1, g: 1, b: 1, a: 1 };
+		case "size": return { width: 1024, height: 1024 };
+		default: return null;
+	}
+}
+
 function SchemaEditor({
 	node,
 	definition,
@@ -380,6 +398,19 @@ function SchemaEditor({
 		}
 	};
 	const supportsReasoningEffort = Object.prototype.hasOwnProperty.call(properties, "reasoningEffort");
+	const updateFlowInputShape = (key: "dataType" | "cardinality", value: string): void => {
+		const next = {
+			...configRef.current,
+			[key]: value,
+			defaultValue: defaultFlowInputValue(
+				key === "dataType" ? value : String(configRef.current.dataType ?? "text"),
+				key === "cardinality" ? value : String(configRef.current.cardinality ?? "one"),
+			),
+		};
+		configRef.current = next;
+		setConfig(next);
+		commitConfig(next);
+	};
 	const renderControl = (key: string, schema: Record<string, unknown>, title: string): React.JSX.Element => {
 		const parameter = definition.parameters.find(
 			(parameter) => parameter.mode !== "connection" && parameter.configField === key,
@@ -387,6 +418,54 @@ function SchemaEditor({
 		const control =
 			schema["x-daedalus-control"] ??
 			(parameter?.mode === "hybrid" ? flowDefaultControl(parameter.dataTypes) : undefined);
+		if (control === "flow-input-value") {
+			const dataType = String(config.dataType ?? "text");
+			const isMedia = ["image", "video", "audio", "mask", "frames", "artifact"].includes(dataType);
+			const mediaKind = dataType as "image" | "video" | "audio" | "mask" | "frames" | "artifact";
+			const chooseMedia = (onSelected: (value: FlowMediaArtifactRef) => void): React.JSX.Element => (
+				<Button
+					className="nodrag"
+					aria-label={t("flow.editor.chooseFile", { defaultValue: "Choose file" })}
+					disabled={disabled || editorOptions.selectFlowInputMedia === undefined}
+					icon={<Icon name="folder-open" />}
+					onClick={() => {
+						const generation = canvas.generation;
+						void editorOptions.selectFlowInputMedia?.(node.nodeId, mediaKind)
+							.then((ref) => {
+								if (ref !== null && ref !== undefined && canvas.generation === generation) onSelected(ref);
+							})
+							.catch(() => message.error(t("flow.editor.mediaImportFailed", { defaultValue: "Could not import this Flow input file." })));
+					}}
+				/>
+			);
+			if (config.cardinality === "many") {
+				const fieldId = `${node.nodeId}\u0000${key}`;
+				const items = Array.isArray(config[key]) ? config[key] : [];
+				return (
+					<FlowListEditor
+						type={dataType}
+						value={items}
+						itemKeys={canvas.getListItemKeys(fieldId, items.length)}
+						onRemove={(index) => canvas.removeListItem(fieldId, index)}
+						onChange={(value) => update(key, value, false)}
+						onOpenChange={onSelectOpenChange}
+						disabled={disabled}
+						renderJson={(itemKey, value, onChange) => isMedia
+							? <Space.Compact block>{chooseMedia(onChange)}<Input readOnly value={typeof value === "object" && value !== null ? String((value as { metadata?: { originalName?: string } }).metadata?.originalName ?? (value as { artifactId?: string }).artifactId ?? "") : ""} /></Space.Compact>
+							: <JsonField fieldId={`${fieldId}\u0000${itemKey}`} name={title} value={value} disabled={disabled} onChange={onChange} />}
+					/>
+				);
+			}
+			if (isMedia) {
+				const value = config[key] as FlowMediaArtifactRef | null;
+				return <Space.Compact block className="nodrag">{chooseMedia((ref) => update(key, ref))}<Input readOnly value={value?.metadata?.originalName as string | undefined ?? value?.artifactId ?? ""} /></Space.Compact>;
+			}
+			if (dataType === "json") return <JsonField fieldId={`${node.nodeId}\u0000${key}`} name={title} value={config[key]} disabled={disabled} onChange={(value) => update(key, value)} />;
+			if (dataType === "boolean") return <Switch disabled={disabled} checked={config[key] === true} onChange={(value) => update(key, value)} />;
+			if (dataType === "number") return <InputNumber className="nodrag" disabled={disabled} value={typeof config[key] === "number" ? config[key] : 0} onChange={(value) => { if (value !== null) update(key, value); }} />;
+			if (dataType === "color" || dataType === "size") return renderControl(key, { ...schema, "x-daedalus-control": dataType }, title);
+			return <Input.TextArea className="nodrag" disabled={disabled} value={typeof config[key] === "string" ? config[key] : ""} autoSize={{ minRows: 1, maxRows: 6 }} onChange={(event) => update(key, event.target.value, false)} onBlur={() => commitConfig(configRef.current)} />;
+		}
 		if (control === "parameter-sets")
 			return (
 				<FlowParameterSetsEditor
@@ -546,6 +625,10 @@ function SchemaEditor({
 					options={providerOptions}
 					showSearch
 					onChange={(value): void => {
+						if (definition.typeId === "builtin/provider") {
+							update(key, value);
+							return;
+						}
 						const nextProvider = editorOptions.modelSelection?.providers.find(
 							(candidate): boolean => candidate.provider === value,
 						);
@@ -618,7 +701,10 @@ function SchemaEditor({
 					value={config[key] as string | number | undefined}
 					placeholder={title}
 					options={enumValues.map((value) => ({ value, label: String(value) }))}
-					onChange={(value): void => update(key, value)}
+					onChange={(value): void => {
+						if (definition.typeId === "builtin/flow-input" && (key === "dataType" || key === "cardinality")) updateFlowInputShape(key, String(value));
+						else update(key, value);
+					}}
 				/>
 			);
 		if (schema.type === "boolean")
@@ -764,6 +850,7 @@ function SchemaMediaPreviews({
 			path: typeof config[key] === "string" ? (config[key] as string) : "",
 			kind: workspaceFilePreviewKind(definition, key, schema)!,
 		}));
+	const inputArtifacts = definition.typeId === "builtin/flow-input" ? collectMediaArtifacts(config.defaultValue) : [];
 	const previewKey = JSON.stringify(previewFields);
 	const [previews, setPreviews] = useState<Record<string, { path: string; url: string; mimeType: string } | null>>({});
 	useEffect((): void => {
@@ -814,9 +901,14 @@ function SchemaMediaPreviews({
 		const preview = previews[field.key];
 		return preview !== undefined && preview !== null && preview.path === field.path ? [{ field, preview }] : [];
 	});
-	if (visiblePreviews.length === 0) return null;
+	if (visiblePreviews.length === 0 && inputArtifacts.length === 0) return null;
 	return (
 		<>
+			{inputArtifacts.length > 0 ? (
+				<div className={styles.schemaMediaPreview} role="region" aria-label={t("flow.editor.fileMediaPreview", { defaultValue: "Selected media preview" })}>
+					<FlowMediaGallery artifacts={inputArtifacts} />
+				</div>
+			) : null}
 			{visiblePreviews.map(({ field, preview }) => (
 				<div
 					key={field.key}
@@ -1017,6 +1109,7 @@ function SandboxEditor({
 							<div
 								className={`${styles.parameterRow} ${styles.parameterRowConnectionOnly}`}
 								key={parameter.id}
+								data-parameter-connected={connectedInputIds.has(parameter.id) ? "true" : "false"}
 							>
 								<span className={styles.parameterSocket}>
 									<Handle
@@ -1214,11 +1307,12 @@ function FlowNodeCard({
 	const hasSchemaMediaPreview = useMemo(
 		(): boolean =>
 			definition?.ui.kind === "schema" &&
+			(flowNode.typeId === "builtin/flow-input" && ["image", "video", "audio", "mask", "frames", "artifact"].includes(String(flowNode.config.dataType)) ||
 			Object.entries(readSchemaProperties(definition.configSchema)).some(
 				([key, schema]) =>
 					workspaceFilePreviewKind(definition, key, schema) !== undefined &&
 					(schema["x-daedalus-control"] === "workspace-file" || schema.format === "workspace-file"),
-			),
+			)),
 		[definition],
 	);
 	const mediaArtifacts = useMemo(

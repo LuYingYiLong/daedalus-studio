@@ -64,7 +64,7 @@ export async function listFlowNodeTypes(params: { flowId?: string; workspaceId?:
 }
 
 export async function commitFlowPatch(params: { flowId: string; clientId: string; operations: FlowOperation[] }): Promise<FlowPatchAck> {
-	return (await createBackendClient()).request("flow.patch.commit", { ...params, generation: "flow-composable-1" });
+	return (await createBackendClient()).request("flow.patch.commit", { ...params, generation: "flow-parameters-2" });
 }
 
 
@@ -114,6 +114,10 @@ export async function exportFlowToSession(params: { flowId: string; outputNodeId
 
 export async function listFlowArtifacts(flowId: string, runId?: string): Promise<{ artifacts: FlowMediaArtifactRef[] }> {
 	return (await createBackendClient()).request("flow.artifact.list", { flowId, ...(runId === undefined ? {} : { runId }) });
+}
+
+export async function importFlowInputArtifact(params: { flowId: string; nodeId: string; sourcePath: string; kind: "image" | "video" | "audio" | "mask" | "frames" | "artifact" }): Promise<{ ref: FlowMediaArtifactRef }> {
+	return (await createBackendClient()).request("flow.artifact.import", params);
 }
 
 export async function listFlowGeneratedArtifacts(flowId: string, limit = 3): Promise<{ artifacts: FlowMediaArtifactRef[]; total: number }> {

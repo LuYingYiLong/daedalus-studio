@@ -80,7 +80,7 @@ type Port = {
 	id: string;
 	label: string;
 	direction: "input" | "output";
-	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact">;
+	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | "number" | "boolean" | "color" | "size" | "mask">;
 	required: boolean;
 	multiple: boolean;
 	defaultConnect: boolean;
@@ -167,13 +167,14 @@ const nodeDefinitions = [
 		executable: true,
 		cachePolicy: "never",
 		defaultTitle: "Flow Input",
-		defaultConfig: { label: "Input", dataType: "text", defaultValue: "" },
+		defaultConfig: { label: "Input", dataType: "text", cardinality: "one", defaultValue: "" },
 		configSchema: {
 			type: "object",
 			properties: {
 				label: { type: "string" },
-				dataType: { type: "string", enum: ["text", "json"] },
-				defaultValue: { type: "string" },
+				dataType: { type: "string", enum: ["text", "json", "image", "video", "audio", "frames", "artifact", "number", "boolean", "color", "size", "mask"] },
+				cardinality: { type: "string", enum: ["one", "many"] },
+				defaultValue: { "x-daedalus-control": "flow-input-value" },
 			},
 		},
 		summaryFields: ["label", "dataType"],
@@ -181,9 +182,10 @@ const nodeDefinitions = [
 		parameters: [
 			{ id: "label", label: "Name", mode: "fixed", configField: "label" },
 			{ id: "dataType", label: "Type", mode: "fixed", configField: "dataType" },
+			{ id: "cardinality", label: "Cardinality", mode: "fixed", configField: "cardinality" },
 			{ id: "defaultValue", label: "Default value", mode: "fixed", configField: "defaultValue" },
 		] satisfies DefinitionParameter[],
-		outputs: [{ id: "output", label: "Value", dataTypes: ["text", "json"] as Port["dataTypes"], defaultConnect: true }],
+		outputs: [{ id: "output", label: "Value", dataTypes: ["text", "json", "image", "video", "audio", "frames", "artifact", "number", "boolean", "color", "size", "mask"] as Port["dataTypes"], defaultConnect: true }],
 	},
 	{
 		typeId: "builtin/user-prompt",
@@ -758,7 +760,7 @@ test.describe("Daedalus Flow node workflow", () => {
 		const pane = mainWindow.locator(".react-flow__pane");
 		const paneBox = await pane.boundingBox();
 		expect(paneBox).not.toBeNull();
-		await mainWindow.locator('section[aria-labelledby="flow-welcome-title"]').click({ button: "right", position: { x: 460, y: 260 } });
+		await mainWindow.locator('section[aria-labelledby="flow-welcome-title"]').getByRole("button", { name: /Add node|添加节点/u }).click();
 		await selectFlowNodeType(mainWindow, /Basic|基础/u, /Text|文本/u);
 		await expect.poll(() => mockBackend.getRequests("flow.patch.commit").length).toBeGreaterThanOrEqual(1);
 		const textNode = mainWindow.locator('.react-flow__node:has([data-node-type="builtin/text"])');

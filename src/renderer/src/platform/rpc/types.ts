@@ -210,7 +210,7 @@ export type FlowDocumentRunStatus = "queued" | "running" | "waiting" | "complete
 export type FlowMediaArtifactRef = {
 	artifactId: string;
 	flowId: string;
-	runId: string;
+	runId: string | null;
 	nodeId: string;
 	mimeType: string;
 	byteSize: number;

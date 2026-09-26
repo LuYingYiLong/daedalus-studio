@@ -296,6 +296,16 @@
 	display: flex;
 }
 
+.parameterRow::before {
+	content: "";
+	position: absolute;
+	z-index: 1;
+	top: 0;
+	bottom: 0;
+	left: calc(0px - var(--ds-space-3) - 8px);
+	width: calc(var(--ds-space-3) + 8px);
+}
+
 .parameterRowConnectionOnly {
 	display: flex;
 }
@@ -492,4 +502,14 @@
 .outputSocket .parameterHandle {
 	left: 0 !important;
 	right: auto !important;
+}
+
+.parameterRow[data-parameter-connected="false"] .parameterHandle {
+	opacity: 0;
+	transition: opacity 120ms ease;
+}
+
+.parameterRow[data-parameter-connected="false"]:hover .parameterHandle,
+.parameterRow[data-parameter-connected="false"]:focus-within .parameterHandle {
+	opacity: 1;
 }

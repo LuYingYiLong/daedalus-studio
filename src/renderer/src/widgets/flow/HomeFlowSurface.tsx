@@ -64,6 +64,7 @@ import {
 	type FlowNodeEditorOptions,
 } from "./FlowNodes";
 import { flowPortColor } from "@/domain/flow/flow-value-presentation";
+import { importFlowInputArtifact } from "@/platform/rpc/flow-api";
 import FlowNodeShell, { type FlowInteractionNode } from "./FlowNodeShell";
 import FlowGroupShell, { type FlowGroupInteractionNode } from "./FlowGroupShell";
 import type { FlowCanvasNode } from "./flow-canvas-node";
@@ -241,7 +242,7 @@ function usesEditorResources(definition: FlowNodeTypeDefinition | null): boolean
 		if (!field || typeof field !== "object" || Array.isArray(field)) return false;
 		const schema = field as Record<string, unknown>;
 		return (
-			["provider", "model", "reasoning-effort", "workspace-file"].includes(
+			["provider", "model", "reasoning-effort", "workspace-file", "flow-input-value"].includes(
 				String(schema["x-daedalus-control"]),
 			) ||
 			schema.format === "workspace-file" ||
@@ -465,8 +466,15 @@ function HomeFlowSurface({
 							workspaceRoot: workspace.rootPath,
 						})
 				: undefined,
+			selectFlowInputMedia: snapshot !== null && window.electronAPI !== undefined
+				? async (nodeId, kind) => {
+						const sourcePath = await window.electronAPI.workspaceFs.pickFlowMediaInput(kind);
+						if (sourcePath === null) return null;
+						return (await importFlowInputArtifact({ flowId: snapshot.flow.flowId, nodeId, sourcePath, kind })).ref;
+					}
+				: undefined,
 		};
-	}, [modelsByProvider, providerModelSelection, snapshot?.flow.workspaceId, workspaceOptions]);
+	}, [modelsByProvider, providerModelSelection, snapshot?.flow.flowId, snapshot?.flow.workspaceId, workspaceOptions]);
 	const latestRun = snapshot?.runs[0];
 	const running =
 		latestRun?.status === "running" || latestRun?.status === "queued" || latestRun?.status === "waiting";

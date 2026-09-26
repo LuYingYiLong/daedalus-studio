@@ -889,6 +889,19 @@ export async function pickFlowImageInput(
 	return selectedPath === undefined ? null : await importFlowImageInput(params.workspaceRoot, selectedPath);
 }
 
+export async function pickFlowMediaInput(owner: BrowserWindow | undefined, kind: "image" | "video" | "audio" | "mask" | "frames" | "artifact"): Promise<string | null> {
+	const extensions = kind === "image" || kind === "mask" || kind === "frames"
+		? ["jpg", "jpeg", "png", "webp"]
+		: kind === "video" ? ["mp4", "webm"] : kind === "audio" ? ["mp3", "wav", "ogg"] : null;
+	const options: Electron.OpenDialogOptions = {
+		title: "Select Flow input media",
+		properties: ["openFile"],
+		...(extensions === null ? {} : { filters: [{ name: kind, extensions }] }),
+	};
+	const result = owner === undefined ? await dialog.showOpenDialog(options) : await dialog.showOpenDialog(owner, options);
+	return result.canceled ? null : result.filePaths[0] ?? null;
+}
+
 export async function pickWorkspaceFolder(owner: BrowserWindow | undefined, params: WorkspaceFsPickEntriesParams): Promise<WorkspaceFsPickEntriesResult> {
 	const options: Electron.OpenDialogOptions = {
 		title: "Add folder from workspace",
@@ -1112,6 +1125,9 @@ export function registerWorkspaceFsIpc(): void {
 	});
 	ipcMain.handle("workspace-fs:pick-flow-image-input", async (event, params: WorkspaceFsPickEntriesParams): Promise<WorkspaceFsPickFlowImageInputResult> => {
 		return pickFlowImageInput(BrowserWindow.fromWebContents(event.sender) ?? undefined, params);
+	});
+	ipcMain.handle("workspace-fs:pick-flow-media-input", async (event, kind: "image" | "video" | "audio" | "mask" | "frames" | "artifact"): Promise<string | null> => {
+		return pickFlowMediaInput(BrowserWindow.fromWebContents(event.sender) ?? undefined, kind);
 	});
 	ipcMain.handle("workspace-fs:pick-folder", async (event, params: WorkspaceFsPickEntriesParams): Promise<WorkspaceFsPickEntriesResult> => {
 		return pickWorkspaceFolder(BrowserWindow.fromWebContents(event.sender) ?? undefined, params);

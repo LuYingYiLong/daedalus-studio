@@ -530,6 +530,7 @@ declare global {
 				kind: "file" | "folder";
 			}> | null>;
 			pickFlowImageInput: (params: { workspaceRoot: string }) => Promise<{ path: string; imported: boolean } | null>;
+			pickFlowMediaInput: (kind: "image" | "video" | "audio" | "mask" | "frames" | "artifact") => Promise<string | null>;
 			pickWorkspaceFolder: (params: { workspaceRoot: string }) => Promise<Array<{
 				name: string;
 				relativePath: string;

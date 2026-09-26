@@ -23,5 +23,5 @@ it("keeps current-generation operations across persistence and restores their ID
 	expect(await state.handlers.get("flow-operation-outbox:load")!()).toEqual({ flow: operations });
 	const writing = state.handlers.get("flow-operation-outbox:replace")!(undefined, "flow", []);
 	await vi.runAllTimersAsync(); await writing;
-	expect(JSON.parse(state.content)).toEqual({ generation: "flow-composable-1", operations: {} });
+	expect(JSON.parse(state.content)).toEqual({ generation: "flow-parameters-2", operations: {} });
 });

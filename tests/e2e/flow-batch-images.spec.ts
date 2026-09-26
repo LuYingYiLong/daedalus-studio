@@ -21,7 +21,7 @@ test("batch → resize → composite → compare → approved save → failed-on
 	const saved = new Set<string>();
 	mockBackend.setHandler("flow.list", () => ({ flows: [flow] }));
 	mockBackend.setHandler("flow.get", () => ({ flow, nodes, edges, runs: run ? [run] : [] }));
-	mockBackend.setHandler("flow.node.types.list", () => ({ nodes: types, generation: "flow-composable-1" }));
+	mockBackend.setHandler("flow.node.types.list", () => ({ nodes: types, generation: "flow-parameters-2" }));
 	mockBackend.setHandler("flow.tools.list", () => ({ tools: [] }));
 	mockBackend.setHandler("flow.approval.list", () => ({ approvals }));
 	mockBackend.setHandler("flow.patch.commit", ({ params }) => {

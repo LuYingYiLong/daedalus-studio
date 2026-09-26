@@ -217,7 +217,7 @@ export async function fetchFlowOverview(params: {
 			...(artifact.width === undefined ? {} : { width: artifact.width }),
 			...(artifact.height === undefined ? {} : { height: artifact.height }),
 			flowId: artifact.flowId,
-			runId: artifact.runId,
+			...(artifact.runId === null ? {} : { runId: artifact.runId }),
 			nodeId: artifact.nodeId,
 			...(provider === undefined ? {} : { provider }),
 			...(model === undefined ? {} : { model }),
