@@ -5,11 +5,19 @@ const NOW = "2026-09-17T00:00:00.000Z";
 const FLOW_ID = "flow-e2e";
 
 async function selectFlowNodeType(page: Page, category: RegExp, nodeName: RegExp): Promise<void> {
-	await page.getByRole("menuitem", { name: category }).hover();
+	const categoryItem = page.getByRole("menuitem", { name: category });
+	await categoryItem.hover();
 	const pickerBox = await page.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ }).boundingBox();
 	expect(pickerBox?.height ?? Number.POSITIVE_INFINITY).toBeLessThan(260);
 	const option = page.getByRole("menuitem", { name: nodeName, exact: true });
 	await expect(option).toBeVisible();
+	const categoryBox = await categoryItem.boundingBox();
+	const optionBox = await option.boundingBox();
+	expect(categoryBox).not.toBeNull();
+	expect(optionBox).not.toBeNull();
+	// Enter the submenu horizontally first. A diagonal click path can cross another
+	// category and replace the open submenu before Playwright reaches the item.
+	await page.mouse.move(optionBox!.x + 8, categoryBox!.y + categoryBox!.height / 2);
 	await option.click();
 	await expect(page.getByRole("dialog", { name: /Add Flow node|添加 Flow 节点/ })).toBeHidden();
 	await expect(option).toBeHidden();
@@ -719,10 +727,19 @@ test.describe("Daedalus Flow node workflow", () => {
 		await ensureFlowNodesInteractive(mainWindow, [flowInputNode, userPromptNode]);
 		const flowInputOutput = flowInputNode.locator('[data-flow-port-id="output"]');
 		const userPromptInput = userPromptNode.locator('[data-flow-port-id="input"]');
+		await flowInputOutput.hover();
 		const flowInputOutputBox = await flowInputOutput.boundingBox();
 		const userPromptInputBox = await userPromptInput.boundingBox();
 		expect(flowInputOutputBox).not.toBeNull();
 		expect(userPromptInputBox).not.toBeNull();
+		const hitSource = await mainWindow.evaluate(({ x, y }): boolean => {
+			const element = window.document.elementFromPoint(x, y);
+			return element instanceof Element && element.closest('[data-flow-port-id="output"]') !== null;
+		}, {
+			x: flowInputOutputBox!.x + flowInputOutputBox!.width / 2,
+			y: flowInputOutputBox!.y + flowInputOutputBox!.height / 2,
+		});
+		expect(hitSource, "The Flow Input output Handle must receive pointer events").toBe(true);
 		await mainWindow.mouse.move(
 			flowInputOutputBox!.x + flowInputOutputBox!.width / 2,
 			flowInputOutputBox!.y + flowInputOutputBox!.height / 2,
