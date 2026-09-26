@@ -17,10 +17,7 @@ import type { ColorPickerProps } from "antd";
 import { Icon } from "@/assets/icons";
 import SettingsItem from "@/ui/SettingsItem";
 import SettingsList from "@/ui/SettingsList";
-import {
-	DEFAULT_STUDIO_FONT_FAMILY,
-	DEFAULT_STUDIO_FONT_FAMILY_CODE,
-} from "../../../../../../contracts/studio-fonts";
+import { DEFAULT_STUDIO_FONT_FAMILY, DEFAULT_STUDIO_FONT_FAMILY_CODE } from "../../../../../../contracts/studio-fonts";
 import {
 	BACKGROUND_IMAGE_OPACITY_STEP,
 	MAX_BACKGROUND_IMAGE_BLUR,
@@ -93,11 +90,7 @@ function AppearanceSettingsPage({
 			})
 			.catch((error: unknown): void => {
 				if (!cancelled) {
-					setErrorMessage(
-						error instanceof Error
-							? error.message
-							: t("settings.appearance.errors.load"),
-					);
+					setErrorMessage(error instanceof Error ? error.message : t("settings.appearance.errors.load"));
 				}
 			})
 			.finally((): void => {
@@ -108,10 +101,7 @@ function AppearanceSettingsPage({
 		};
 	}, [onClientPreferencesChange, t]);
 
-	async function save(
-		patch: Partial<ClientPreferences>,
-		key: SettingKey,
-	): Promise<void> {
+	async function save(patch: Partial<ClientPreferences>, key: SettingKey): Promise<void> {
 		if (savingKey !== null) return;
 		const previous = draft;
 		const optimistic = { ...previous, ...patch };
@@ -126,11 +116,7 @@ function AppearanceSettingsPage({
 		} catch (error: unknown) {
 			setDraft(previous);
 			onClientPreferencesChange(previous);
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: t("settings.appearance.errors.save"),
-			);
+			setErrorMessage(error instanceof Error ? error.message : t("settings.appearance.errors.save"));
 		} finally {
 			setSavingKey(null);
 		}
@@ -152,10 +138,7 @@ function AppearanceSettingsPage({
 		}
 	}
 
-	function saveFontSize(
-		key: "uiFontSize" | "codeFontSize",
-		value: number | null,
-	): void {
+	function saveFontSize(key: "uiFontSize" | "codeFontSize", value: number | null): void {
 		if (value === null || value === draft[key]) return;
 		void save({ [key]: value }, key);
 	}
@@ -165,18 +148,13 @@ function AppearanceSettingsPage({
 		try {
 			setSavingKey("backgroundImage");
 			setErrorMessage(null);
-			const preferences: ClientPreferences =
-				await window.electronAPI.appearanceBackground.pick(
-					t("settings.appearance.background.image.pickTitle"),
-				);
+			const preferences: ClientPreferences = await window.electronAPI.appearanceBackground.pick(
+				t("settings.appearance.background.image.pickTitle"),
+			);
 			setDraft(preferences);
 			onClientPreferencesChange(preferences);
 		} catch (error: unknown) {
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: t("settings.appearance.background.errors.pick"),
-			);
+			setErrorMessage(error instanceof Error ? error.message : t("settings.appearance.background.errors.pick"));
 		} finally {
 			setSavingKey(null);
 		}
@@ -189,17 +167,12 @@ function AppearanceSettingsPage({
 			setSavingKey("backgroundImage");
 			setErrorMessage(null);
 			setDraft({ ...previous, backgroundImage: null });
-			const preferences: ClientPreferences =
-				await window.electronAPI.appearanceBackground.clear();
+			const preferences: ClientPreferences = await window.electronAPI.appearanceBackground.clear();
 			setDraft(preferences);
 			onClientPreferencesChange(preferences);
 		} catch (error: unknown) {
 			setDraft(previous);
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: t("settings.appearance.background.errors.clear"),
-			);
+			setErrorMessage(error instanceof Error ? error.message : t("settings.appearance.background.errors.clear"));
 		} finally {
 			setSavingKey(null);
 		}
@@ -231,33 +204,23 @@ function AppearanceSettingsPage({
 						<SettingsItem
 							searchKey="item:appearance.themeMode"
 							title={t("settings.appearance.theme.mode.title")}
-							description={t(
-								"settings.appearance.theme.mode.description",
-							)}
+							description={t("settings.appearance.theme.mode.description")}
 						>
 							<Segmented<ClientPreferences["theme"]>
 								className={styles.themeControl}
 								value={draft.theme}
-								disabled={
-									savingKey !== null && savingKey !== "theme"
-								}
+								disabled={savingKey !== null && savingKey !== "theme"}
 								options={[
 									{
-										label: t(
-											"settings.appearance.theme.mode.system",
-										),
+										label: t("settings.appearance.theme.mode.system"),
 										value: "system",
 									},
 									{
-										label: t(
-											"settings.appearance.theme.mode.light",
-										),
+										label: t("settings.appearance.theme.mode.light"),
 										value: "light",
 									},
 									{
-										label: t(
-											"settings.appearance.theme.mode.dark",
-										),
+										label: t("settings.appearance.theme.mode.dark"),
 										value: "dark",
 									},
 								]}
@@ -269,9 +232,7 @@ function AppearanceSettingsPage({
 						<SettingsItem
 							searchKey="item:appearance.themeColor"
 							title={t("settings.appearance.theme.color.title")}
-							description={t(
-								"settings.appearance.theme.color.description",
-							)}
+							description={t("settings.appearance.theme.color.description")}
 						>
 							<Space.Compact>
 								<ColorPicker
@@ -280,40 +241,27 @@ function AppearanceSettingsPage({
 									format="hex"
 									disabledAlpha={true}
 									disabledFormat={true}
-									showText={(color): React.ReactNode =>
-										color.toHexString().toUpperCase()
-									}
+									showText={(color): React.ReactNode => color.toHexString().toUpperCase()}
 									disabled={savingKey !== null}
 									onChange={(color): void => {
 										const themeColor = color.toHexString();
 										setDraft(
-											(
-												preferences: ClientPreferences,
-											): ClientPreferences => ({
+											(preferences: ClientPreferences): ClientPreferences => ({
 												...preferences,
 												themeColor,
 											}),
 										);
 									}}
 									onChangeComplete={(color): void => {
-										void save(
-											{ themeColor: color.toHexString() },
-											"themeColor",
-										);
+										void save({ themeColor: color.toHexString() }, "themeColor");
 									}}
 								/>
 								<Button
 									icon={<Icon name="reload" />}
 									loading={savingKey === "themeColor"}
-									disabled={
-										savingKey !== null ||
-										draft.themeColor === DEFAULT_THEME_COLOR
-									}
+									disabled={savingKey !== null || draft.themeColor === DEFAULT_THEME_COLOR}
 									onClick={(): void => {
-										void save(
-											{ themeColor: DEFAULT_THEME_COLOR },
-											"themeColor",
-										);
+										void save({ themeColor: DEFAULT_THEME_COLOR }, "themeColor");
 									}}
 								/>
 							</Space.Compact>
@@ -324,38 +272,22 @@ function AppearanceSettingsPage({
 					<div className={styles.preferenceList}>
 						<SettingsItem
 							searchKey="item:appearance.motion"
-							title={t(
-								"settings.appearance.interface.motion.title",
-							)}
-							description={t(
-								"settings.appearance.interface.motion.description",
-							)}
+							title={t("settings.appearance.interface.motion.title")}
+							description={t("settings.appearance.interface.motion.description")}
 						>
 							<Switch
 								checked={draft.animationsEnabled}
 								loading={savingKey === "animationsEnabled"}
-								disabled={
-									savingKey !== null &&
-									savingKey !== "animationsEnabled"
-								}
-								onChange={(
-									animationsEnabled: boolean,
-								): void => {
-									void save(
-										{ animationsEnabled },
-										"animationsEnabled",
-									);
+								disabled={savingKey !== null && savingKey !== "animationsEnabled"}
+								onChange={(animationsEnabled: boolean): void => {
+									void save({ animationsEnabled }, "animationsEnabled");
 								}}
 							/>
 						</SettingsItem>
 						<SettingsItem
 							searchKey="item:appearance.uiFontSize"
-							title={t(
-								"settings.appearance.interface.uiFontSize.title",
-							)}
-							description={t(
-								"settings.appearance.interface.uiFontSize.description",
-							)}
+							title={t("settings.appearance.interface.uiFontSize.title")}
+							description={t("settings.appearance.interface.uiFontSize.description")}
 						>
 							<InputNumber
 								className={styles.fontSizeInput}
@@ -365,9 +297,7 @@ function AppearanceSettingsPage({
 								precision={0}
 								suffix="px"
 								disabled={savingKey !== null}
-								onChange={(value: number | null): void =>
-									saveFontSize("uiFontSize", value)
-								}
+								onChange={(value: number | null): void => saveFontSize("uiFontSize", value)}
 							/>
 						</SettingsItem>
 					</div>
@@ -396,16 +326,9 @@ function AppearanceSettingsPage({
 												`settings.appearance.fonts.${key === "fontFamily" ? "body" : "code"}.placeholder`,
 											)}
 											disabled={savingKey !== null}
-											onChange={(event): void =>
-												updateFont(
-													key,
-													event.target.value,
-												)
-											}
+											onChange={(event): void => updateFont(key, event.target.value)}
 											onBlur={(): void => saveFont(key)}
-											onPressEnter={(event): void =>
-												event.currentTarget.blur()
-											}
+											onPressEnter={(event): void => event.currentTarget.blur()}
 										/>
 										<Tooltip
 											title={t(
@@ -419,21 +342,13 @@ function AppearanceSettingsPage({
 												icon={<Icon name="reload" />}
 												loading={savingKey === key}
 												disabled={
-													savingKey !== null ||
-													draft[key] ===
-														DEFAULT_FONT_FAMILIES[
-															key
-														]
+													savingKey !== null || draft[key] === DEFAULT_FONT_FAMILIES[key]
 												}
-												onMouseDown={(event): void =>
-													event.preventDefault()
-												}
+												onMouseDown={(event): void => event.preventDefault()}
 												onClick={(): void => {
 													void save(
 														{
-															[key]: DEFAULT_FONT_FAMILIES[
-																key
-															],
+															[key]: DEFAULT_FONT_FAMILIES[key],
 														},
 														key,
 													);
@@ -446,12 +361,8 @@ function AppearanceSettingsPage({
 						)}
 						<SettingsItem
 							searchKey="item:appearance.codeFontSize"
-							title={t(
-								"settings.appearance.fonts.codeSize.title",
-							)}
-							description={t(
-								"settings.appearance.fonts.codeSize.description",
-							)}
+							title={t("settings.appearance.fonts.codeSize.title")}
+							description={t("settings.appearance.fonts.codeSize.description")}
 						>
 							<InputNumber
 								className={styles.fontSizeInput}
@@ -461,9 +372,7 @@ function AppearanceSettingsPage({
 								precision={0}
 								suffix="px"
 								disabled={savingKey !== null}
-								onChange={(value: number | null): void =>
-									saveFontSize("codeFontSize", value)
-								}
+								onChange={(value: number | null): void => saveFontSize("codeFontSize", value)}
 							/>
 						</SettingsItem>
 					</div>
@@ -473,62 +382,31 @@ function AppearanceSettingsPage({
 						<SettingsItem
 							searchKey="item:appearance.backgroundImage"
 							title={t("settings.appearance.background.image.title")}
-							description={t(
-								"settings.appearance.background.image.description",
-							)}
+							description={t("settings.appearance.background.image.description")}
 						>
 							<Space.Compact>
-								{draft.backgroundImage === null ? null : (
-									<img
-										className={styles.backgroundPreview}
-										src={
-											buildAppearanceBackgroundUrl(
-												draft.backgroundImage,
-											) ?? undefined
-										}
-										alt={t(
-											"settings.appearance.background.image.preview",
-										)}
-									/>
-								)}
 								<Button
 									loading={savingKey === "backgroundImage"}
-									disabled={
-										savingKey !== null &&
-										savingKey !== "backgroundImage"
-									}
+									disabled={savingKey !== null && savingKey !== "backgroundImage"}
 									onClick={(): void => {
 										void pickBackgroundImage();
 									}}
 								>
-									{t(
-										"settings.appearance.background.image.pick",
-									)}
+									{t("settings.appearance.background.image.pick")}
 								</Button>
 								<Button
 									icon={<Icon name="clear" />}
-									disabled={
-										savingKey !== null ||
-										draft.backgroundImage === null
-									}
+									disabled={savingKey !== null || draft.backgroundImage === null}
 									onClick={(): void => {
 										void clearBackgroundImage();
 									}}
-								>
-									{t(
-										"settings.appearance.background.image.clear",
-									)}
-								</Button>
+								/>
 							</Space.Compact>
 						</SettingsItem>
 						<SettingsItem
 							searchKey="item:appearance.backgroundImageOpacity"
-							title={t(
-								"settings.appearance.background.opacity.title",
-							)}
-							description={t(
-								"settings.appearance.background.opacity.description",
-							)}
+							title={t("settings.appearance.background.opacity.title")}
+							description={t("settings.appearance.background.opacity.description")}
 						>
 							<Slider
 								className={styles.backgroundSlider}
@@ -536,40 +414,27 @@ function AppearanceSettingsPage({
 								min={MIN_BACKGROUND_IMAGE_OPACITY}
 								max={MAX_BACKGROUND_IMAGE_OPACITY}
 								step={BACKGROUND_IMAGE_OPACITY_STEP}
-								disabled={
-									savingKey !== null ||
-									draft.backgroundImage === null
-								}
+								disabled={savingKey !== null || draft.backgroundImage === null}
 								tooltip={{
-									formatter: (value): string =>
-										`${Math.round((value ?? 0) * 100)}%`,
+									formatter: (value): string => `${Math.round((value ?? 0) * 100)}%`,
 								}}
 								onChange={(value: number): void => {
 									setDraft(
-										(
-											preferences: ClientPreferences,
-										): ClientPreferences => ({
+										(preferences: ClientPreferences): ClientPreferences => ({
 											...preferences,
 											backgroundImageOpacity: value,
 										}),
 									);
 								}}
 								onChangeComplete={(value: number): void => {
-									void save(
-										{ backgroundImageOpacity: value },
-										"backgroundImageOpacity",
-									);
+									void save({ backgroundImageOpacity: value }, "backgroundImageOpacity");
 								}}
 							/>
 						</SettingsItem>
 						<SettingsItem
 							searchKey="item:appearance.backgroundImageBlur"
-							title={t(
-								"settings.appearance.background.blur.title",
-							)}
-							description={t(
-								"settings.appearance.background.blur.description",
-							)}
+							title={t("settings.appearance.background.blur.title")}
+							description={t("settings.appearance.background.blur.description")}
 						>
 							<Slider
 								className={styles.backgroundSlider}
@@ -577,73 +442,48 @@ function AppearanceSettingsPage({
 								min={MIN_BACKGROUND_IMAGE_BLUR}
 								max={MAX_BACKGROUND_IMAGE_BLUR}
 								step={1}
-								disabled={
-									savingKey !== null ||
-									draft.backgroundImage === null
-								}
+								disabled={savingKey !== null || draft.backgroundImage === null}
 								tooltip={{
-									formatter: (value): string =>
-										`${value ?? 0}px`,
+									formatter: (value): string => `${value ?? 0}px`,
 								}}
 								onChange={(value: number): void => {
 									setDraft(
-										(
-											preferences: ClientPreferences,
-										): ClientPreferences => ({
+										(preferences: ClientPreferences): ClientPreferences => ({
 											...preferences,
 											backgroundImageBlur: value,
 										}),
 									);
 								}}
 								onChangeComplete={(value: number): void => {
-									void save(
-										{ backgroundImageBlur: value },
-										"backgroundImageBlur",
-									);
+									void save({ backgroundImageBlur: value }, "backgroundImageBlur");
 								}}
 							/>
 						</SettingsItem>
 						<SettingsItem
 							searchKey="item:appearance.backgroundImageFit"
-							title={t(
-								"settings.appearance.background.fit.title",
-							)}
-							description={t(
-								"settings.appearance.background.fit.description",
-							)}
+							title={t("settings.appearance.background.fit.title")}
+							description={t("settings.appearance.background.fit.description")}
 						>
 							<Segmented<BackgroundImageFit>
 								className={styles.themeControl}
 								value={draft.backgroundImageFit}
-								disabled={
-									savingKey !== null ||
-									draft.backgroundImage === null
-								}
+								disabled={savingKey !== null || draft.backgroundImage === null}
 								options={[
 									{
-										label: t(
-											"settings.appearance.background.fit.cover",
-										),
+										label: t("settings.appearance.background.fit.cover"),
 										value: "cover",
 									},
 									{
-										label: t(
-											"settings.appearance.background.fit.contain",
-										),
+										label: t("settings.appearance.background.fit.contain"),
 										value: "contain",
 									},
 									{
-										label: t(
-											"settings.appearance.background.fit.repeat",
-										),
+										label: t("settings.appearance.background.fit.repeat"),
 										value: "repeat",
 									},
 								]}
 								onChange={(fit): void => {
-									void save(
-										{ backgroundImageFit: fit },
-										"backgroundImageFit",
-									);
+									void save({ backgroundImageFit: fit }, "backgroundImageFit");
 								}}
 							/>
 						</SettingsItem>

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { App as AntdApp } from "antd";
 import useClientPreferencesController from "@/features/application/hooks/useClientPreferencesController";
 import InputContextMenu from "@/ui/InputContextMenu";
+import ContentBackground from "@/ui/ContentBackground";
 import styles from "./WindowProviders.module.css";
 import SharedVisualProviders from "./SharedVisualProviders";
 
@@ -59,6 +60,7 @@ function WindowProviders({
 			animationsEnabled={animationsEnabled}
 			className={styles.root}
 		>
+			{backgroundImage === null ? null : <ContentBackground />}
 			<ForegroundScheduledNotificationBridge />
 			{children}
 			<InputContextMenu />

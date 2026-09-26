@@ -11,7 +11,6 @@ import {
 	SIDE_DOCK_CLOSED_SIZE,
 } from "@/features/home/dock/useHomePageDockController";
 import ScheduledTasksPage from "@/widgets/scheduled-tasks/ScheduledTasksPage";
-import ContentBackground from "@/ui/ContentBackground";
 import styles from "../HomePage.module.css";
 import HomeFlowSurface, { type HomeFlowSurfaceProps } from "@/widgets/flow/HomeFlowSurface";
 import type { HomeMainSurface, HomePrimarySurface } from "@/features/home/surface/useHomeSurfaceController";
@@ -87,7 +86,6 @@ function HomePageWorkbench({
 			data-page-actions-wide={pageActionControlsWide ? "true" : undefined}
 			data-dock-fullscreen={activeFullscreenDock ?? undefined}
 		>
-			<ContentBackground />
 			{pageActionControls !== null ? (
 				<div className={styles.floatingActionSlot}>
 					{pageActionControls}

@@ -68,6 +68,11 @@ function SharedVisualProviders({
 	}, [codeFontSize, fontFamily, fontFamilyCode, uiFontSize]);
 
 	useEffect((): void => {
+		if (backgroundImage === null) {
+			delete document.documentElement.dataset.studioBackgroundImage;
+		} else {
+			document.documentElement.dataset.studioBackgroundImage = "true";
+		}
 		applyStudioBackgroundVariables(document.documentElement.style, {
 			image: backgroundImage,
 			opacity: backgroundImageOpacity,

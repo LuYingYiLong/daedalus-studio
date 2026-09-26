@@ -85,6 +85,10 @@
 	border-radius: var(--ds-space-2);
 }
 
+:global([data-studio-background-image="true"]) .agentMain {
+	background-color: transparent;
+}
+
 .scheduledTasksOverlay {
 	position: absolute;
 	inset: 0;
@@ -104,6 +108,10 @@
 	pointer-events: auto;
 	opacity: 1;
 	transform: none;
+}
+
+:global([data-studio-background-image="true"]) .scheduledTasksOverlay {
+	background: transparent;
 }
 
 .agentMain[data-main-surface="scheduledTasks"] > :not(.scheduledTasksOverlay) {

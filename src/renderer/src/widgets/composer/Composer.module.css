@@ -103,9 +103,7 @@
 .composerSurfaceCoversWorkspaceFooter {
 	--composer-workspace-footer-cover-height: 36px;
 	z-index: 1;
-	padding-bottom: calc(
-		42px + var(--composer-workspace-footer-cover-height)
-	);
+	padding-bottom: calc(42px + var(--composer-workspace-footer-cover-height));
 	margin-bottom: calc(-1 * var(--composer-workspace-footer-cover-height));
 }
 
@@ -411,12 +409,7 @@
 		max-width 0.16s ease,
 		opacity 0.12s ease,
 		transform 0.16s ease;
-	mask-image: linear-gradient(
-		to right,
-		transparent 0,
-		rgb(0 0 0 / 45%) 35%,
-		rgb(0 0 0) 100%
-	);
+	mask-image: linear-gradient(to right, transparent 0, rgb(0 0 0 / 45%) 35%, rgb(0 0 0) 100%);
 }
 
 .contextUsageButton:hover .contextUsageButtonText,
