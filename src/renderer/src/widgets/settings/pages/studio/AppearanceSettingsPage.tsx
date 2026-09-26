@@ -7,6 +7,7 @@ import {
 	Input,
 	InputNumber,
 	Segmented,
+	Slider,
 	Space,
 	Switch,
 	Tooltip,
@@ -20,6 +21,15 @@ import {
 	DEFAULT_STUDIO_FONT_FAMILY,
 	DEFAULT_STUDIO_FONT_FAMILY_CODE,
 } from "../../../../../../contracts/studio-fonts";
+import {
+	BACKGROUND_IMAGE_OPACITY_STEP,
+	MAX_BACKGROUND_IMAGE_BLUR,
+	MAX_BACKGROUND_IMAGE_OPACITY,
+	MIN_BACKGROUND_IMAGE_BLUR,
+	MIN_BACKGROUND_IMAGE_OPACITY,
+	buildAppearanceBackgroundUrl,
+	type BackgroundImageFit,
+} from "../../../../../../contracts/appearance-background";
 import {
 	DEFAULT_THEME_COLOR,
 	fetchClientPreferences,
@@ -41,7 +51,11 @@ type SettingKey =
 	| "themeColor"
 	| "animationsEnabled"
 	| "uiFontSize"
-	| "codeFontSize";
+	| "codeFontSize"
+	| "backgroundImage"
+	| "backgroundImageOpacity"
+	| "backgroundImageBlur"
+	| "backgroundImageFit";
 
 const DEFAULT_FONT_FAMILIES: Record<FontFamilyKey, string> = {
 	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
@@ -144,6 +158,51 @@ function AppearanceSettingsPage({
 	): void {
 		if (value === null || value === draft[key]) return;
 		void save({ [key]: value }, key);
+	}
+
+	async function pickBackgroundImage(): Promise<void> {
+		if (savingKey !== null) return;
+		try {
+			setSavingKey("backgroundImage");
+			setErrorMessage(null);
+			const preferences: ClientPreferences =
+				await window.electronAPI.appearanceBackground.pick(
+					t("settings.appearance.background.image.pickTitle"),
+				);
+			setDraft(preferences);
+			onClientPreferencesChange(preferences);
+		} catch (error: unknown) {
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: t("settings.appearance.background.errors.pick"),
+			);
+		} finally {
+			setSavingKey(null);
+		}
+	}
+
+	async function clearBackgroundImage(): Promise<void> {
+		if (savingKey !== null) return;
+		const previous = draft;
+		try {
+			setSavingKey("backgroundImage");
+			setErrorMessage(null);
+			setDraft({ ...previous, backgroundImage: null });
+			const preferences: ClientPreferences =
+				await window.electronAPI.appearanceBackground.clear();
+			setDraft(preferences);
+			onClientPreferencesChange(preferences);
+		} catch (error: unknown) {
+			setDraft(previous);
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: t("settings.appearance.background.errors.clear"),
+			);
+		} finally {
+			setSavingKey(null);
+		}
 	}
 
 	if (isLoading) return null;
@@ -405,6 +464,187 @@ function AppearanceSettingsPage({
 								onChange={(value: number | null): void =>
 									saveFontSize("codeFontSize", value)
 								}
+							/>
+						</SettingsItem>
+					</div>
+				</SettingsList>
+				<SettingsList title={t("settings.appearance.background.title")}>
+					<div className={styles.preferenceList}>
+						<SettingsItem
+							searchKey="item:appearance.backgroundImage"
+							title={t("settings.appearance.background.image.title")}
+							description={t(
+								"settings.appearance.background.image.description",
+							)}
+						>
+							<Space.Compact>
+								{draft.backgroundImage === null ? null : (
+									<img
+										className={styles.backgroundPreview}
+										src={
+											buildAppearanceBackgroundUrl(
+												draft.backgroundImage,
+											) ?? undefined
+										}
+										alt={t(
+											"settings.appearance.background.image.preview",
+										)}
+									/>
+								)}
+								<Button
+									loading={savingKey === "backgroundImage"}
+									disabled={
+										savingKey !== null &&
+										savingKey !== "backgroundImage"
+									}
+									onClick={(): void => {
+										void pickBackgroundImage();
+									}}
+								>
+									{t(
+										"settings.appearance.background.image.pick",
+									)}
+								</Button>
+								<Button
+									icon={<Icon name="clear" />}
+									disabled={
+										savingKey !== null ||
+										draft.backgroundImage === null
+									}
+									onClick={(): void => {
+										void clearBackgroundImage();
+									}}
+								>
+									{t(
+										"settings.appearance.background.image.clear",
+									)}
+								</Button>
+							</Space.Compact>
+						</SettingsItem>
+						<SettingsItem
+							searchKey="item:appearance.backgroundImageOpacity"
+							title={t(
+								"settings.appearance.background.opacity.title",
+							)}
+							description={t(
+								"settings.appearance.background.opacity.description",
+							)}
+						>
+							<Slider
+								className={styles.backgroundSlider}
+								value={draft.backgroundImageOpacity}
+								min={MIN_BACKGROUND_IMAGE_OPACITY}
+								max={MAX_BACKGROUND_IMAGE_OPACITY}
+								step={BACKGROUND_IMAGE_OPACITY_STEP}
+								disabled={
+									savingKey !== null ||
+									draft.backgroundImage === null
+								}
+								tooltip={{
+									formatter: (value): string =>
+										`${Math.round((value ?? 0) * 100)}%`,
+								}}
+								onChange={(value: number): void => {
+									setDraft(
+										(
+											preferences: ClientPreferences,
+										): ClientPreferences => ({
+											...preferences,
+											backgroundImageOpacity: value,
+										}),
+									);
+								}}
+								onChangeComplete={(value: number): void => {
+									void save(
+										{ backgroundImageOpacity: value },
+										"backgroundImageOpacity",
+									);
+								}}
+							/>
+						</SettingsItem>
+						<SettingsItem
+							searchKey="item:appearance.backgroundImageBlur"
+							title={t(
+								"settings.appearance.background.blur.title",
+							)}
+							description={t(
+								"settings.appearance.background.blur.description",
+							)}
+						>
+							<Slider
+								className={styles.backgroundSlider}
+								value={draft.backgroundImageBlur}
+								min={MIN_BACKGROUND_IMAGE_BLUR}
+								max={MAX_BACKGROUND_IMAGE_BLUR}
+								step={1}
+								disabled={
+									savingKey !== null ||
+									draft.backgroundImage === null
+								}
+								tooltip={{
+									formatter: (value): string =>
+										`${value ?? 0}px`,
+								}}
+								onChange={(value: number): void => {
+									setDraft(
+										(
+											preferences: ClientPreferences,
+										): ClientPreferences => ({
+											...preferences,
+											backgroundImageBlur: value,
+										}),
+									);
+								}}
+								onChangeComplete={(value: number): void => {
+									void save(
+										{ backgroundImageBlur: value },
+										"backgroundImageBlur",
+									);
+								}}
+							/>
+						</SettingsItem>
+						<SettingsItem
+							searchKey="item:appearance.backgroundImageFit"
+							title={t(
+								"settings.appearance.background.fit.title",
+							)}
+							description={t(
+								"settings.appearance.background.fit.description",
+							)}
+						>
+							<Segmented<BackgroundImageFit>
+								className={styles.themeControl}
+								value={draft.backgroundImageFit}
+								disabled={
+									savingKey !== null ||
+									draft.backgroundImage === null
+								}
+								options={[
+									{
+										label: t(
+											"settings.appearance.background.fit.cover",
+										),
+										value: "cover",
+									},
+									{
+										label: t(
+											"settings.appearance.background.fit.contain",
+										),
+										value: "contain",
+									},
+									{
+										label: t(
+											"settings.appearance.background.fit.repeat",
+										),
+										value: "repeat",
+									},
+								]}
+								onChange={(fit): void => {
+									void save(
+										{ backgroundImageFit: fit },
+										"backgroundImageFit",
+									);
+								}}
 							/>
 						</SettingsItem>
 					</div>

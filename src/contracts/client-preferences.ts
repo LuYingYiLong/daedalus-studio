@@ -1,3 +1,4 @@
+import type { BackgroundImageFit, BackgroundImagePreference } from "./appearance-background";
 import type { KeyboardShortcutOverrides } from "./keyboard-shortcuts";
 import type { NewSessionComposerPreferences } from "./new-session-composer-preferences";
 import type { OnboardingPreferences } from "./onboarding";
@@ -26,6 +27,10 @@ export type ClientPreferences = {
 	codeFontSize: number;
 	fontFamily: string;
 	fontFamilyCode: string;
+	backgroundImage: BackgroundImagePreference | null;
+	backgroundImageOpacity: number;
+	backgroundImageBlur: number;
+	backgroundImageFit: BackgroundImageFit;
 	language: LanguagePreference;
 	webLinkOpenMode: WebLinkOpenMode;
 	workspaceSidebar: WorkspaceSidebarPreferences;

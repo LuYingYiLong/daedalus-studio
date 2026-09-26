@@ -35,6 +35,10 @@ function WindowProviders({
 		themeColor,
 		fontFamily,
 		fontFamilyCode,
+		backgroundImage,
+		backgroundImageOpacity,
+		backgroundImageBlur,
+		backgroundImageFit,
 		animationsEnabled,
 		uiFontSize,
 		codeFontSize,
@@ -46,6 +50,10 @@ function WindowProviders({
 			themeColor={themeColor}
 			fontFamily={fontFamily}
 			fontFamilyCode={fontFamilyCode}
+			backgroundImage={backgroundImage}
+			backgroundImageOpacity={backgroundImageOpacity}
+			backgroundImageBlur={backgroundImageBlur}
+			backgroundImageFit={backgroundImageFit}
 			uiFontSize={uiFontSize}
 			codeFontSize={codeFontSize}
 			animationsEnabled={animationsEnabled}

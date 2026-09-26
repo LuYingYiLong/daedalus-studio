@@ -4,6 +4,7 @@ import type { WindowCaptureAPI } from "../contracts/window-capture";
 import type { ComputerAPI, ComputerState } from "../contracts/computer-observation";
 import { applyStudioAccentVariables } from "../contracts/theme-color";
 import { applyStudioFontVariables } from "../contracts/studio-fonts";
+import { applyStudioBackgroundVariables } from "../contracts/appearance-background";
 import type { ClientPreferences, ClientPreferencesPatch } from "../contracts/client-preferences";
 import type { GeneralSettings } from "../contracts/general-settings";
 import type { FlowOperationOutboxDocument, PersistedFlowOperation } from "../contracts/flow-operation-outbox";
@@ -201,6 +202,12 @@ function applyRendererTheme(preferences: ClientPreferences = cachedClientPrefere
 		preferences.codeFontSize
 	);
 	rootElement.dataset.motion = preferences.animationsEnabled !== false ? "on" : "off";
+	applyStudioBackgroundVariables(rootElement.style, {
+		image: preferences.backgroundImage,
+		opacity: preferences.backgroundImageOpacity,
+		blur: preferences.backgroundImageBlur,
+		fit: preferences.backgroundImageFit
+	});
 }
 
 applyRendererTheme();
@@ -271,6 +278,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			return (): void => {
 				ipcRenderer.removeListener("client-preferences:changed", handler);
 			};
+		}
+	},
+
+	appearanceBackground: {
+		pick: (title?: string): Promise<ClientPreferences> => {
+			return ipcRenderer.invoke("appearance-background:pick", title === undefined ? {} : { title });
+		},
+		clear: (): Promise<ClientPreferences> => {
+			return ipcRenderer.invoke("appearance-background:clear");
 		}
 	},
 

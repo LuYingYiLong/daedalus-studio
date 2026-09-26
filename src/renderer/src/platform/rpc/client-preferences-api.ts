@@ -1,5 +1,6 @@
 import { DEFAULT_STUDIO_THEME_COLOR } from "../../../../contracts/theme-color";
 import { DEFAULT_MASCOT_SIZE } from "../../../../contracts/mascot-preferences";
+import { DEFAULT_BACKGROUND_IMAGE_BLUR, DEFAULT_BACKGROUND_IMAGE_FIT, DEFAULT_BACKGROUND_IMAGE_OPACITY } from "../../../../contracts/appearance-background";
 import { DEFAULT_STUDIO_CODE_FONT_SIZE, DEFAULT_STUDIO_FONT_FAMILY, DEFAULT_STUDIO_FONT_FAMILY_CODE, DEFAULT_STUDIO_UI_FONT_SIZE } from "../../../../contracts/studio-fonts";
 import { createDefaultOnboardingPreferences } from "../../../../contracts/onboarding";
 import { createDefaultNewSessionComposerPreferences, type NewSessionComposerPreferences } from "../../../../contracts/new-session-composer-preferences";
@@ -23,6 +24,10 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	codeFontSize: DEFAULT_STUDIO_CODE_FONT_SIZE,
 	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
 	fontFamilyCode: DEFAULT_STUDIO_FONT_FAMILY_CODE,
+	backgroundImage: null,
+	backgroundImageOpacity: DEFAULT_BACKGROUND_IMAGE_OPACITY,
+	backgroundImageBlur: DEFAULT_BACKGROUND_IMAGE_BLUR,
+	backgroundImageFit: DEFAULT_BACKGROUND_IMAGE_FIT,
 	language: "system",
 	webLinkOpenMode: "integrated",
 	workspaceSidebar: {

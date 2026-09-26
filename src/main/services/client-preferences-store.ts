@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { DEFAULT_BACKGROUND_IMAGE_BLUR, DEFAULT_BACKGROUND_IMAGE_FIT, DEFAULT_BACKGROUND_IMAGE_OPACITY, normalizeBackgroundImage, normalizeBackgroundImageBlur, normalizeBackgroundImageFit, normalizeBackgroundImageOpacity } from "../../contracts/appearance-background";
 import { normalizeKeyboardShortcutOverrides, type KeyboardShortcutOverrides, type ShortcutPlatform } from "../../contracts/keyboard-shortcuts";
 import { DEFAULT_STUDIO_THEME_COLOR, normalizeStudioThemeColor } from "../../contracts/theme-color";
 import { DEFAULT_STUDIO_CODE_FONT_SIZE, DEFAULT_STUDIO_FONT_FAMILY, DEFAULT_STUDIO_FONT_FAMILY_CODE, DEFAULT_STUDIO_UI_FONT_SIZE, MAX_STUDIO_CODE_FONT_SIZE, MAX_STUDIO_UI_FONT_SIZE, MIN_STUDIO_CODE_FONT_SIZE, MIN_STUDIO_UI_FONT_SIZE, normalizeStudioFontFamily, normalizeStudioFontFamilyPatch, normalizeStudioFontSize } from "../../contracts/studio-fonts";
@@ -27,6 +28,10 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	codeFontSize: DEFAULT_STUDIO_CODE_FONT_SIZE,
 	fontFamily: DEFAULT_STUDIO_FONT_FAMILY,
 	fontFamilyCode: DEFAULT_STUDIO_FONT_FAMILY_CODE,
+	backgroundImage: null,
+	backgroundImageOpacity: DEFAULT_BACKGROUND_IMAGE_OPACITY,
+	backgroundImageBlur: DEFAULT_BACKGROUND_IMAGE_BLUR,
+	backgroundImageFit: DEFAULT_BACKGROUND_IMAGE_FIT,
 	language: "system",
 	webLinkOpenMode: "integrated",
 	workspaceSidebar: {
@@ -167,6 +172,10 @@ export function normalizeClientPreferences(value: unknown): {
 	const codeFontSize: number = normalizeStudioFontSize(value.codeFontSize, DEFAULT_CLIENT_PREFERENCES.codeFontSize, MIN_STUDIO_CODE_FONT_SIZE, MAX_STUDIO_CODE_FONT_SIZE);
 	const fontFamily: string = normalizeStudioFontFamily(value.fontFamily, DEFAULT_CLIENT_PREFERENCES.fontFamily);
 	const fontFamilyCode: string = normalizeStudioFontFamily(value.fontFamilyCode, DEFAULT_CLIENT_PREFERENCES.fontFamilyCode);
+	const backgroundImage: ClientPreferences["backgroundImage"] = normalizeBackgroundImage(value.backgroundImage);
+	const backgroundImageOpacity: number = normalizeBackgroundImageOpacity(value.backgroundImageOpacity, DEFAULT_CLIENT_PREFERENCES.backgroundImageOpacity);
+	const backgroundImageBlur: number = normalizeBackgroundImageBlur(value.backgroundImageBlur, DEFAULT_CLIENT_PREFERENCES.backgroundImageBlur);
+	const backgroundImageFit: ClientPreferences["backgroundImageFit"] = normalizeBackgroundImageFit(value.backgroundImageFit);
 	const languagePreference: ClientPreferences["language"] = value.language === "en-US" || value.language === "zh-CN" || value.language === "system" ? value.language : DEFAULT_CLIENT_PREFERENCES.language;
 	const webLinkOpenMode: ClientPreferences["webLinkOpenMode"] = value.webLinkOpenMode === "external" || value.webLinkOpenMode === "integrated" ? value.webLinkOpenMode : DEFAULT_CLIENT_PREFERENCES.webLinkOpenMode;
 	const workspaceSidebar: ClientPreferences["workspaceSidebar"] = normalizeWorkspaceSidebar(value.workspaceSidebar);
@@ -193,6 +202,10 @@ export function normalizeClientPreferences(value: unknown): {
 			codeFontSize,
 			fontFamily,
 			fontFamilyCode,
+			backgroundImage,
+			backgroundImageOpacity,
+			backgroundImageBlur,
+			backgroundImageFit,
 			language: languagePreference,
 			webLinkOpenMode,
 			workspaceSidebar,
@@ -218,6 +231,10 @@ export function normalizeClientPreferences(value: unknown): {
 			value.codeFontSize !== codeFontSize ||
 			value.fontFamily !== fontFamily ||
 			value.fontFamilyCode !== fontFamilyCode ||
+			JSON.stringify(value.backgroundImage ?? null) !== JSON.stringify(backgroundImage) ||
+			value.backgroundImageOpacity !== backgroundImageOpacity ||
+			value.backgroundImageBlur !== backgroundImageBlur ||
+			value.backgroundImageFit !== backgroundImageFit ||
 			value.language !== languagePreference ||
 			value.webLinkOpenMode !== webLinkOpenMode ||
 			JSON.stringify(value.workspaceSidebar ?? null) !== JSON.stringify(workspaceSidebar) ||
@@ -227,7 +244,7 @@ export function normalizeClientPreferences(value: unknown): {
 			JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel) ||
 			JSON.stringify(value.newSessionComposer ?? null) !== JSON.stringify(newSessionComposer) ||
 			JSON.stringify(value.onboarding ?? null) !== JSON.stringify(onboarding) ||
-			Object.keys(value).some((key: string): boolean => !["allowComputerObservation", "allowComputerControl", "autoCheckForUpdates", "notifyOnRunCompleted", "minimizeToTrayOnClose", "theme", "themeColor", "animationsEnabled", "mascotEnabled", "mascotSize", "uiFontSize", "codeFontSize", "fontFamily", "fontFamilyCode", "language", "webLinkOpenMode", "workspaceSidebar", "keyboardShortcuts", "flowSnapToGrid", "flowRunEntryByFlowId", "lastComposerModel", "newSessionComposer", "onboarding"].includes(key)),
+			Object.keys(value).some((key: string): boolean => !["allowComputerObservation", "allowComputerControl", "autoCheckForUpdates", "notifyOnRunCompleted", "minimizeToTrayOnClose", "theme", "themeColor", "animationsEnabled", "mascotEnabled", "mascotSize", "uiFontSize", "codeFontSize", "fontFamily", "fontFamilyCode", "backgroundImage", "backgroundImageOpacity", "backgroundImageBlur", "backgroundImageFit", "language", "webLinkOpenMode", "workspaceSidebar", "keyboardShortcuts", "flowSnapToGrid", "flowRunEntryByFlowId", "lastComposerModel", "newSessionComposer", "onboarding"].includes(key)),
 	};
 }
 
@@ -274,6 +291,20 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	}
 	if (typeof value.fontFamilyCode === "string") {
 		patch.fontFamilyCode = normalizeStudioFontFamilyPatch(value.fontFamilyCode, DEFAULT_CLIENT_PREFERENCES.fontFamilyCode, "fontFamilyCode");
+	}
+	if (value.backgroundImage === null) {
+		patch.backgroundImage = null;
+	} else if (isRecord(value.backgroundImage)) {
+		patch.backgroundImage = normalizeBackgroundImage(value.backgroundImage);
+	}
+	if (typeof value.backgroundImageOpacity === "number" && Number.isFinite(value.backgroundImageOpacity)) {
+		patch.backgroundImageOpacity = normalizeBackgroundImageOpacity(value.backgroundImageOpacity, DEFAULT_CLIENT_PREFERENCES.backgroundImageOpacity);
+	}
+	if (typeof value.backgroundImageBlur === "number" && Number.isFinite(value.backgroundImageBlur)) {
+		patch.backgroundImageBlur = normalizeBackgroundImageBlur(value.backgroundImageBlur, DEFAULT_CLIENT_PREFERENCES.backgroundImageBlur);
+	}
+	if (value.backgroundImageFit === "cover" || value.backgroundImageFit === "contain" || value.backgroundImageFit === "repeat") {
+		patch.backgroundImageFit = value.backgroundImageFit;
 	}
 	if (value.language === "en-US" || value.language === "zh-CN" || value.language === "system") {
 		patch.language = value.language;

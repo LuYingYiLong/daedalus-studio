@@ -44,10 +44,24 @@
 	width: 112px;
 }
 
+.backgroundPreview {
+	width: 64px;
+	height: 36px;
+	object-fit: cover;
+	border: 1px solid var(--ant-color-border);
+	border-radius: var(--ds-space-1);
+	background: var(--ds-surface-muted);
+}
+
+.backgroundSlider {
+	width: min(280px, 40vw);
+}
+
 @media (max-width: 720px) {
 	.themeControl,
 	.fontFamilyInput,
-	.fontSizeInput {
+	.fontSizeInput,
+	.backgroundSlider {
 		width: 100%;
 	}
 }

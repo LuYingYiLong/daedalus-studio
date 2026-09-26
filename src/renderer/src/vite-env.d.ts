@@ -107,6 +107,11 @@ declare global {
 		onChanged: (callback: (preferences: ClientPreferences) => void) => () => void;
 	}
 
+	interface AppearanceBackgroundAPI {
+		pick: (title?: string) => Promise<ClientPreferences>;
+		clear: () => Promise<ClientPreferences>;
+	}
+
 	interface GeneralSettingsAPI {
 		notifyChanged: (settings: GeneralSettings) => void;
 		onChanged: (callback: (settings: GeneralSettings) => void) => () => void;
@@ -482,6 +487,7 @@ declare global {
 			resetAll: () => Promise<{ reset: true }>;
 		};
 		clientPreferences: ClientPreferencesAPI;
+		appearanceBackground: AppearanceBackgroundAPI;
 		generalSettings: GeneralSettingsAPI;
 		remoteAccess: RemoteAccessAPI;
 		sessionCatalog: SessionCatalogAPI;

@@ -89,6 +89,10 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 	{ key: "item:appearance.fontFamily", page: "appearance", titleKey: "settings.appearance.fonts.body.title", descriptionKey: "settings.appearance.fonts.body.description" },
 	{ key: "item:appearance.fontFamilyCode", page: "appearance", titleKey: "settings.appearance.fonts.code.title", descriptionKey: "settings.appearance.fonts.code.description" },
 	{ key: "item:appearance.codeFontSize", page: "appearance", titleKey: "settings.appearance.fonts.codeSize.title", descriptionKey: "settings.appearance.fonts.codeSize.description" },
+	{ key: "item:appearance.backgroundImage", page: "appearance", titleKey: "settings.appearance.background.image.title", descriptionKey: "settings.appearance.background.image.description" },
+	{ key: "item:appearance.backgroundImageOpacity", page: "appearance", titleKey: "settings.appearance.background.opacity.title", descriptionKey: "settings.appearance.background.opacity.description" },
+	{ key: "item:appearance.backgroundImageBlur", page: "appearance", titleKey: "settings.appearance.background.blur.title", descriptionKey: "settings.appearance.background.blur.description" },
+	{ key: "item:appearance.backgroundImageFit", page: "appearance", titleKey: "settings.appearance.background.fit.title", descriptionKey: "settings.appearance.background.fit.description" },
 
 	{ key: "item:personalization.userPrompt", page: "personalization", titleKey: "settings.personalization.userPrompt.title", descriptionKey: "settings.personalization.userPrompt.description" },
 	{ key: "item:personalization.gitCommitPrompt", page: "personalization", titleKey: "settings.personalization.gitCommitPrompt.title", descriptionKey: "settings.personalization.gitCommitPrompt.description" },

@@ -3945,6 +3945,36 @@
 					"description": "Adjust the baseline size of code in chats and diffs."
 				}
 			},
+			"background": {
+				"title": "Background",
+				"image": {
+					"title": "Background image",
+					"description": "Pick a local image to use behind the chat and home content areas. The image is re-encoded into the Studio data directory and only the newest one is kept.",
+					"pick": "Choose image",
+					"pickTitle": "Choose background image",
+					"clear": "Remove",
+					"preview": "Current background image preview"
+				},
+				"opacity": {
+					"title": "Opacity",
+					"description": "Control how strongly the background image shows through; lower values fade it out."
+				},
+				"blur": {
+					"title": "Blur",
+					"description": "Blur the background image to reduce visual noise."
+				},
+				"fit": {
+					"title": "Fit",
+					"description": "Choose how the background image fills the content area.",
+					"cover": "Cover",
+					"contain": "Contain",
+					"repeat": "Tile"
+				},
+				"errors": {
+					"pick": "Failed to choose a background image",
+					"clear": "Failed to remove the background image"
+				}
+			},
 			"errors": {
 				"load": "Failed to load appearance preferences",
 				"save": "Failed to save appearance preferences"
