@@ -1,4 +1,5 @@
 import { FlowMediaGallery } from "./FlowMediaGallery";
+import { FlowNodeExtra, FlowNodeHeaderActions } from "./FlowNodeHeaderExtra";
 import { FlowParameterSetsEditor } from "./FlowParameterSetsEditor";
 import { FlowListEditor } from "./FlowListEditor";
 import {
@@ -62,6 +63,7 @@ export type FlowCanvasNodeData = {
 	nodeRun: FlowDocumentNodeRun | null;
 	definition: FlowNodeTypeDefinition | null;
 	editorOptions: FlowNodeEditorOptions;
+	workspaceRoot?: string;
 	connectedInputIds: ReadonlySet<string>;
 	matched: boolean;
 	locked: boolean;
@@ -1461,25 +1463,19 @@ function FlowNodeCard({
 								</span>
 							)}
 						</div>
-						<div className={styles.headerActions}>
-							{flowNode.typeId === "builtin/flow-input" ? (
-								<Tooltip title={t("flow.editor.runEntry", { input: runInputLabel })}>
-									<Button
-										type="text"
-										shape="circle"
-										size="small"
-										className={`${styles.runInputButton} nodrag nopan`}
-										icon={<Icon name="play" />}
-										disabled={data.runDisabled}
-										aria-label={t("flow.editor.runEntry", { input: runInputLabel })}
-										onPointerDown={(event): void => event.stopPropagation()}
-										onClick={(event): void => {
-											event.stopPropagation();
-											data.onAction(flowNode.nodeId, "run-input");
-										}}
-									/>
-								</Tooltip>
-							) : null}
+						<FlowNodeHeaderActions extra={[
+							"builtin/flow-input", "builtin/output", "builtin/media-output", "builtin/save-images", "builtin/save-videos",
+						].includes(flowNode.typeId) ? <FlowNodeExtra
+							typeId={flowNode.typeId}
+							nodeId={flowNode.nodeId}
+							title={nodeTitle}
+							runInputLabel={runInputLabel}
+							runDisabled={data.runDisabled}
+							output={data.nodeRun?.output}
+							mediaArtifacts={mediaArtifacts}
+							workspaceRoot={data.workspaceRoot}
+							onAction={data.onAction}
+						/> : null}>
 							{nodeStatus === "failed" || nodeStatus === "partial_failure" ? (
 								<Tooltip
 									title={<span className={styles.errorTooltip}>{nodeError}</span>}
@@ -1496,7 +1492,7 @@ function FlowNodeCard({
 									</span>
 								</Tooltip>
 							) : null}
-						</div>
+						</FlowNodeHeaderActions>
 					</header>
 					{!collapsed ? (
 						<div

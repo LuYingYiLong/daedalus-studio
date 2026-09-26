@@ -683,6 +683,7 @@ function HomeFlowSurface({
 				nodeRun: null,
 				definition,
 				editorOptions: usesEditorResources(definition) ? editorOptions : EMPTY_EDITOR_OPTIONS,
+				workspaceRoot: editorOptions.workspaceRoot,
 				connectedInputIds,
 				matched: matchingIds.has(flowNode.nodeId),
 				locked: controller.isGraphLocked,

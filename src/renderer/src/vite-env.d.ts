@@ -620,6 +620,7 @@ declare global {
 			}) => Promise<{ saved: true; filePath: string } | { saved: false }>;
 		};
 		fileExport: {
+			pickArtifactDestination: (params: { directory: boolean; defaultFileName: string }) => Promise<string | null>;
 			saveText: (params: {
 				defaultFileName: string;
 				content: string;

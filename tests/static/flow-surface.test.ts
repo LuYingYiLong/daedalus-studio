@@ -8,6 +8,7 @@ describe("Flow home surface", (): void => {
 		const surface = readRepoFile("src", "renderer", "src", "widgets", "flow", "HomeFlowSurface.tsx");
 		const welcome = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowWelcome.tsx");
 		const nodes = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodes.tsx");
+		const nodeExtra = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodeHeaderExtra.tsx");
 		const mediaGallery = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowMediaGallery.tsx");
 		const nodeStyles = readRepoFile("src", "renderer", "src", "widgets", "flow", "FlowNodes.module.css");
 		const surfaceStyles = readRepoFile(
@@ -127,7 +128,10 @@ describe("Flow home surface", (): void => {
 		expect(nodes).not.toContain("<Tag");
 		expect(nodes).not.toContain("normalizeFlowNodeRunStatus");
 		expect(nodes).toContain('flowNode.typeId === "builtin/flow-input"');
-		expect(nodes).toContain('name="play"');
+		expect(nodes).toContain("<FlowNodeHeaderActions extra=");
+		expect(nodeExtra).toContain('button(label, "play", runDisabled, () => onAction(nodeId, "run-input"))');
+		expect(nodeExtra).toContain("exportFlowArtifacts({ flowId:");
+		expect(nodeExtra).toContain("workspaceFs.openFile({ workspaceRoot, filePath: directory })");
 		expect(nodes).toContain('flowNode.typeId === "builtin/output"');
 		expect(nodes).toMatch(/className=\{.*styles\.outputResult.*nodrag/u);
 		expect(nodes).toContain('mediaArtifacts.length === 0 ? " nowheel" : ""');
