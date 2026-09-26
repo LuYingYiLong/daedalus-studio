@@ -12,6 +12,7 @@ import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo,
 import { useTranslation } from "react-i18next";
 import { useSelectionAsk } from "@/features/conversation/useSelectionAsk";
 import SelectionAskDialog from "./SelectionAskDialog";
+import ContentBackground from "@/ui/ContentBackground";
 import styles from "./ConversationTimelinePane.module.css";
 import { shouldHideInlineDiffForGoal } from "@/domain/composer/goal-display";
 
@@ -217,6 +218,7 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 
 	return (
 		<div className={styles.timelinePane}>
+			<ContentBackground />
 			<ConversationSearchPanel
 				open={conversationSearch.open}
 				query={conversationSearch.query}

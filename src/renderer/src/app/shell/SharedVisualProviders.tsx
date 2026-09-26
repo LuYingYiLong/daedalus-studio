@@ -7,6 +7,7 @@ import { createStudioTheme, type StudioThemeVariant } from "@/ui/styles/studio-t
 import type { ResolvedTheme } from "@/domain/theme/studio-theme-preference";
 import { applyStudioAccentVariables } from "../../../../contracts/theme-color";
 import { applyStudioFontVariables } from "../../../../contracts/studio-fonts";
+import { applyStudioBackgroundVariables, DEFAULT_BACKGROUND_IMAGE_BLUR, DEFAULT_BACKGROUND_IMAGE_FIT, DEFAULT_BACKGROUND_IMAGE_OPACITY, type BackgroundImageFit, type BackgroundImagePreference } from "../../../../contracts/appearance-background";
 import { Icon } from "@/assets/icons";
 
 export type SharedVisualProvidersProps = {
@@ -16,6 +17,10 @@ export type SharedVisualProvidersProps = {
 	themeColor: string;
 	fontFamily: string;
 	fontFamilyCode: string;
+	backgroundImage?: BackgroundImagePreference | null;
+	backgroundImageOpacity?: number;
+	backgroundImageBlur?: number;
+	backgroundImageFit?: BackgroundImageFit;
 	uiFontSize: number;
 	codeFontSize: number;
 	animationsEnabled: boolean;
@@ -30,6 +35,10 @@ function SharedVisualProviders({
 	themeColor,
 	fontFamily,
 	fontFamilyCode,
+	backgroundImage = null,
+	backgroundImageOpacity = DEFAULT_BACKGROUND_IMAGE_OPACITY,
+	backgroundImageBlur = DEFAULT_BACKGROUND_IMAGE_BLUR,
+	backgroundImageFit = DEFAULT_BACKGROUND_IMAGE_FIT,
 	uiFontSize,
 	codeFontSize,
 	animationsEnabled,
@@ -57,6 +66,15 @@ function SharedVisualProviders({
 	useEffect((): void => {
 		applyStudioFontVariables(document.documentElement.style, fontFamily, fontFamilyCode, uiFontSize, codeFontSize);
 	}, [codeFontSize, fontFamily, fontFamilyCode, uiFontSize]);
+
+	useEffect((): void => {
+		applyStudioBackgroundVariables(document.documentElement.style, {
+			image: backgroundImage,
+			opacity: backgroundImageOpacity,
+			blur: backgroundImageBlur,
+			fit: backgroundImageFit,
+		});
+	}, [backgroundImage, backgroundImageBlur, backgroundImageFit, backgroundImageOpacity]);
 
 	useEffect((): void => {
 		document.documentElement.dataset.motion = animationsEnabled ? "on" : "off";

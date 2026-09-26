@@ -25,6 +25,7 @@ import { getDaedalusDir } from "./services/backend-binary-store";
 import { homedir } from "node:os";
 import { publishStudioExecutableRecord } from "./services/studio-executable-record";
 import { registerImageExportIpc } from "./services/image-export";
+import { registerAppearanceBackgroundIpc, registerAppearanceBackgroundProtocol } from "./services/appearance-background";
 import { registerFileExportIpc } from "./services/file-export";
 import { registerPluginFsIpc } from "./services/plugin-fs";
 import { registerFlowOperationOutboxIpc } from "./services/flow-operation-outbox";
@@ -61,6 +62,14 @@ protocol.registerSchemesAsPrivileged([{
 		stream: true
 	}
 }, {
+	scheme: "daedalus-background",
+	privileges: {
+		standard: true,
+		secure: true,
+		supportFetchAPI: false,
+		stream: true
+	}
+}, {
 	scheme: "plugin-ui",
 	privileges: {
 		standard: true,
@@ -79,6 +88,7 @@ registerGodotDocumentationFsIpc();
 registerSkillsCliIpc();
 registerClipboardIpc();
 registerImageExportIpc();
+registerAppearanceBackgroundIpc();
 registerFileExportIpc();
 registerPluginFsIpc();
 registerFlowOperationOutboxIpc();
@@ -792,6 +802,7 @@ if (!hasSingleInstanceLock) {
 
 	void app.whenReady().then(async (): Promise<void> => {
 		registerWorkspaceMediaProtocol();
+		registerAppearanceBackgroundProtocol();
 		registerPluginUiProtocol();
 		await publishStudioExecutableRecord(backendManager.getPort()).catch((): void => {
 			// Bridge launch metadata is a convenience; failure must not block Studio startup.

@@ -9,6 +9,7 @@ import {
 	type LanguagePreference
 } from "@/platform/rpc/client-preferences-api";
 import { resolveLanguagePreference, type ResolvedLanguage } from "@/platform/i18n";
+import type { BackgroundImageFit, BackgroundImagePreference } from "../../../../../contracts/appearance-background";
 import {
 	resolveThemePreference,
 	type ResolvedTheme,
@@ -30,6 +31,10 @@ export type ClientPreferencesController = {
 	resolvedLanguage: ResolvedLanguage;
 	fontFamily: string;
 	fontFamilyCode: string;
+	backgroundImage: BackgroundImagePreference | null;
+	backgroundImageOpacity: number;
+	backgroundImageBlur: number;
+	backgroundImageFit: BackgroundImageFit;
 	animationsEnabled: boolean;
 	uiFontSize: number;
 	codeFontSize: number;
@@ -40,6 +45,10 @@ function useClientPreferencesController(): ClientPreferencesController {
 	const [themeColor, setThemeColor] = useState<string>(() => getCachedClientPreferences().themeColor);
 	const [fontFamily, setFontFamily] = useState<string>(() => getCachedClientPreferences().fontFamily);
 	const [fontFamilyCode, setFontFamilyCode] = useState<string>(() => getCachedClientPreferences().fontFamilyCode);
+	const [backgroundImage, setBackgroundImage] = useState<BackgroundImagePreference | null>(() => getCachedClientPreferences().backgroundImage);
+	const [backgroundImageOpacity, setBackgroundImageOpacity] = useState<number>(() => getCachedClientPreferences().backgroundImageOpacity);
+	const [backgroundImageBlur, setBackgroundImageBlur] = useState<number>(() => getCachedClientPreferences().backgroundImageBlur);
+	const [backgroundImageFit, setBackgroundImageFit] = useState<BackgroundImageFit>(() => getCachedClientPreferences().backgroundImageFit);
 	const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => getCachedClientPreferences().animationsEnabled);
 	const [uiFontSize, setUiFontSize] = useState<number>(() => getCachedClientPreferences().uiFontSize);
 	const [codeFontSize, setCodeFontSize] = useState<number>(() => getCachedClientPreferences().codeFontSize);
@@ -51,6 +60,10 @@ function useClientPreferencesController(): ClientPreferencesController {
 		setThemeColor(preferences.themeColor);
 		setFontFamily(preferences.fontFamily);
 		setFontFamilyCode(preferences.fontFamilyCode);
+		setBackgroundImage(preferences.backgroundImage);
+		setBackgroundImageOpacity(preferences.backgroundImageOpacity);
+		setBackgroundImageBlur(preferences.backgroundImageBlur);
+		setBackgroundImageFit(preferences.backgroundImageFit);
 		setAnimationsEnabled(preferences.animationsEnabled);
 		setUiFontSize(preferences.uiFontSize);
 		setCodeFontSize(preferences.codeFontSize);
@@ -96,6 +109,10 @@ function useClientPreferencesController(): ClientPreferencesController {
 		resolvedLanguage: resolveLanguagePreference(languagePreference),
 		fontFamily,
 		fontFamilyCode,
+		backgroundImage,
+		backgroundImageOpacity,
+		backgroundImageBlur,
+		backgroundImageFit,
 		animationsEnabled,
 		uiFontSize,
 		codeFontSize

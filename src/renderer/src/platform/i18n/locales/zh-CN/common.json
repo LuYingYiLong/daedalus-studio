@@ -3955,6 +3955,36 @@
 					"description": "调整聊天和差异视图中代码使用的基础字号。"
 				}
 			},
+			"background": {
+				"title": "背景",
+				"image": {
+					"title": "背景图片",
+					"description": "选择一张本地图片作为聊天与首页内容区的背景。图片会被重新编码后保存到 Studio 数据目录，并始终只保留一张。",
+					"pick": "选择图片",
+					"pickTitle": "选择背景图片",
+					"clear": "移除",
+					"preview": "当前背景图预览"
+				},
+				"opacity": {
+					"title": "不透明度",
+					"description": "控制背景图片的显示强度；数值越低，图片越淡。"
+				},
+				"blur": {
+					"title": "模糊",
+					"description": "对背景图片做模糊处理，降低细节干扰。"
+				},
+				"fit": {
+					"title": "填充方式",
+					"description": "选择背景图片如何适应内容区域。",
+					"cover": "铺满",
+					"contain": "适应",
+					"repeat": "平铺"
+				},
+				"errors": {
+					"pick": "选择背景图片失败",
+					"clear": "移除背景图片失败"
+				}
+			},
 			"errors": {
 				"load": "加载外观偏好失败",
 				"save": "保存外观偏好失败"

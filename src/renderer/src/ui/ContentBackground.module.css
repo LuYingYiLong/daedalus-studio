@@ -1,0 +1,19 @@
+.background {
+	position: absolute;
+	inset: 0;
+	/*
+	 * Negative z-index keeps the image above the host container background but
+	 * below every in-flow child (message list, workbench content).
+	 */
+	z-index: -1;
+	pointer-events: none;
+	background-color: transparent;
+	background-image: var(--ds-background-image, none);
+	background-position: center;
+	background-repeat: var(--ds-background-repeat, no-repeat);
+	background-size: var(--ds-background-size, cover);
+	border-radius: inherit;
+	opacity: var(--ds-background-opacity, 0.4);
+	filter: blur(var(--ds-background-blur, 0px));
+	transform: translateZ(0);
+}
