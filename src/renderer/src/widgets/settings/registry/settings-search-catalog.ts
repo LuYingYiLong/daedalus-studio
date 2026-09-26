@@ -120,5 +120,6 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 	{ key: "item:worktrees.autoDeleteLimit", page: "worktrees", titleKey: "settings.worktrees.autoDeleteLimit", descriptionKey: "settings.worktrees.autoDeleteLimitDescription" },
 
 	{ key: "item:import.session", page: "import", titleKey: "settings.import.session.importSession.title", descriptionKey: "settings.import.session.importSession.description" },
+	{ key: "item:import.flow", page: "import", titleKey: "settings.import.session.importFlow.title", descriptionKey: "settings.import.session.importFlow.description" },
 	{ key: "item:import.plugin", page: "import", titleKey: "settings.import.plugin.title", descriptionKey: "settings.import.plugin.description" },
 ];

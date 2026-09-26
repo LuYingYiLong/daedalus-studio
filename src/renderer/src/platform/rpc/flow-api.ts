@@ -144,6 +144,11 @@ export async function cleanupFlowArtifacts(flowId: string, keepRunIds?: string[]
 	return (await createBackendClient()).request("flow.artifact.cleanup", { flowId, ...(keepRunIds === undefined ? {} : { keepRunIds }) });
 }
 
+export type FlowImportResult = { imported: true; flowId: string; title: string; workspaceId: string | null; archived: boolean; restoredArtifactCount: number; missingArtifactCount: number };
+export async function importFlowData(sourcePath: string): Promise<FlowImportResult> {
+	return (await createBackendClient()).request("flow.import", { sourcePath });
+}
+
 export type FlowExportResult = { exported: true; flowId: string; destinationPath: string; byteSize: number; tableCounts: Record<string, number>; embeddedFileCount: number; missingFileCount: number };
 export async function exportFlowData(flowId: string, destinationPath: string): Promise<FlowExportResult> {
 	return (await createBackendClient()).request("flow.export", { flowId, destinationPath });

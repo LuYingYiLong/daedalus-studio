@@ -3252,6 +3252,17 @@
 					"success": "已导入会话：{{title}}",
 					"successArchived": "已导入归档会话：{{title}}",
 					"resultDescription_other": "会话 ID：{{sessionId}} · 已恢复 {{files}} 个文件"
+				},
+				"importFlow": {
+					"title": "导入 Flow 会话",
+					"description": "选择从 FlowTree 导出的 SQLite 文件，将工作流、节点布局、运行记录和媒体产物导入本机。重复的 Flow ID 会被拒绝。",
+					"action": "选择 Flow SQLite 文件",
+					"dialogTitle": "导入 Flow 会话",
+					"dialogButton": "导入",
+					"success": "已导入 Flow：{{title}}",
+					"successArchived": "已导入归档 Flow：{{title}}",
+					"successMissing": "已导入 Flow：{{title}}，但有 {{count}} 个媒体产物未包含在导出文件中",
+					"resultDescription": "Flow ID：{{flowId}} · 已恢复 {{files}} 个媒体文件 · 缺失 {{missing}} 个"
 				}
 			},
 			"plugin": {

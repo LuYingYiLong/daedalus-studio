@@ -6,6 +6,10 @@ import {
 	type ImportSessionResult,
 } from "@/platform/rpc/session-api";
 import {
+	importFlowData,
+	type FlowImportResult,
+} from "@/platform/rpc/flow-api";
+import {
 	fetchHarnessConfig,
 	installPlugin,
 	scanPlugin,
@@ -31,12 +35,15 @@ function ImportSettingsPage(): React.JSX.Element {
 	const { message } = App.useApp();
 	const [isImportingSession, setIsImportingSession] =
 		useState<boolean>(false);
+	const [isImportingFlow, setIsImportingFlow] = useState<boolean>(false);
 	const [isScanningPlugin, setIsScanningPlugin] = useState<boolean>(false);
 	const [isInstallingPlugin, setIsInstallingPlugin] =
 		useState<boolean>(false);
 	const [isTrustingPlugin, setIsTrustingPlugin] = useState<boolean>(false);
 	const [importResult, setImportResult] =
 		useState<ImportSessionResult | null>(null);
+	const [flowImportResult, setFlowImportResult] =
+		useState<FlowImportResult | null>(null);
 	const [scanResult, setScanResult] = useState<PluginScanResult | null>(null);
 	const [pluginSource, setPluginSource] = useState<PluginSource | null>(null);
 	const [installedPlugin, setInstalledPlugin] = useState<PluginRecord | null>(
@@ -83,6 +90,47 @@ function ImportSettingsPage(): React.JSX.Element {
 			void message.error(nextErrorMessage);
 		} finally {
 			setIsImportingSession(false);
+		}
+	};
+
+	const handleImportFlow = async (): Promise<void> => {
+		setErrorMessage(null);
+		setFlowImportResult(null);
+		setIsImportingFlow(true);
+		try {
+			const sourcePath = await window.electronAPI.sessionFs.pickImportSource({
+				dialogTitle: t("settings.import.session.importFlow.dialogTitle"),
+				buttonLabel: t("settings.import.session.importFlow.dialogButton"),
+			});
+			if (sourcePath === null) return;
+			const result = await importFlowData(sourcePath);
+			setFlowImportResult(result);
+			if (result.missingArtifactCount > 0) {
+				void message.warning(
+					t("settings.import.session.importFlow.successMissing", {
+						title: result.title,
+						count: result.missingArtifactCount,
+					}),
+				);
+			} else {
+				void message.success(
+					t(
+						result.archived
+							? "settings.import.session.importFlow.successArchived"
+							: "settings.import.session.importFlow.success",
+						{ title: result.title },
+					),
+				);
+			}
+		} catch (error: unknown) {
+			const nextErrorMessage = getErrorMessage(
+				error,
+				t("settings.import.errors.import"),
+			);
+			setErrorMessage(nextErrorMessage);
+			void message.error(nextErrorMessage);
+		} finally {
+			setIsImportingFlow(false);
 		}
 	};
 
@@ -192,6 +240,22 @@ function ImportSettingsPage(): React.JSX.Element {
 							{t("settings.import.session.importSession.action")}
 						</Button>
 					</SettingsItem>
+					<SettingsItem
+						searchKey="item:import.flow"
+						title={t("settings.import.session.importFlow.title")}
+						description={t("settings.import.session.importFlow.description")}
+					>
+						<Button
+							type="primary"
+							icon={<Icon name="download" />}
+							loading={isImportingFlow}
+							onClick={(): void => {
+								void handleImportFlow();
+							}}
+						>
+							{t("settings.import.session.importFlow.action")}
+						</Button>
+					</SettingsItem>
 				</SettingsList>
 				<SettingsList title={t("settings.import.plugin.sectionTitle")}>
 					<SettingsItem
@@ -217,6 +281,15 @@ function ImportSettingsPage(): React.JSX.Element {
 								files: importResult.restoredFileCount,
 							},
 						)}
+					</Typography.Text>
+				) : null}
+				{flowImportResult !== null ? (
+					<Typography.Text type="secondary">
+						{t("settings.import.session.importFlow.resultDescription", {
+							flowId: flowImportResult.flowId,
+							files: flowImportResult.restoredArtifactCount,
+							missing: flowImportResult.missingArtifactCount,
+						})}
 					</Typography.Text>
 				) : null}
 			</div>

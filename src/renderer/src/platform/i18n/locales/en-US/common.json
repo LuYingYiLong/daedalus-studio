@@ -3262,6 +3262,17 @@
 					"success": "Imported session: {{title}}",
 					"successArchived": "Imported archived session: {{title}}",
 					"resultDescription_other": "Session ID: {{sessionId}} · {{files}} files restored"
+				},
+				"importFlow": {
+					"title": "Import Flow session",
+					"description": "Choose a SQLite file exported from FlowTree to import the workflow, node layout, run history, and media artifacts. Duplicate Flow IDs are rejected.",
+					"action": "Choose Flow SQLite file",
+					"dialogTitle": "Import Flow session",
+					"dialogButton": "Import",
+					"success": "Imported Flow: {{title}}",
+					"successArchived": "Imported archived Flow: {{title}}",
+					"successMissing": "Imported Flow: {{title}}, but {{count}} media artifacts were not included in the export",
+					"resultDescription": "Flow ID: {{flowId}} · {{files}} media files restored · {{missing}} missing"
 				}
 			},
 			"plugin": {

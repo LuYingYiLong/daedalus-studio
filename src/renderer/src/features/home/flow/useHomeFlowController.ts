@@ -615,6 +615,10 @@ export default function useHomeFlowController(params: UseHomeFlowControllerParam
 			const data = typeof event.data === "object" && event.data !== null ? (event.data as Record<string, unknown>) : {};
 			const flowId = typeof data.flowId === "string" ? data.flowId : null;
 			if (flowId === null) return;
+			if (event.event === "flow.updated") {
+				window.setTimeout((): void => void refreshRef.current(), 30);
+				return;
+			}
 			if (event.event === "flow.run.state") {
 				const status = typeof data.status === "string" ? data.status : "running";
 				setFlowRuntimeStatusById((values): Record<string, "running" | "failed" | "completed"> => ({
