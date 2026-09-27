@@ -9,20 +9,10 @@ export type PluginSource =
 
 export type PluginCompatibility = {
 	daedalus: "native" | "unknown";
-	harnessBundle: boolean;
-	harnessClient: boolean;
-	patchPath?: string;
-	patchExists: boolean;
 	entryPaths: string[];
 	unsupportedFeatures: string[];
 	warnings: string[];
-	classification:
-		| "native"
-		| "harness-bundle"
-		| "harness-client"
-		| "both"
-		| "metadata-only"
-		| "unsupported";
+	classification: "native" | "metadata-only" | "unsupported";
 };
 
 export type PluginPresentation = {
@@ -31,63 +21,6 @@ export type PluginPresentation = {
 	changelog?: string;
 	iconDataUrl?: string;
 };
-
-export type HarnessRuntimeStatus =
-	| "unconfigured"
-	| "detected"
-	| "needs_setup"
-	| "ready"
-	| "running"
-	| "failed"
-	| "disabled";
-
-export type HarnessBundleSummary = {
-	patchPath?: string;
-	totalRows: number;
-	bridgeableRows: number;
-	skippedRows: Array<{
-		index: number;
-		id?: string;
-		name?: string;
-		reason: string;
-	}>;
-	operations: Array<"insert" | "replace" | "override">;
-	warnings: string[];
-	dangerousConstructs: string[];
-	contentHash: string;
-};
-
-export type HarnessRuntimeConfig = {
-	enabled: boolean;
-	executablePath: string | null;
-	sourceRoot: string | null;
-	launchMode: "installed" | "source";
-	bridgeProtocolVersion: number;
-	network: "disabled";
-	revision: string;
-	updatedAt: string;
-};
-
-export type HarnessInstallationStatus = {
-	status: "unconfigured" | "detected" | "needs_setup" | "failed";
-	launchMode: "installed" | "source";
-	version?: string;
-	bridgeProtocolVersion: number;
-	bridgeCompatible: boolean;
-	dependenciesReady: boolean;
-	error?: string;
-};
-
-export type HarnessConfigResult = {
-	config: HarnessRuntimeConfig;
-	installation: HarnessInstallationStatus;
-	trustInvalidated?: boolean;
-};
-
-export type HarnessConfigDraft = Pick<
-	HarnessRuntimeConfig,
-	"enabled" | "executablePath" | "sourceRoot" | "launchMode"
->;
 
 export type PluginRecord = {
 	id: string;
@@ -117,14 +50,12 @@ export type PluginRecord = {
 		declarations: Record<string, unknown>;
 	};
 	dependencyLockHash?: string;
-	harnessBundle?: HarnessBundleSummary;
 	runtime?: PluginRuntimeSnapshot;
 	isolation?: PluginRuntimeSnapshot["isolation"];
 };
 
 export type PluginRuntimeSnapshot = {
 	pluginId: string;
-	runtimeKind?: "native" | "harness";
 	status:
 		| "stopped"
 		| "starting"
@@ -143,10 +74,6 @@ export type PluginRuntimeSnapshot = {
 		| "ready"
 		| "needs_network"
 		| "failed";
-	harnessStatus?: HarnessRuntimeStatus;
-	harnessVersion?: string;
-	bridgeProtocolVersion?: number;
-	bundleSummary?: HarnessBundleSummary;
 	lastError?: string;
 	isolation?: {
 		status: "none" | "quarantined";
@@ -273,7 +200,6 @@ export type PluginScanResult = {
 	nativePlugin?: PluginRecord["nativePlugin"];
 	p2?: PluginRecord["p2"];
 	dependencyLockHash?: string;
-	harnessBundle?: PluginRecord["harnessBundle"];
 };
 
 export async function fetchPluginCatalog(): Promise<PluginCatalogResult> {
@@ -395,49 +321,6 @@ export async function installPluginDependencies(
 		pluginId,
 		allowNetwork,
 	});
-}
-
-export async function fetchHarnessConfig(): Promise<HarnessConfigResult> {
-	const client = await createBackendClient();
-	return client.request("plugin.harness.config.get", {});
-}
-
-export async function updateHarnessConfig(params: {
-	expectedRevision: string;
-	enabled: boolean;
-	executablePath: string | null;
-	sourceRoot: string | null;
-	launchMode: "installed" | "source";
-}): Promise<HarnessConfigResult> {
-	const client = await createBackendClient();
-	return client.request("plugin.harness.config.update", params);
-}
-
-export async function detectHarness(
-	draft?: HarnessConfigDraft,
-): Promise<HarnessConfigResult> {
-	const client = await createBackendClient();
-	return client.request(
-		"plugin.harness.detect",
-		draft === undefined ? {} : { draft },
-	);
-}
-
-export async function previewHarnessBundle(
-	pluginId: string,
-): Promise<HarnessBundleSummary> {
-	const client = await createBackendClient();
-	return client.request("plugin.harness.preview", { pluginId });
-}
-
-export async function fetchHarnessRuntimeStatus(
-	pluginId: string,
-): Promise<{
-	runtime: PluginRuntimeSnapshot | null;
-	installation: HarnessInstallationStatus;
-}> {
-	const client = await createBackendClient();
-	return client.request("plugin.harness.runtime.status", { pluginId });
 }
 
 export async function fetchPluginDevelopmentStatus(

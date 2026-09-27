@@ -5,7 +5,7 @@ import type { PluginSource } from "@/platform/rpc/plugin-api";
 import styles from "./import-settings.module.css";
 import type { InstallSourceType } from "@/widgets/settings/pages/extensions/plugins/plugin-types";
 
-export function HarnessPluginImportModal({
+export function PluginImportModal({
 	open,
 	loading,
 	onCancel,

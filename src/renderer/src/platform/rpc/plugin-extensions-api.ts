@@ -1,7 +1,7 @@
 import { createBackendClient } from "@/platform/rpc/transport/backend-client";
 
 function namespacedId(pluginId: string, localId: string): string {
-	return pluginId.startsWith("plugin:") || pluginId.startsWith("harness:")
+	return pluginId.startsWith("plugin:")
 		? `${pluginId}:${localId}`
 		: `plugin:${pluginId}:${localId}`;
 }
@@ -161,27 +161,6 @@ export async function appendPluginTimelinePart(params: {
 	return client.request<{ appended: true; requestId: string }>(
 		"plugin.timeline.append",
 		params,
-	);
-}
-
-export async function previewHarnessNativeConversion(
-	pluginId: string,
-): Promise<Record<string, unknown>> {
-	const client = await createBackendClient();
-	return client.request<Record<string, unknown>>(
-		"plugin.harness.convert.preview",
-		{ pluginId },
-	);
-}
-
-export async function activateHarnessNativeConversion(
-	pluginId: string,
-	expectedFingerprint: string,
-): Promise<Record<string, unknown>> {
-	const client = await createBackendClient();
-	return client.request<Record<string, unknown>>(
-		"plugin.harness.convert.activate",
-		{ pluginId, expectedFingerprint },
 	);
 }
 

@@ -16,7 +16,6 @@ This is a local test build, not a published or fully hardware-qualified release.
 | Check | Result |
 | --- | --- |
 | Backend `npm run typecheck` | Passed |
-| Backend complete `npm test` | 1,024 passed, 1 failed in the plugin Harness Sidecar fixture |
 | Studio `npm run verify:electron` | Passed, Electron 43.0.0 |
 | Studio `npm run typecheck` | Passed |
 | Studio `npm test` | 610 unit/integration/renderer tests + 6 static checks passed |
@@ -24,8 +23,6 @@ This is a local test build, not a published or fully hardware-qualified release.
 | Studio `npm run test:e2e:built` | 20 passed, including Android Remote |
 | Native offline build and `npm run test:computer` | Passed |
 | Windows x64 NSIS packaging | Passed, unsigned local installer |
-
-The failing Backend test is `tests/unit/plugins/plugin-harness.test.ts`: `fake Harness Sidecar performs the versioned handshake and publishes isolated tools`. Its temporary profile cleanup fails with `EPERM` when unlinking `profiles/daedalus/package.json`. The failure has not been suppressed or counted as passed. Full output is in Backend `.cache/uia-keyboard-tests-20260831.log`.
 
 Computer E2E uses a Mock Backend and a simulated helper; it never dispatches input into user applications. Invalid coordinate actions are also tested directly against real Main IPC, since invalid Backend events are rejected by the renderer parser before execution. Native self-tests cover resource hashes, offline English/Chinese OCR, a dedicated read-only UIA fixture, protocol rejection and parent-exit supervision; they do not inject input.
 

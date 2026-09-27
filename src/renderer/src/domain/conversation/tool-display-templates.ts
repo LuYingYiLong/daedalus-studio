@@ -72,7 +72,7 @@ function loadTemplateMap(value: unknown): ToolDisplayTemplateMap {
 }
 
 /**
- * Registers renderer metadata for a future native/Harness plugin.
+ * Registers renderer metadata for a future Native plugin.
  * Built-in entries are immutable and plugin entries are namespaced by sourceId.
  */
 export function registerToolDisplayTemplates(

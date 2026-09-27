@@ -32,7 +32,6 @@ export function PluginDetailPane({
 	onClearQuarantine,
 	onOpenDirectory,
 	onInstallDependencies,
-	onPreviewHarness,
 	logs,
 	developmentStatus,
 }: {
@@ -48,7 +47,6 @@ export function PluginDetailPane({
 	onClearQuarantine: () => void;
 	onOpenDirectory: () => void;
 	onInstallDependencies: () => void;
-	onPreviewHarness: () => void;
 	logs: import("@/platform/rpc/plugin-api").PluginRuntimeLog[];
 	developmentStatus?: PluginDevelopmentStatus | null;
 }): React.JSX.Element {
@@ -225,21 +223,6 @@ export function PluginDetailPane({
 													),
 													disabled: busy,
 													onClick: onClearQuarantine,
-												},
-											]
-										: []),
-									...(plugin.compatibility.harnessBundle
-										? [
-												{
-													key: "preview-harness",
-													icon: (
-														<Icon name="vision" />
-													),
-													label: t(
-														"settings.plugins.harness.preview",
-													),
-													disabled: busy,
-													onClick: onPreviewHarness,
 												},
 											]
 										: []),

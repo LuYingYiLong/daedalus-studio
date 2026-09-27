@@ -11,7 +11,6 @@ import {
 	type FlowImportResult,
 } from "@/platform/rpc/flow-api";
 import {
-	fetchHarnessConfig,
 	installPlugin,
 	scanPlugin,
 	updatePluginTrust,
@@ -24,7 +23,7 @@ import SettingsList from "@/ui/SettingsList";
 import SettingsItem from "@/ui/SettingsItem";
 import { Icon } from "@/assets/icons";
 import styles from "./import/import-settings.module.css";
-import { HarnessPluginImportModal } from "./import/HarnessPluginImportModal";
+import { PluginImportModal } from "./import/PluginImportModal";
 import { PluginImportReviewModal } from "./import/PluginImportReviewModal";
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -54,7 +53,6 @@ function ImportSettingsPage(): React.JSX.Element {
 	const [pluginModalOpen, setPluginModalOpen] = useState<boolean>(false);
 	const [reviewModalOpen, setReviewModalOpen] = useState<boolean>(false);
 	const [trustModalOpen, setTrustModalOpen] = useState<boolean>(false);
-	const [harnessTrustReady, setHarnessTrustReady] = useState<boolean>(true);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
 	const handleImportSession = async (): Promise<void> => {
@@ -172,17 +170,6 @@ function ImportSettingsPage(): React.JSX.Element {
 			const result = await installPlugin(pluginSource);
 			setInstalledPlugin(result.plugin);
 			setReviewModalOpen(false);
-			setHarnessTrustReady(true);
-			if (result.plugin.compatibility.harnessBundle) {
-				try {
-					const harness = await fetchHarnessConfig();
-					setHarnessTrustReady(
-						harness.installation.status === "detected",
-					);
-				} catch {
-					setHarnessTrustReady(false);
-				}
-			}
 			setTrustModalOpen(true);
 		} catch (error: unknown) {
 			const nextErrorMessage: string = getErrorMessage(
@@ -310,7 +297,7 @@ function ImportSettingsPage(): React.JSX.Element {
 					</Typography.Text>
 				) : null}
 			</div>
-			<HarnessPluginImportModal
+			<PluginImportModal
 				open={pluginModalOpen}
 				loading={isScanningPlugin}
 				onCancel={(): void => setPluginModalOpen(false)}
@@ -328,21 +315,6 @@ function ImportSettingsPage(): React.JSX.Element {
 				open={trustModalOpen}
 				plugin={installedPlugin ?? undefined}
 				loading={isTrustingPlugin}
-				confirmDisabled={
-					Boolean(installedPlugin?.compatibility.harnessBundle) &&
-					!harnessTrustReady
-				}
-				confirmDisabledReason={
-					Boolean(installedPlugin?.compatibility.harnessBundle) &&
-					!harnessTrustReady
-						? t("settings.import.plugin.harnessRuntimeRequired")
-						: undefined
-				}
-				onConfigureHarness={(): void => {
-					void window.electronAPI.windowControl.openSettings(
-						"environments",
-					);
-				}}
 				onCancel={(): void => setTrustModalOpen(false)}
 				onConfirm={(): void => {
 					void handleTrustPlugin();

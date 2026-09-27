@@ -3,14 +3,8 @@ import type { PluginRecord, PluginSource } from "@/platform/rpc/plugin-api";
 export function classificationColor(
 	classification: PluginRecord["compatibility"]["classification"],
 ): string {
-	if (classification === "native" || classification === "both")
-		return "success";
+	if (classification === "native") return "success";
 	if (classification === "unsupported") return "error";
-	if (
-		classification === "harness-bundle" ||
-		classification === "harness-client"
-	)
-		return "processing";
 	return "default";
 }
 

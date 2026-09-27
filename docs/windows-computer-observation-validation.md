@@ -57,12 +57,6 @@
 - 另一轮完整 E2E 的 Remote 用例在刷新重连时未在断言时限内完成握手，随后出现连接拒绝。未更改 Remote 业务代码；单独复核以及最终完整套件均通过。保留这次波动记录，单次最终全绿不代表长期重连稳定性已充分验证。
 - Windows 打包时曾与前端重建并发，旧资源名被删除导致 ENOENT；最终在构建完成后重新打包，并逐文件验证包内内容。
 
-## 尚未通过的门禁
-
-Backend 的 `tests/unit/plugins/plugin-harness.test.ts` 中，`fake Harness Sidecar performs the versioned handshake and publishes isolated tools` 失败：沙箱子进程 Node 启动时发生 `EPERM: operation not permitted, lstat 'C:\\'`。
-
-这条路径使用已有 Harness / Windows sandbox helper，并非本轮独立的感知助手。没有降低沙箱权限、跳过该测试或把 Backend 全量结果标为通过。正式发布前仍需单独解决并重跑完整门禁。
-
 ## 实机覆盖边界
 
 已验证：测试自行创建的普通顶层窗口、真实 Control View UIA、密码字段省略与遮盖、WGC 画面及实际 PNG 尺寸、生成中英文文字图片的本地 OCR、资源哈希、协议拒绝、父进程退出后的助手终止。

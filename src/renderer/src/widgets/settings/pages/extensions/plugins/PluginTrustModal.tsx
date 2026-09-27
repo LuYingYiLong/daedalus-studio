@@ -1,16 +1,12 @@
 import { Alert, Button, Descriptions, Modal, Tag, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import type { PluginRecord } from "@/platform/rpc/plugin-api";
-import { HarnessTrustSummary } from "./HarnessTrustSummary";
 
 export function PluginTrustModal({
 	plugin,
 	open,
 	mode: trustMode = "trusted",
 	loading,
-	confirmDisabled = false,
-	confirmDisabledReason,
-	onConfigureHarness,
 	developmentReview,
 	onCancel,
 	onConfirm,
@@ -19,9 +15,6 @@ export function PluginTrustModal({
 	open: boolean;
 	mode?: "trusted" | "disabled";
 	loading: boolean;
-	confirmDisabled?: boolean;
-	confirmDisabledReason?: string;
-	onConfigureHarness?: () => void;
 	developmentReview?: PluginReviewRequest;
 	onCancel: () => void;
 	onConfirm: () => void;
@@ -45,7 +38,6 @@ export function PluginTrustModal({
 			)}
 			okButtonProps={{
 				...(mode === "disabled" ? { danger: true } : {}),
-				...(confirmDisabled ? { disabled: true } : {}),
 			}}
 			cancelText={t(developmentReview === undefined ? "settings.common.cancel" : "settings.plugins.trustReview.later")}
 			confirmLoading={loading}
@@ -106,18 +98,6 @@ export function PluginTrustModal({
 						: t("settings.plugins.trustReview.none")}
 				</Descriptions.Item>
 			</Descriptions>
-			{mode === "trusted" && plugin.compatibility.harnessBundle ? <HarnessTrustSummary plugin={plugin} /> : plugin.compatibility.harnessClient ? (
-				<Alert style={{ marginTop: 12 }} type="info" showIcon title={t("settings.plugins.trustReview.harnessNotice")} />
-			) : null}
-			{confirmDisabledReason !== undefined ? (
-				<Alert
-					style={{ marginTop: 12 }}
-					type="warning"
-					showIcon
-					title={confirmDisabledReason}
-					action={onConfigureHarness === undefined ? undefined : <Button size="small" onClick={onConfigureHarness}>{t("settings.import.plugin.configureHarness")}</Button>}
-				/>
-			) : null}
 		</Modal>
 	);
 }

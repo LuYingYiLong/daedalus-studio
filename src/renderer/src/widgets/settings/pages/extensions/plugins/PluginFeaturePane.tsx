@@ -49,11 +49,7 @@ export function PluginFeaturePane({
 }): React.JSX.Element {
 	const { t } = useTranslation();
 	const runtime = plugin.runtime;
-	const capabilities =
-		plugin.nativePlugin?.capabilities ??
-		(plugin.compatibility.harnessBundle
-			? ["tools", "skills", "hooks", "mcp"]
-			: []);
+	const capabilities = plugin.nativePlugin?.capabilities ?? [];
 	const p2Declarations = plugin.p2?.declarations ?? {};
 	const runtimeStatus = runtime?.status ?? "stopped";
 	const rssMb =
@@ -279,43 +275,6 @@ export function PluginFeaturePane({
 						) : (
 							t("settings.plugins.items.notDeclared")
 						)}
-					</Descriptions.Item>
-					<Descriptions.Item
-						label={t("settings.plugins.items.harnessBundle")}
-					>
-						<Space>
-							<Tag
-								color={
-									plugin.compatibility.harnessBundle
-										? "processing"
-										: "default"
-								}
-							>
-								{plugin.compatibility.harnessBundle
-									? t("settings.plugins.yes")
-									: t("settings.plugins.no")}
-							</Tag>
-							{plugin.compatibility.patchPath ? (
-								<Typography.Text code>
-									{plugin.compatibility.patchPath}
-								</Typography.Text>
-							) : null}
-						</Space>
-					</Descriptions.Item>
-					<Descriptions.Item
-						label={t("settings.plugins.items.harnessClient")}
-					>
-						<Tag
-							color={
-								plugin.compatibility.harnessClient
-									? "processing"
-									: "default"
-							}
-						>
-							{plugin.compatibility.harnessClient
-								? t("settings.plugins.yes")
-								: t("settings.plugins.no")}
-						</Tag>
 					</Descriptions.Item>
 					<Descriptions.Item
 						label={t("settings.plugins.items.p2Capabilities")}

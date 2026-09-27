@@ -11,8 +11,6 @@
 - 两个通道的 C++ 主机构建、自检、资源 SHA-256 与扩展 manifest 验证通过。E2E 退出后未发现遗留的浏览器主机进程。
 - Backend 类型检查通过；完整 `npm test` 为 1107/1108 通过。外部浏览器、对话确认、执行隔离与观察存储相关测试全部通过。
 
-Backend 唯一未通过项：`tests/unit/plugins/plugin-harness.test.ts` 中的 `fake Harness Sidecar performs the versioned handshake and publishes isolated tools`。最后一次运行在清理临时 `harness-runtime/.../profiles/daedalus` 目录时返回 `EPERM`。未修改 Harness 的隔离策略或绕过该失败，因此不能将 Backend 完整测试报告为全绿。
-
 ## Windows 打包
 
 本地验证使用未签名 NSIS 安装包；产物放在仓库内 `.cache/external-browser-package`，不写入正式 Release 目录，也没有安装到用户系统。通过 `--prepackaged` 更新最终 Backend 后重新封装，避免安装包包含验证过程中的旧 Backend。

@@ -6,7 +6,6 @@ import { onBackendEvent } from "@/platform/rpc/transport/backend-client";
 import {
 	fetchPluginCatalog,
 	fetchPluginRuntimeLogs,
-	previewHarnessBundle,
 	installPlugin,
 	installPluginDependencies,
 	removePlugin,
@@ -21,13 +20,11 @@ import {
 	type PluginRuntimeLog,
 	type PluginSource,
 	type PluginDevelopmentStatus,
-	type HarnessBundleSummary,
 } from "@/platform/rpc/plugin-api";
 import { PluginListPane } from "./plugins/PluginListPane";
 import { PluginDetailPane } from "./plugins/PluginDetailPane";
 import { PluginInstallModal } from "./plugins/PluginInstallModal";
 import { PluginTrustModal } from "./plugins/PluginTrustModal";
-import { HarnessBundlePreview } from "./plugins/HarnessBundlePreview";
 import styles from "./plugins/plugins.module.css";
 
 function PluginsSettingsPage(): React.JSX.Element {
@@ -47,9 +44,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 	const [developmentReview, setDevelopmentReview] = useState<PluginReviewRequest | null>(null);
 	const developmentReviewRef = useRef<PluginReviewRequest | null>(null);
 	const [logs, setLogs] = useState<PluginRuntimeLog[]>([]);
-	const [previewOpen, setPreviewOpen] = useState(false);
-	const [previewLoading, setPreviewLoading] = useState(false);
-	const [previewSummary, setPreviewSummary] = useState<HarnessBundleSummary | null>(null);
 	const [developmentStatuses, setDevelopmentStatuses] = useState<PluginDevelopmentStatus[]>([]);
 	const selectedPlugin = catalog?.plugins.find(
 		(plugin): boolean => plugin.id === selectedId,
@@ -308,15 +302,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 			},
 		});
 	}
-	async function openHarnessPreview(): Promise<void> {
-		if (selectedPlugin === undefined) return;
-		setPreviewOpen(true);
-		setPreviewSummary(null);
-		try { setPreviewLoading(true); setPreviewSummary(await previewHarnessBundle(selectedPlugin.id)); }
-		catch (caught: unknown) { message.error(caught instanceof Error ? caught.message : t("settings.plugins.harness.previewFailed")); }
-		finally { setPreviewLoading(false); }
-	}
-
 	return (
 		<section className={styles.page}>
 			<aside className={styles.listPane}>
@@ -354,7 +339,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 						onInstallDependencies={(): void => {
 							void dependencies();
 						}}
-						onPreviewHarness={(): void => { void openHarnessPreview(); }}
 						logs={logs}
 						developmentStatus={developmentStatus}
 					/>
@@ -389,13 +373,6 @@ function PluginsSettingsPage(): React.JSX.Element {
 						});
 					}
 				}}
-			/>
-			<HarnessBundlePreview
-				plugin={selectedPlugin}
-				summary={previewSummary}
-				open={previewOpen}
-				loading={previewLoading}
-				onClose={(): void => setPreviewOpen(false)}
 			/>
 		</section>
 	);

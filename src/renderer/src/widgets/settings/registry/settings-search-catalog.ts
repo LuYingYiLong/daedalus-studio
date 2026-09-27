@@ -119,7 +119,6 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 	{ key: "item:browser.aiCdp", page: "browser", titleKey: "settings.browser.aiControl.enable", descriptionKey: "settings.browser.aiControl.description" },
 
 	{ key: "item:environments.godot", page: "environments", titleKey: "settings.environments.runtime.godot.title", descriptionKey: "settings.environments.runtime.godot.notConfigured" },
-	{ key: "item:environments.harness", page: "environments", titleKey: "settings.environments.runtime.harness.title", descriptionKey: "settings.environments.runtime.harness.description" },
 	{ key: "item:worktrees.rootDirectory", page: "worktrees", titleKey: "settings.worktrees.rootDirectory" },
 	{ key: "item:worktrees.fetchBeforeCreate", page: "worktrees", titleKey: "settings.worktrees.fetchBeforeCreate", descriptionKey: "settings.worktrees.fetchBeforeCreateDescription" },
 	{ key: "item:worktrees.autoDelete", page: "worktrees", titleKey: "settings.worktrees.autoDelete", descriptionKey: "settings.worktrees.autoDeleteDescription" },

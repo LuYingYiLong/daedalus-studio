@@ -44,10 +44,6 @@
 
 日志：`.cache/control-windows-package-debug.log`、`.cache/control-bootstrap-final-lf.log`、`.cache/control-windows-package-final.log`、`.cache/control-package-content-verification.log`。
 
-## 尚未通过的门禁
-
-Backend `tests/unit/plugins/plugin-harness.test.ts` 的 `fake Harness Sidecar performs the versioned handshake and publishes isolated tools` 失败：其已有沙箱子进程在 Node 启动阶段发生 `EPERM: operation not permitted, lstat 'C:\\'`。相同问题也记录在此前的只读感知验收中；没有降低沙箱权限或跳过用例，不能把 Backend 全量测试标为通过。
-
 新增原生输入 fixture 只创建并操作自己的测试窗口。完整硬件复核中，真实 WGC/UIA 捕获通过，输入 fixture 返回 `computer_focus_changed`；定向复核还出现了启动时 `computer_fixture_focus_failed`。输入测试受焦点校验阻断，真实点击、文本输入、滚动和人工接管矩阵不能标为通过。日志为 `.cache/control-native-hardware-acceptance.log`、`.cache/control-fixture-stage.log`。未绕过焦点检查、UIPI 或提权；Mock E2E 通过不能替代这项实测。
 
 ## 实机待验收
