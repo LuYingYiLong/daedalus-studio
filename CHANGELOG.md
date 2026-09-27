@@ -1,7 +1,39 @@
 # Daedalus Studio Changelog
 
-> Scope: v1.0.8 (`81eb465`) → Current version (v1.2.0).
-> Note: The repository does not have a local v1.0.8 tag (no tag references were fetched during cloning; packed-refs only contains origin/main). Therefore, the commit `81eb465` (2026-08-01), where `package.json` `version` first became 1.0.8, is used as the baseline. Version boundaries are determined by the `version` field in `package.json`.
+> Scope: v1.0.8 baseline through v1.3.0.
+> Note: The repository has no local v1.0.8 tag, so commit 81eb465 (2026-08-01) remains the historical baseline. This changelog now covers the v1.3.0 release.
+
+## [1.3.0] - 2026-09-27
+
+### Added
+- Added a dedicated Flow workspace with a welcome surface, starter prompts, conversation search, workspace-aware creation, and a grouped Flow tree with pinning, renaming, unread indicators, and drag-and-drop ordering
+- Rebuilt Flow authoring around a typed node graph, with a categorized node picker, dynamic ports, provider/model capability checks, per-entry runs, an approval queue, undo/redo, grid snapping, and keyboard shortcuts
+- Added node resizing and collapsing, node groups, rename and context menus, copy/paste, edge reconnection, typed gradient edges, canvas zoom controls, and hybrid rendering for larger graphs
+- Added composable and batch image workflows, media artifact previews, workspace image import, output save actions, and unit labels for node parameters
+- Added Flow run preflight and diagnostics, storage cleanup controls, persistent latest outputs across independent runs, and generated-media sources in session summaries
+- Added Flow archive export/import and Flow session support in the archived sessions page
+- Added model capability labels for video and audio features, plus a shared image preview toolbar
+- Added custom app-wide background images, adjustable background tint opacity, and an optional opaque window setting
+- Added window thumbnails and enumeration diagnostics for computer operations, and options to move Flow/chat sessions to an unbound workspace
+- Added Linux Debian packaging with the backend bundled in the Studio release
+
+### Changed
+- Expanded Studio from a Godot-focused tool into a general workspace for software projects
+- Standardized Flow node header colors by picker category and port colors by value type
+- Applied appearance backgrounds across the app shell and aligned image preview behavior across Chat and Flow
+
+### Fixed
+- Stabilized Flow edge reconnection, handle targeting, node resizing, overlap-avoidance animation, and text clarity after zooming
+- Preserved outputs from unaffected Flow branches when another entry runs, and unified generated-media source previews
+- Improved Flow navigation, tree selection, context menus, and media interaction behavior
+- Improved Android remote viewport, keyboard inset, and navigation behavior
+- Fixed Linux release packaging compatibility and backend startup bundling
+
+### Removed
+- Removed the DeepSeek Harness runtime integration and bundled Harness support
+
+### Testing
+- Expanded Electron E2E coverage for Flow authoring, node resizing, edge connections, media previews, and Android remote flows
 
 ## [1.2.0] - 2026-09-12
 
@@ -121,3 +153,4 @@
 | v1.1.0 | `32e20a8` | 1.1.0 | 2026-08-06 |
 | v1.1.4 | — | 1.1.4 | 2026-08-16 |
 | v1.2.0 | — | 1.2.0 | 2026-09-12 |
+| v1.3.0 | — | 1.3.0 | 2026-09-27 |

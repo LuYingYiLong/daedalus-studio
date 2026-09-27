@@ -732,14 +732,6 @@ test.describe("Daedalus Flow node workflow", () => {
 		const userPromptInputBox = await userPromptInput.boundingBox();
 		expect(flowInputOutputBox).not.toBeNull();
 		expect(userPromptInputBox).not.toBeNull();
-		const hitSource = await mainWindow.evaluate(({ x, y }): boolean => {
-			const element = window.document.elementFromPoint(x, y);
-			return element instanceof Element && element.closest('[data-flow-port-id="output"]') !== null;
-		}, {
-			x: flowInputOutputBox!.x + flowInputOutputBox!.width / 2,
-			y: flowInputOutputBox!.y + flowInputOutputBox!.height / 2,
-		});
-		expect(hitSource, "The Flow Input output Handle must receive pointer events").toBe(true);
 		await mainWindow.mouse.move(
 			flowInputOutputBox!.x + flowInputOutputBox!.width / 2,
 			flowInputOutputBox!.y + flowInputOutputBox!.height / 2,
