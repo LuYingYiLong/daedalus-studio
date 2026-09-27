@@ -27,6 +27,7 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	backgroundImage: null,
 	backgroundImageOpacity: DEFAULT_BACKGROUND_IMAGE_OPACITY,
 	backgroundTintOpacity: DEFAULT_BACKGROUND_TINT_OPACITY,
+	windowOpaque: false,
 	backgroundImageBlur: DEFAULT_BACKGROUND_IMAGE_BLUR,
 	backgroundImageFit: DEFAULT_BACKGROUND_IMAGE_FIT,
 	language: "system",

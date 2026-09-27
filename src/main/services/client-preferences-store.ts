@@ -31,6 +31,7 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	backgroundImage: null,
 	backgroundImageOpacity: DEFAULT_BACKGROUND_IMAGE_OPACITY,
 	backgroundTintOpacity: DEFAULT_BACKGROUND_TINT_OPACITY,
+	windowOpaque: false,
 	backgroundImageBlur: DEFAULT_BACKGROUND_IMAGE_BLUR,
 	backgroundImageFit: DEFAULT_BACKGROUND_IMAGE_FIT,
 	language: "system",
@@ -176,6 +177,7 @@ export function normalizeClientPreferences(value: unknown): {
 	const backgroundImage: ClientPreferences["backgroundImage"] = normalizeBackgroundImage(value.backgroundImage);
 	const backgroundImageOpacity: number = normalizeBackgroundImageOpacity(value.backgroundImageOpacity, DEFAULT_CLIENT_PREFERENCES.backgroundImageOpacity);
 	const backgroundTintOpacity: number = normalizeBackgroundTintOpacity(value.backgroundTintOpacity, DEFAULT_CLIENT_PREFERENCES.backgroundTintOpacity);
+	const windowOpaque: boolean = typeof value.windowOpaque === "boolean" ? value.windowOpaque : DEFAULT_CLIENT_PREFERENCES.windowOpaque;
 	const backgroundImageBlur: number = normalizeBackgroundImageBlur(value.backgroundImageBlur, DEFAULT_CLIENT_PREFERENCES.backgroundImageBlur);
 	const backgroundImageFit: ClientPreferences["backgroundImageFit"] = normalizeBackgroundImageFit(value.backgroundImageFit);
 	const languagePreference: ClientPreferences["language"] = value.language === "en-US" || value.language === "zh-CN" || value.language === "system" ? value.language : DEFAULT_CLIENT_PREFERENCES.language;
@@ -207,6 +209,7 @@ export function normalizeClientPreferences(value: unknown): {
 			backgroundImage,
 			backgroundImageOpacity,
 			backgroundTintOpacity,
+			windowOpaque,
 			backgroundImageBlur,
 			backgroundImageFit,
 			language: languagePreference,
@@ -237,6 +240,7 @@ export function normalizeClientPreferences(value: unknown): {
 			JSON.stringify(value.backgroundImage ?? null) !== JSON.stringify(backgroundImage) ||
 			value.backgroundImageOpacity !== backgroundImageOpacity ||
 			value.backgroundTintOpacity !== backgroundTintOpacity ||
+			value.windowOpaque !== windowOpaque ||
 			value.backgroundImageBlur !== backgroundImageBlur ||
 			value.backgroundImageFit !== backgroundImageFit ||
 			value.language !== languagePreference ||
@@ -248,7 +252,7 @@ export function normalizeClientPreferences(value: unknown): {
 			JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel) ||
 			JSON.stringify(value.newSessionComposer ?? null) !== JSON.stringify(newSessionComposer) ||
 			JSON.stringify(value.onboarding ?? null) !== JSON.stringify(onboarding) ||
-			Object.keys(value).some((key: string): boolean => !["allowComputerObservation", "allowComputerControl", "autoCheckForUpdates", "notifyOnRunCompleted", "minimizeToTrayOnClose", "theme", "themeColor", "animationsEnabled", "mascotEnabled", "mascotSize", "uiFontSize", "codeFontSize", "fontFamily", "fontFamilyCode", "backgroundImage", "backgroundImageOpacity", "backgroundTintOpacity", "backgroundImageBlur", "backgroundImageFit", "language", "webLinkOpenMode", "workspaceSidebar", "keyboardShortcuts", "flowSnapToGrid", "flowRunEntryByFlowId", "lastComposerModel", "newSessionComposer", "onboarding"].includes(key)),
+			Object.keys(value).some((key: string): boolean => !["allowComputerObservation", "allowComputerControl", "autoCheckForUpdates", "notifyOnRunCompleted", "minimizeToTrayOnClose", "theme", "themeColor", "animationsEnabled", "mascotEnabled", "mascotSize", "uiFontSize", "codeFontSize", "fontFamily", "fontFamilyCode", "backgroundImage", "backgroundImageOpacity", "backgroundTintOpacity", "windowOpaque", "backgroundImageBlur", "backgroundImageFit", "language", "webLinkOpenMode", "workspaceSidebar", "keyboardShortcuts", "flowSnapToGrid", "flowRunEntryByFlowId", "lastComposerModel", "newSessionComposer", "onboarding"].includes(key)),
 	};
 }
 
@@ -306,6 +310,9 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	}
 	if (typeof value.backgroundTintOpacity === "number" && Number.isFinite(value.backgroundTintOpacity)) {
 		patch.backgroundTintOpacity = normalizeBackgroundTintOpacity(value.backgroundTintOpacity, DEFAULT_CLIENT_PREFERENCES.backgroundTintOpacity);
+	}
+	if (typeof value.windowOpaque === "boolean") {
+		patch.windowOpaque = value.windowOpaque;
 	}
 	if (typeof value.backgroundImageBlur === "number" && Number.isFinite(value.backgroundImageBlur)) {
 		patch.backgroundImageBlur = normalizeBackgroundImageBlur(value.backgroundImageBlur, DEFAULT_CLIENT_PREFERENCES.backgroundImageBlur);

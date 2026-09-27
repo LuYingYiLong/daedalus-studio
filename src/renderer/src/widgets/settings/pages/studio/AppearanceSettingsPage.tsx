@@ -55,6 +55,7 @@ type SettingKey =
 	| "backgroundImage"
 	| "backgroundImageOpacity"
 	| "backgroundTintOpacity"
+	| "windowOpaque"
 	| "backgroundImageBlur"
 	| "backgroundImageFit";
 
@@ -446,7 +447,7 @@ function AppearanceSettingsPage({
 								min={MIN_BACKGROUND_TINT_OPACITY}
 								max={MAX_BACKGROUND_TINT_OPACITY}
 								step={BACKGROUND_TINT_OPACITY_STEP}
-								disabled={savingKey !== null || draft.backgroundImage === null}
+								disabled={savingKey !== null}
 								tooltip={{
 									formatter: (value): string => `${Math.round((value ?? 0) * 100)}%`,
 								}}
@@ -460,6 +461,20 @@ function AppearanceSettingsPage({
 								}}
 								onChangeComplete={(value: number): void => {
 									void save({ backgroundTintOpacity: value }, "backgroundTintOpacity");
+								}}
+							/>
+						</SettingsItem>
+						<SettingsItem
+							searchKey="item:appearance.windowOpaque"
+							title={t("settings.appearance.background.windowOpaque.title")}
+							description={t("settings.appearance.background.windowOpaque.description")}
+						>
+							<Switch
+								checked={draft.windowOpaque}
+								loading={savingKey === "windowOpaque"}
+								disabled={savingKey !== null && savingKey !== "windowOpaque"}
+								onChange={(windowOpaque: boolean): void => {
+									void save({ windowOpaque }, "windowOpaque");
 								}}
 							/>
 						</SettingsItem>

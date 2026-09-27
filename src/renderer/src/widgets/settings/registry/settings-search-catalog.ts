@@ -92,6 +92,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 	{ key: "item:appearance.backgroundImage", page: "appearance", titleKey: "settings.appearance.background.image.title", descriptionKey: "settings.appearance.background.image.description" },
 	{ key: "item:appearance.backgroundImageOpacity", page: "appearance", titleKey: "settings.appearance.background.opacity.title", descriptionKey: "settings.appearance.background.opacity.description" },
 	{ key: "item:appearance.backgroundTintOpacity", page: "appearance", titleKey: "settings.appearance.background.tintOpacity.title", descriptionKey: "settings.appearance.background.tintOpacity.description" },
+	{ key: "item:appearance.windowOpaque", page: "appearance", titleKey: "settings.appearance.background.windowOpaque.title", descriptionKey: "settings.appearance.background.windowOpaque.description" },
 	{ key: "item:appearance.backgroundImageBlur", page: "appearance", titleKey: "settings.appearance.background.blur.title", descriptionKey: "settings.appearance.background.blur.description" },
 	{ key: "item:appearance.backgroundImageFit", page: "appearance", titleKey: "settings.appearance.background.fit.title", descriptionKey: "settings.appearance.background.fit.description" },
 

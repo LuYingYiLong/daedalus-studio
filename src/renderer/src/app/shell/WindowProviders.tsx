@@ -39,6 +39,7 @@ function WindowProviders({
 		backgroundImage,
 		backgroundImageOpacity,
 		backgroundTintOpacity,
+		windowOpaque,
 		backgroundImageBlur,
 		backgroundImageFit,
 		animationsEnabled,
@@ -55,6 +56,7 @@ function WindowProviders({
 			backgroundImage={backgroundImage}
 			backgroundImageOpacity={backgroundImageOpacity}
 			backgroundTintOpacity={backgroundTintOpacity}
+			windowOpaque={windowOpaque}
 			backgroundImageBlur={backgroundImageBlur}
 			backgroundImageFit={backgroundImageFit}
 			uiFontSize={uiFontSize}

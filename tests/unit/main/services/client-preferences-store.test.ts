@@ -69,6 +69,8 @@ describe("client preferences store", () => {
 				fontFamilyCode: DEFAULT_CLIENT_PREFERENCES.fontFamilyCode,
 				backgroundImage: null,
 				backgroundImageOpacity: DEFAULT_CLIENT_PREFERENCES.backgroundImageOpacity,
+				backgroundTintOpacity: DEFAULT_CLIENT_PREFERENCES.backgroundTintOpacity,
+				windowOpaque: false,
 				backgroundImageBlur: DEFAULT_CLIENT_PREFERENCES.backgroundImageBlur,
 				backgroundImageFit: DEFAULT_CLIENT_PREFERENCES.backgroundImageFit,
 				language: "system",
@@ -130,6 +132,8 @@ describe("client preferences store", () => {
 			fontFamilyCode: DEFAULT_CLIENT_PREFERENCES.fontFamilyCode,
 			backgroundImage: null,
 			backgroundImageOpacity: DEFAULT_CLIENT_PREFERENCES.backgroundImageOpacity,
+			backgroundTintOpacity: DEFAULT_CLIENT_PREFERENCES.backgroundTintOpacity,
+			windowOpaque: false,
 			backgroundImageBlur: DEFAULT_CLIENT_PREFERENCES.backgroundImageBlur,
 			backgroundImageFit: DEFAULT_CLIENT_PREFERENCES.backgroundImageFit,
 			language: "system",
@@ -182,6 +186,19 @@ describe("client preferences store", () => {
 		);
 
 		expect(nextPreferences.theme).toBe("dark");
+	});
+
+	it("persists the window opacity preference", async () => {
+		const memory = createMemoryIo(JSON.stringify(DEFAULT_CLIENT_PREFERENCES));
+		const nextPreferences = await updateClientPreferencesFile(
+			"prefs.json",
+			{
+				windowOpaque: false,
+			},
+			memory.io,
+		);
+
+		expect(nextPreferences.windowOpaque).toBe(false);
 	});
 
 	it("stores custom font families in Studio preferences", async () => {

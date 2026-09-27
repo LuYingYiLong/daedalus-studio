@@ -139,7 +139,7 @@
 	z-index: 20;
 	display: grid;
 	max-height: 210px;
-	padding: 5px 0;
+	padding: 4px 0;
 	overflow: hidden;
 	border: 1px solid var(--ds-border);
 	border-radius: var(--ds-radius-lg);

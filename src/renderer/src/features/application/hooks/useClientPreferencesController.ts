@@ -34,6 +34,7 @@ export type ClientPreferencesController = {
 	backgroundImage: BackgroundImagePreference | null;
 	backgroundImageOpacity: number;
 	backgroundTintOpacity: number;
+	windowOpaque: boolean;
 	backgroundImageBlur: number;
 	backgroundImageFit: BackgroundImageFit;
 	animationsEnabled: boolean;
@@ -49,6 +50,7 @@ function useClientPreferencesController(): ClientPreferencesController {
 	const [backgroundImage, setBackgroundImage] = useState<BackgroundImagePreference | null>(() => getCachedClientPreferences().backgroundImage);
 	const [backgroundImageOpacity, setBackgroundImageOpacity] = useState<number>(() => getCachedClientPreferences().backgroundImageOpacity);
 	const [backgroundTintOpacity, setBackgroundTintOpacity] = useState<number>(() => getCachedClientPreferences().backgroundTintOpacity);
+	const [windowOpaque, setWindowOpaque] = useState<boolean>(() => getCachedClientPreferences().windowOpaque);
 	const [backgroundImageBlur, setBackgroundImageBlur] = useState<number>(() => getCachedClientPreferences().backgroundImageBlur);
 	const [backgroundImageFit, setBackgroundImageFit] = useState<BackgroundImageFit>(() => getCachedClientPreferences().backgroundImageFit);
 	const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => getCachedClientPreferences().animationsEnabled);
@@ -65,6 +67,7 @@ function useClientPreferencesController(): ClientPreferencesController {
 		setBackgroundImage(preferences.backgroundImage);
 		setBackgroundImageOpacity(preferences.backgroundImageOpacity);
 		setBackgroundTintOpacity(preferences.backgroundTintOpacity);
+		setWindowOpaque(preferences.windowOpaque);
 		setBackgroundImageBlur(preferences.backgroundImageBlur);
 		setBackgroundImageFit(preferences.backgroundImageFit);
 		setAnimationsEnabled(preferences.animationsEnabled);
@@ -115,6 +118,7 @@ function useClientPreferencesController(): ClientPreferencesController {
 		backgroundImage,
 		backgroundImageOpacity,
 		backgroundTintOpacity,
+		windowOpaque,
 		backgroundImageBlur,
 		backgroundImageFit,
 		animationsEnabled,

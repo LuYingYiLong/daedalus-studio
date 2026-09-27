@@ -3983,6 +3983,10 @@
 					"title": "Content tint opacity",
 					"description": "Adjust the tint on chat, Flow, and other content areas; lower values show more of the background image."
 				},
+				"windowOpaque": {
+					"title": "Opaque window",
+					"description": "Use a solid window background when enabled. Turn it off to restore the translucent glass effect and show the desktop behind the window."
+				},
 				"blur": {
 					"title": "Blur",
 					"description": "Blur the background image to reduce visual noise."

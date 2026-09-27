@@ -30,6 +30,7 @@ export type ClientPreferences = {
 	backgroundImage: BackgroundImagePreference | null;
 	backgroundImageOpacity: number;
 	backgroundTintOpacity: number;
+	windowOpaque: boolean;
 	backgroundImageBlur: number;
 	backgroundImageFit: BackgroundImageFit;
 	language: LanguagePreference;

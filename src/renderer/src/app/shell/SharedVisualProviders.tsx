@@ -20,6 +20,7 @@ export type SharedVisualProvidersProps = {
 	backgroundImage?: BackgroundImagePreference | null;
 	backgroundImageOpacity?: number;
 	backgroundTintOpacity?: number;
+	windowOpaque?: boolean;
 	backgroundImageBlur?: number;
 	backgroundImageFit?: BackgroundImageFit;
 	uiFontSize: number;
@@ -39,6 +40,7 @@ function SharedVisualProviders({
 	backgroundImage = null,
 	backgroundImageOpacity = DEFAULT_BACKGROUND_IMAGE_OPACITY,
 	backgroundTintOpacity = DEFAULT_BACKGROUND_TINT_OPACITY,
+	windowOpaque = false,
 	backgroundImageBlur = DEFAULT_BACKGROUND_IMAGE_BLUR,
 	backgroundImageFit = DEFAULT_BACKGROUND_IMAGE_FIT,
 	uiFontSize,
@@ -59,6 +61,13 @@ function SharedVisualProviders({
 		document.documentElement.dataset.themeVariant = themeVariant;
 		applyStudioAccentVariables(document.documentElement.style, resolvedTheme, themeColor);
 	}, [resolvedTheme, themeColor, themeVariant]);
+
+	useEffect((): void => {
+		document.documentElement.style.setProperty(
+			"--ds-window-glass-opacity",
+			windowOpaque ? "1" : resolvedTheme === "dark" ? "0.7" : "0.64",
+		);
+	}, [resolvedTheme, windowOpaque]);
 
 	useEffect((): void => {
 		document.documentElement.lang = resolvedLanguage;
