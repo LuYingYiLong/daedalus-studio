@@ -3267,25 +3267,29 @@
 			"errors": { "import": "导入失败。" }
 		},
 		"archivedSessions": {
-			"title": "已归档会话",
-			"loading": "正在加载已归档会话...",
-			"searchPlaceholder": "搜索会话...",
+			"title": "已归档会话与 Flow",
+			"loading": "正在加载已归档会话与 Flow...",
+			"searchPlaceholder": "搜索会话或 Flow...",
 			"actions": {
 				"delete": "删除",
-				"deleteAll": "全部删除",
+				"deleteAll": "删除全部 Chat 会话",
 				"restore": "取消归档"
 			},
 			"aria": {
 				"delete": "删除 {{sessionTitle}}",
-				"restore": "取消归档 {{sessionTitle}}"
+				"restore": "取消归档 {{sessionTitle}}",
+				"restoreFlow": "取消归档 Flow {{flowTitle}}"
+			},
+			"types": {
+				"flow": "Flow"
 			},
 			"filters": {
 				"all": "全部",
 				"noWorkspace": "无 workspace"
 			},
 			"empty": {
-				"none": "暂无已归档会话",
-				"noMatches": "没有匹配的已归档会话"
+				"none": "暂无已归档会话或 Flow",
+				"noMatches": "没有匹配的已归档会话或 Flow"
 			},
 			"confirm": {
 				"deleteSession": {
@@ -3293,16 +3297,17 @@
 					"description": "这会永久删除这个已归档会话。"
 				},
 				"deleteAll": {
-					"title": "删除已归档会话？",
-					"description": "这会永久删除当前筛选条件下的 {{count}} 个已归档会话。",
-					"description_other": "这会永久删除当前筛选条件下的 {{count}} 个已归档会话。"
+					"title": "删除已归档 Chat 会话？",
+					"description": "这会永久删除当前筛选条件下的 {{count}} 个已归档 Chat 会话。",
+					"description_other": "这会永久删除当前筛选条件下的 {{count}} 个已归档 Chat 会话。"
 				}
 			},
 			"errors": {
 				"deleteAll": "删除已归档会话失败",
 				"deleteSession": "删除已归档会话失败",
 				"load": "加载已归档会话失败",
-				"restore": "取消归档会话失败"
+				"restore": "取消归档会话失败",
+				"restoreFlow": "取消归档 Flow 失败"
 			}
 		},
 		"defaultModel": {

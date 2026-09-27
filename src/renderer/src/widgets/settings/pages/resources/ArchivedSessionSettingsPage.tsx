@@ -1,20 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import {
-	Button,
-	Empty,
-	Flex,
-	Input,
-	Menu,
-	Modal,
-	Popconfirm,
-	Select,
-	Space,
-	Tag,
-	Tooltip,
-	Typography,
-} from "antd";
+import { Button, Empty, Flex, Input, Menu, Modal, Popconfirm, Select, Space, Tag, Tooltip, Typography } from "antd";
 import type { MenuProps } from "antd";
 import {
 	deleteArchivedSession,
@@ -22,12 +9,10 @@ import {
 	fetchArchivedSessions,
 	restoreArchivedSession,
 } from "@/platform/rpc/session-api";
+import { fetchFlows, restoreFlow } from "@/platform/rpc/flow-api";
 import { fetchWorkspaces } from "@/platform/rpc/workspace-api";
-import type { SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
-import {
-	createDefaultSessionLayout,
-	listTerminalRuntimeIds,
-} from "@/domain/session/session-layout";
+import type { FlowDocument, SessionMetadata, WorkspaceConfig } from "@/platform/rpc/types";
+import { createDefaultSessionLayout, listTerminalRuntimeIds } from "@/domain/session/session-layout";
 import { Icon } from "@/assets/icons";
 import styles from "./ArchivedSessionSettingsPage.module.css";
 
@@ -36,7 +21,7 @@ const UNKNOWN_WORKSPACE_KEY = "__unknown__";
 
 type ArchivedSessionMenuItem = NonNullable<MenuProps["items"]>[number];
 type ArchivedSessionMenuItems = NonNullable<MenuProps["items"]>;
-type SessionAction = "restore" | "delete" | "delete-worktree";
+type SessionAction = "restore" | "restore-flow" | "delete" | "delete-worktree";
 
 type ArchivedSessionLabels = {
 	all: string;
@@ -48,20 +33,19 @@ type ArchivedSessionLabels = {
 	failedDeleteSession: string;
 	failedLoad: string;
 	failedRestore: string;
+	failedRestoreFlow: string;
 	deleteWorktree: string;
 	failedDeleteWorktree: string;
 	noWorkspace: string;
 	restore: string;
+	flow: string;
 	deleteAria: (sessionTitle: string) => string;
 	restoreAria: (sessionTitle: string) => string;
+	restoreFlowAria: (flowTitle: string) => string;
 };
 
 function getWorkspaceFilterKey(session: SessionMetadata): string {
-	return (
-		session.worktree?.sourceWorkspaceId ??
-		session.workspaceId ??
-		UNKNOWN_WORKSPACE_KEY
-	);
+	return session.worktree?.sourceWorkspaceId ?? session.workspaceId ?? UNKNOWN_WORKSPACE_KEY;
 }
 
 function getWorkspaceLabel(
@@ -69,8 +53,7 @@ function getWorkspaceLabel(
 	workspacesById: Map<string, WorkspaceConfig>,
 	noWorkspaceLabel: string,
 ): string {
-	const workspaceId: string | undefined =
-		session.worktree?.sourceWorkspaceId ?? session.workspaceId;
+	const workspaceId: string | undefined = session.worktree?.sourceWorkspaceId ?? session.workspaceId;
 	if (workspaceId === undefined) {
 		return noWorkspaceLabel;
 	}
@@ -87,37 +70,37 @@ function formatArchivedAt(session: SessionMetadata): string {
 	return session.archivedAt ?? session.updatedAt;
 }
 
+function getFlowWorkspaceFilterKey(flow: FlowDocument): string {
+	return flow.workspaceId ?? UNKNOWN_WORKSPACE_KEY;
+}
+
+function getFlowWorkspaceLabel(
+	flow: FlowDocument,
+	workspacesById: Map<string, WorkspaceConfig>,
+	noWorkspaceLabel: string,
+): string {
+	if (flow.workspaceId === null) return noWorkspaceLabel;
+	return workspacesById.get(flow.workspaceId)?.name ?? flow.workspaceId;
+}
+
 type CreateArchivedSessionMenuItemOptions = {
 	workspacesById: Map<string, WorkspaceConfig>;
 	busySessionId: string | null;
 	busyAction: SessionAction | null;
 	labels: ArchivedSessionLabels;
-	onRestore: (
-		session: SessionMetadata,
-		event: MouseEvent<HTMLElement>,
-	) => void;
-	onDelete: (
-		session: SessionMetadata,
-		event?: MouseEvent<HTMLElement>,
-	) => void;
-	onDeleteWorktree: (
-		session: SessionMetadata,
-		event?: MouseEvent<HTMLElement>,
-	) => void;
+	onRestore: (session: SessionMetadata, event: MouseEvent<HTMLElement>) => void;
+	onDelete: (session: SessionMetadata, event?: MouseEvent<HTMLElement>) => void;
+	onDeleteWorktree: (session: SessionMetadata, event?: MouseEvent<HTMLElement>) => void;
 };
 
 function createArchivedSessionMenuItem(
 	session: SessionMetadata,
 	options: CreateArchivedSessionMenuItemOptions,
 ): ArchivedSessionMenuItem {
-	const isRestoring: boolean =
-		options.busySessionId === session.id &&
-		options.busyAction === "restore";
-	const isDeleting: boolean =
-		options.busySessionId === session.id && options.busyAction === "delete";
+	const isRestoring: boolean = options.busySessionId === session.id && options.busyAction === "restore";
+	const isDeleting: boolean = options.busySessionId === session.id && options.busyAction === "delete";
 	const isDeletingWorktree: boolean =
-		options.busySessionId === session.id &&
-		options.busyAction === "delete-worktree";
+		options.busySessionId === session.id && options.busyAction === "delete-worktree";
 
 	return {
 		key: `archived:${session.id}`,
@@ -126,39 +109,28 @@ function createArchivedSessionMenuItem(
 				<span className={styles.sessionText}>
 					<span className={styles.sessionTitle}>{session.title}</span>
 					<span className={styles.sessionMeta}>
-						{getWorkspaceLabel(
-							session,
-							options.workspacesById,
-							options.labels.noWorkspace,
-						)}{" "}
-						- {formatArchivedAt(session)}
+						{getWorkspaceLabel(session, options.workspacesById, options.labels.noWorkspace)} -{" "}
+						{formatArchivedAt(session)}
 					</span>
 				</span>
 				<span className={styles.sessionActions}>
 					{session.worktree !== undefined ? (
 						<Popconfirm
 							title={options.labels.deleteWorktree}
-							description={
-								options.labels.deleteConfirmDescription
-							}
+							description={options.labels.deleteConfirmDescription}
 							okText={options.labels.deleteWorktree}
 							okButtonProps={{
 								danger: true,
 								loading: isDeletingWorktree,
 							}}
-							onConfirm={(): void =>
-								options.onDeleteWorktree(session)
-							}
+							onConfirm={(): void => options.onDeleteWorktree(session)}
 						>
 							<Button
 								type="text"
 								size="small"
 								danger={true}
 								loading={isDeletingWorktree}
-								disabled={
-									options.busySessionId !== null &&
-									!isDeletingWorktree
-								}
+								disabled={options.busySessionId !== null && !isDeletingWorktree}
 							>
 								{options.labels.deleteWorktree}
 							</Button>
@@ -168,16 +140,10 @@ function createArchivedSessionMenuItem(
 						<Button
 							type="text"
 							size="small"
-							aria-label={options.labels.restoreAria(
-								session.title,
-							)}
+							aria-label={options.labels.restoreAria(session.title)}
 							loading={isRestoring}
-							disabled={
-								options.busySessionId !== null && !isRestoring
-							}
-							onClick={(event: MouseEvent<HTMLElement>): void =>
-								options.onRestore(session, event)
-							}
+							disabled={options.busySessionId !== null && !isRestoring}
+							onClick={(event: MouseEvent<HTMLElement>): void => options.onRestore(session, event)}
 						>
 							{options.labels.restore}
 						</Button>
@@ -194,16 +160,10 @@ function createArchivedSessionMenuItem(
 							size="small"
 							shape="circle"
 							danger={true}
-							aria-label={options.labels.deleteAria(
-								session.title,
-							)}
+							aria-label={options.labels.deleteAria(session.title)}
 							icon={<Icon name="remove" width={16} height={16} />}
 							loading={isDeleting}
-							disabled={
-								(options.busySessionId !== null &&
-									!isDeleting) ||
-								session.worktree !== undefined
-							}
+							disabled={(options.busySessionId !== null && !isDeleting) || session.worktree !== undefined}
 							onClick={(event: MouseEvent<HTMLElement>): void => {
 								event.preventDefault();
 								event.stopPropagation();
@@ -220,8 +180,7 @@ function createArchivedSessionMenuGroups(
 	sessions: SessionMetadata[],
 	options: CreateArchivedSessionMenuItemOptions,
 ): ArchivedSessionMenuItems {
-	const groups: Map<string, { label: string; sessions: SessionMetadata[] }> =
-		new Map();
+	const groups: Map<string, { label: string; sessions: SessionMetadata[] }> = new Map();
 
 	for (const session of sessions) {
 		const workspaceKey: string = getWorkspaceFilterKey(session);
@@ -232,11 +191,7 @@ function createArchivedSessionMenuGroups(
 		}
 
 		groups.set(workspaceKey, {
-			label: getWorkspaceLabel(
-				session,
-				options.workspacesById,
-				options.labels.noWorkspace,
-			),
+			label: getWorkspaceLabel(session, options.workspacesById, options.labels.noWorkspace),
 			sessions: [session],
 		});
 	}
@@ -247,9 +202,79 @@ function createArchivedSessionMenuGroups(
 			key: `archived-workspace:${workspaceKey}`,
 			label: group.label,
 			children: group.sessions.map(
-				(session: SessionMetadata): ArchivedSessionMenuItem =>
-					createArchivedSessionMenuItem(session, options),
+				(session: SessionMetadata): ArchivedSessionMenuItem => createArchivedSessionMenuItem(session, options),
 			),
+		}),
+	);
+}
+
+type CreateArchivedFlowMenuItemOptions = {
+	workspacesById: Map<string, WorkspaceConfig>;
+	busySessionId: string | null;
+	busyAction: SessionAction | null;
+	labels: ArchivedSessionLabels;
+	onRestore: (flow: FlowDocument, event: MouseEvent<HTMLElement>) => void;
+};
+
+function createArchivedFlowMenuGroups(
+	flows: FlowDocument[],
+	options: CreateArchivedFlowMenuItemOptions,
+): ArchivedSessionMenuItems {
+	const groups: Map<string, { label: string; flows: FlowDocument[] }> = new Map();
+	for (const flow of flows) {
+		const workspaceKey = getFlowWorkspaceFilterKey(flow);
+		const existing = groups.get(workspaceKey);
+		if (existing !== undefined) {
+			existing.flows.push(flow);
+			continue;
+		}
+		groups.set(workspaceKey, {
+			label: `${getFlowWorkspaceLabel(
+				flow,
+				options.workspacesById,
+				options.labels.noWorkspace,
+			)} (${options.labels.flow})`,
+			flows: [flow],
+		});
+	}
+
+	return Array.from(groups.entries()).map(
+		([workspaceKey, group]): ArchivedSessionMenuItem => ({
+			type: "group",
+			key: `archived-flow-workspace:${workspaceKey}`,
+			label: group.label,
+			children: group.flows.map((flow): ArchivedSessionMenuItem => {
+				const isRestoring = options.busySessionId === flow.flowId && options.busyAction === "restore-flow";
+				return {
+					key: `archived-flow:${flow.flowId}`,
+					label: (
+						<span className={styles.sessionMenuItem}>
+							<span className={styles.sessionText}>
+								<span className={styles.sessionTitle}>{flow.title}</span>
+								<span className={styles.sessionMeta}>
+									{flow.flowId} - {flow.archivedAt ?? flow.updatedAt}
+								</span>
+							</span>
+							<span className={styles.sessionActions}>
+								<Tooltip title={options.labels.restore} placement="top">
+									<Button
+										type="text"
+										size="small"
+										aria-label={options.labels.restoreFlowAria(flow.title)}
+										loading={isRestoring}
+										disabled={options.busySessionId !== null && !isRestoring}
+										onClick={(event: MouseEvent<HTMLElement>): void =>
+											options.onRestore(flow, event)
+										}
+									>
+										{options.labels.restore}
+									</Button>
+								</Tooltip>
+							</span>
+						</span>
+					),
+				};
+			}),
 		}),
 	);
 }
@@ -257,11 +282,9 @@ function createArchivedSessionMenuGroups(
 function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([]);
-	const [archivedSessions, setArchivedSessions] = useState<SessionMetadata[]>(
-		[],
-	);
-	const [workspaceFilter, setWorkspaceFilter] =
-		useState<string>(ALL_WORKSPACES_KEY);
+	const [archivedSessions, setArchivedSessions] = useState<SessionMetadata[]>([]);
+	const [archivedFlows, setArchivedFlows] = useState<FlowDocument[]>([]);
+	const [workspaceFilter, setWorkspaceFilter] = useState<string>(ALL_WORKSPACES_KEY);
 	const [searchText, setSearchText] = useState<string>("");
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -275,34 +298,29 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 			all: t("settings.archivedSessions.filters.all"),
 			delete: t("settings.archivedSessions.actions.delete"),
 			deleteAll: t("settings.archivedSessions.actions.deleteAll"),
-			deleteConfirmDescription: t(
-				"settings.archivedSessions.confirm.deleteSession.description",
-			),
-			deleteConfirmTitle: t(
-				"settings.archivedSessions.confirm.deleteSession.title",
-			),
+			deleteConfirmDescription: t("settings.archivedSessions.confirm.deleteSession.description"),
+			deleteConfirmTitle: t("settings.archivedSessions.confirm.deleteSession.title"),
 			failedDeleteAll: t("settings.archivedSessions.errors.deleteAll"),
-			failedDeleteSession: t(
-				"settings.archivedSessions.errors.deleteSession",
-			),
+			failedDeleteSession: t("settings.archivedSessions.errors.deleteSession"),
 			failedLoad: t("settings.archivedSessions.errors.load"),
 			failedRestore: t("settings.archivedSessions.errors.restore"),
+			failedRestoreFlow: t("settings.archivedSessions.errors.restoreFlow"),
 			deleteWorktree: t("workspaceTree.actions.deleteWorktree"),
 			failedDeleteWorktree: t("workspaceTree.errors.deleteWorktree"),
 			noWorkspace: t("settings.archivedSessions.filters.noWorkspace"),
 			restore: t("settings.archivedSessions.actions.restore"),
-			deleteAria: (sessionTitle: string): string =>
-				t("settings.archivedSessions.aria.delete", { sessionTitle }),
+			flow: t("settings.archivedSessions.types.flow"),
+			deleteAria: (sessionTitle: string): string => t("settings.archivedSessions.aria.delete", { sessionTitle }),
 			restoreAria: (sessionTitle: string): string =>
 				t("settings.archivedSessions.aria.restore", { sessionTitle }),
+			restoreFlowAria: (flowTitle: string): string =>
+				t("settings.archivedSessions.aria.restoreFlow", { flowTitle }),
 		};
 	}, [t]);
 
 	useEffect((): (() => void) => {
 		return window.electronAPI.sessionCatalog.onChanged((): void => {
-			setCatalogRevision(
-				(currentRevision: number): number => currentRevision + 1,
-			);
+			setCatalogRevision((currentRevision: number): number => currentRevision + 1);
 		});
 	}, []);
 
@@ -314,9 +332,10 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 				setIsLoading(true);
 				setErrorMessage(null);
 
-				const [workspaceList, archivedList] = await Promise.all([
+				const [workspaceList, archivedList, archivedFlowList] = await Promise.all([
 					fetchWorkspaces(),
 					fetchArchivedSessions(),
+					fetchFlows({ archived: true }),
 				]);
 
 				if (cancelled) {
@@ -325,13 +344,10 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 
 				setWorkspaces(workspaceList.workspaces);
 				setArchivedSessions(archivedList.archivedSessions);
+				setArchivedFlows(archivedFlowList.flows);
 			} catch (error: unknown) {
 				if (!cancelled) {
-					setErrorMessage(
-						error instanceof Error
-							? error.message
-							: labels.failedLoad,
-					);
+					setErrorMessage(error instanceof Error ? error.message : labels.failedLoad);
 				}
 			} finally {
 				if (!cancelled) {
@@ -347,17 +363,9 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 		};
 	}, [catalogRevision, labels.failedLoad]);
 
-	const workspacesById: Map<string, WorkspaceConfig> = useMemo((): Map<
-		string,
-		WorkspaceConfig
-	> => {
+	const workspacesById: Map<string, WorkspaceConfig> = useMemo((): Map<string, WorkspaceConfig> => {
 		return new Map(
-			workspaces.map(
-				(workspace: WorkspaceConfig): [string, WorkspaceConfig] => [
-					workspace.id,
-					workspace,
-				],
-			),
+			workspaces.map((workspace: WorkspaceConfig): [string, WorkspaceConfig] => [workspace.id, workspace]),
 		);
 	}, [workspaces]);
 
@@ -365,42 +373,44 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 		label: string;
 		value: string;
 	}> => {
-		const options: Array<{ label: string; value: string }> = [
-			{ label: labels.all, value: ALL_WORKSPACES_KEY },
-		];
+		const options: Array<{ label: string; value: string }> = [{ label: labels.all, value: ALL_WORKSPACES_KEY }];
 		const seenWorkspaceIds: Set<string> = new Set<string>();
 
 		for (const session of archivedSessions) {
-			const workspaceId: string | undefined =
-				session.worktree?.sourceWorkspaceId ?? session.workspaceId;
+			const workspaceId: string | undefined = session.worktree?.sourceWorkspaceId ?? session.workspaceId;
 			if (workspaceId === undefined) {
 				continue;
 			}
 			seenWorkspaceIds.add(workspaceId);
 		}
+		for (const flow of archivedFlows) {
+			if (flow.workspaceId !== null) {
+				seenWorkspaceIds.add(flow.workspaceId);
+			}
+		}
 
 		for (const workspaceId of seenWorkspaceIds) {
+			const workspaceFlow = archivedFlows.find((flow): boolean => flow.workspaceId === workspaceId);
+			const workspaceSession = archivedSessions.find(
+				(session): boolean => getWorkspaceFilterKey(session) === workspaceId,
+			);
 			options.push({
 				label:
 					workspacesById.get(workspaceId)?.name ??
-					archivedSessions.find(
-						(session: SessionMetadata): boolean =>
-							getWorkspaceFilterKey(session) === workspaceId,
-					)?.worktree?.sourceWorkspaceName ??
-					archivedSessions.find(
-						(session: SessionMetadata): boolean =>
-							getWorkspaceFilterKey(session) === workspaceId,
-					)?.workspaceName ??
-					workspaceId,
+					workspaceSession?.worktree?.sourceWorkspaceName ??
+					workspaceSession?.workspaceName ??
+					(workspaceFlow === undefined
+						? workspaceId
+						: getFlowWorkspaceLabel(workspaceFlow, workspacesById, labels.noWorkspace)),
 				value: workspaceId,
 			});
 		}
 
 		if (
 			archivedSessions.some(
-				(session: SessionMetadata): boolean =>
-					getWorkspaceFilterKey(session) === UNKNOWN_WORKSPACE_KEY,
-			)
+				(session: SessionMetadata): boolean => getWorkspaceFilterKey(session) === UNKNOWN_WORKSPACE_KEY,
+			) ||
+			archivedFlows.some((flow): boolean => flow.workspaceId === null)
 		) {
 			options.push({
 				label: labels.noWorkspace,
@@ -409,69 +419,91 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 		}
 
 		return options;
-	}, [archivedSessions, labels.all, labels.noWorkspace, workspacesById]);
+	}, [archivedFlows, archivedSessions, labels.all, labels.noWorkspace, workspacesById]);
 
-	const filteredSessions: SessionMetadata[] =
-		useMemo((): SessionMetadata[] => {
-			const normalizedSearch: string = searchText.trim().toLowerCase();
+	const filteredSessions: SessionMetadata[] = useMemo((): SessionMetadata[] => {
+		const normalizedSearch: string = searchText.trim().toLowerCase();
 
-			return archivedSessions.filter(
-				(session: SessionMetadata): boolean => {
-					if (
-						workspaceFilter !== ALL_WORKSPACES_KEY &&
-						getWorkspaceFilterKey(session) !== workspaceFilter
-					) {
-						return false;
-					}
-					if (normalizedSearch.length === 0) {
-						return true;
-					}
+		return archivedSessions.filter((session: SessionMetadata): boolean => {
+			if (workspaceFilter !== ALL_WORKSPACES_KEY && getWorkspaceFilterKey(session) !== workspaceFilter) {
+				return false;
+			}
+			if (normalizedSearch.length === 0) {
+				return true;
+			}
 
-					return session.title
-						.toLowerCase()
-						.includes(normalizedSearch);
-				},
+			return session.title.toLowerCase().includes(normalizedSearch);
+		});
+	}, [archivedSessions, searchText, workspaceFilter]);
+
+	const filteredFlows: FlowDocument[] = useMemo((): FlowDocument[] => {
+		const normalizedSearch: string = searchText.trim().toLowerCase();
+		return archivedFlows.filter((flow): boolean => {
+			if (workspaceFilter !== ALL_WORKSPACES_KEY && getFlowWorkspaceFilterKey(flow) !== workspaceFilter) {
+				return false;
+			}
+			if (normalizedSearch.length === 0) {
+				return true;
+			}
+			return (
+				flow.title.toLowerCase().includes(normalizedSearch) ||
+				flow.flowId.toLowerCase().includes(normalizedSearch)
 			);
-		}, [archivedSessions, searchText, workspaceFilter]);
+		});
+	}, [archivedFlows, searchText, workspaceFilter]);
 
-	const menuItems: ArchivedSessionMenuItems =
-		useMemo((): ArchivedSessionMenuItems => {
-			return createArchivedSessionMenuGroups(filteredSessions, {
+	const menuItems: ArchivedSessionMenuItems = useMemo((): ArchivedSessionMenuItems => {
+		return [
+			...createArchivedSessionMenuGroups(filteredSessions, {
 				workspacesById,
 				busySessionId,
 				busyAction,
 				labels,
-				onRestore: (
-					targetSession: SessionMetadata,
-					event: MouseEvent<HTMLElement>,
-				): void => {
+				onRestore: (targetSession: SessionMetadata, event: MouseEvent<HTMLElement>): void => {
 					void handleRestoreSession(targetSession, event);
 				},
-				onDelete: (
-					targetSession: SessionMetadata,
-					event?: MouseEvent<HTMLElement>,
-				): void => {
+				onDelete: (targetSession: SessionMetadata, event?: MouseEvent<HTMLElement>): void => {
 					void handleDeleteSession(targetSession, event);
 				},
-				onDeleteWorktree: (
-					targetSession: SessionMetadata,
-					event?: MouseEvent<HTMLElement>,
-				): void => {
+				onDeleteWorktree: (targetSession: SessionMetadata, event?: MouseEvent<HTMLElement>): void => {
 					void handleDeleteWorktree(targetSession, event);
 				},
-			});
-		}, [
-			busyAction,
-			busySessionId,
-			filteredSessions,
-			labels,
-			workspacesById,
-		]);
+			}),
+			...createArchivedFlowMenuGroups(filteredFlows, {
+				workspacesById,
+				busySessionId,
+				busyAction,
+				labels,
+				onRestore: (targetFlow, event): void => {
+					void handleRestoreFlow(targetFlow, event);
+				},
+			}),
+		];
+	}, [busyAction, busySessionId, filteredSessions, filteredFlows, labels, workspacesById]);
 
-	async function handleRestoreSession(
-		session: SessionMetadata,
-		event: MouseEvent<HTMLElement>,
-	): Promise<void> {
+	async function handleRestoreFlow(flow: FlowDocument, event: MouseEvent<HTMLElement>): Promise<void> {
+		event.preventDefault();
+		event.stopPropagation();
+
+		if (busySessionId !== null || isDeletingAll) return;
+
+		try {
+			setBusySessionId(flow.flowId);
+			setBusyAction("restore-flow");
+			setErrorMessage(null);
+			await restoreFlow(flow.flowId, flow.revision);
+			setArchivedFlows((currentFlows): FlowDocument[] =>
+				currentFlows.filter((currentFlow): boolean => currentFlow.flowId !== flow.flowId),
+			);
+		} catch (error: unknown) {
+			setErrorMessage(error instanceof Error ? error.message : labels.failedRestoreFlow);
+		} finally {
+			setBusySessionId(null);
+			setBusyAction(null);
+		}
+	}
+
+	async function handleRestoreSession(session: SessionMetadata, event: MouseEvent<HTMLElement>): Promise<void> {
 		event.preventDefault();
 		event.stopPropagation();
 
@@ -485,28 +517,20 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 			setErrorMessage(null);
 			await restoreArchivedSession(session.id);
 			window.electronAPI.sessionCatalog.notifyChanged();
-			setArchivedSessions(
-				(currentSessions: SessionMetadata[]): SessionMetadata[] => {
-					return currentSessions.filter(
-						(currentSession: SessionMetadata): boolean =>
-							currentSession.id !== session.id,
-					);
-				},
-			);
+			setArchivedSessions((currentSessions: SessionMetadata[]): SessionMetadata[] => {
+				return currentSessions.filter(
+					(currentSession: SessionMetadata): boolean => currentSession.id !== session.id,
+				);
+			});
 		} catch (error: unknown) {
-			setErrorMessage(
-				error instanceof Error ? error.message : labels.failedRestore,
-			);
+			setErrorMessage(error instanceof Error ? error.message : labels.failedRestore);
 		} finally {
 			setBusySessionId(null);
 			setBusyAction(null);
 		}
 	}
 
-	async function handleDeleteSession(
-		session: SessionMetadata,
-		event?: MouseEvent<HTMLElement>,
-	): Promise<void> {
+	async function handleDeleteSession(session: SessionMetadata, event?: MouseEvent<HTMLElement>): Promise<void> {
 		event?.preventDefault();
 		event?.stopPropagation();
 
@@ -519,38 +543,23 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 			setBusyAction("delete");
 			setErrorMessage(null);
 			await deleteArchivedSession(session.id);
-			void window.electronAPI.sessionLayout
-				.remove({ sessionIds: [session.id] })
-				.catch((error: unknown): void => {
-					console.error(
-						"[ArchivedSessionSettingsPage] remove session layout failed",
-						error,
-					);
-				});
-			setArchivedSessions(
-				(currentSessions: SessionMetadata[]): SessionMetadata[] => {
-					return currentSessions.filter(
-						(currentSession: SessionMetadata): boolean =>
-							currentSession.id !== session.id,
-					);
-				},
-			);
+			void window.electronAPI.sessionLayout.remove({ sessionIds: [session.id] }).catch((error: unknown): void => {
+				console.error("[ArchivedSessionSettingsPage] remove session layout failed", error);
+			});
+			setArchivedSessions((currentSessions: SessionMetadata[]): SessionMetadata[] => {
+				return currentSessions.filter(
+					(currentSession: SessionMetadata): boolean => currentSession.id !== session.id,
+				);
+			});
 		} catch (error: unknown) {
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: labels.failedDeleteSession,
-			);
+			setErrorMessage(error instanceof Error ? error.message : labels.failedDeleteSession);
 		} finally {
 			setBusySessionId(null);
 			setBusyAction(null);
 		}
 	}
 
-	async function handleDeleteWorktree(
-		session: SessionMetadata,
-		event?: MouseEvent<HTMLElement>,
-	): Promise<void> {
+	async function handleDeleteWorktree(session: SessionMetadata, event?: MouseEvent<HTMLElement>): Promise<void> {
 		event?.preventDefault();
 		event?.stopPropagation();
 		if (busySessionId !== null || isDeletingAll) {
@@ -562,35 +571,23 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 			setErrorMessage(null);
 			const layouts = await window.electronAPI.sessionLayout.getAll();
 			const layout = layouts[session.id] ?? createDefaultSessionLayout();
-			for (const terminalId of listTerminalRuntimeIds(
-				session.id,
-				layout,
-			)) {
-				const terminalState =
-					await window.electronAPI.terminal.getState({
-						terminalId,
-					});
+			for (const terminalId of listTerminalRuntimeIds(session.id, layout)) {
+				const terminalState = await window.electronAPI.terminal.getState({
+					terminalId,
+				});
 				if (terminalState?.running === true) {
-					throw new Error(
-						t("workspaceTree.errors.worktreeTerminalActive"),
-					);
+					throw new Error(t("workspaceTree.errors.worktreeTerminalActive"));
 				}
 			}
 			const result = await deleteSessionWorktree(session.id);
 			setArchivedSessions((currentSessions): SessionMetadata[] =>
 				currentSessions.map(
 					(currentSession): SessionMetadata =>
-						currentSession.id === result.metadata.id
-							? result.metadata
-							: currentSession,
+						currentSession.id === result.metadata.id ? result.metadata : currentSession,
 				),
 			);
 		} catch (error: unknown) {
-			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: labels.failedDeleteWorktree,
-			);
+			setErrorMessage(error instanceof Error ? error.message : labels.failedDeleteWorktree);
 		} finally {
 			setBusySessionId(null);
 			setBusyAction(null);
@@ -602,53 +599,31 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 			setDeleteAllOpen(false);
 			return;
 		}
-		if (
-			filteredSessions.some(
-				(session: SessionMetadata): boolean =>
-					session.worktree !== undefined,
-			)
-		) {
+		if (filteredSessions.some((session: SessionMetadata): boolean => session.worktree !== undefined)) {
 			setErrorMessage(labels.failedDeleteAll);
 			setDeleteAllOpen(false);
 			return;
 		}
 
-		const sessionIds: string[] = filteredSessions.map(
-			(session: SessionMetadata): string => session.id,
-		);
+		const sessionIds: string[] = filteredSessions.map((session: SessionMetadata): string => session.id);
 
 		try {
 			setIsDeletingAll(true);
 			setErrorMessage(null);
 			await Promise.all(
-				sessionIds.map(
-					(sessionId: string): Promise<unknown> =>
-						deleteArchivedSession(sessionId),
-				),
+				sessionIds.map((sessionId: string): Promise<unknown> => deleteArchivedSession(sessionId)),
 			);
-			void window.electronAPI.sessionLayout
-				.remove({ sessionIds })
-				.catch((error: unknown): void => {
-					console.error(
-						"[ArchivedSessionSettingsPage] remove session layouts failed",
-						error,
-					);
-				});
-			setArchivedSessions(
-				(currentSessions: SessionMetadata[]): SessionMetadata[] => {
-					const deletedIds: Set<string> = new Set(sessionIds);
+			void window.electronAPI.sessionLayout.remove({ sessionIds }).catch((error: unknown): void => {
+				console.error("[ArchivedSessionSettingsPage] remove session layouts failed", error);
+			});
+			setArchivedSessions((currentSessions: SessionMetadata[]): SessionMetadata[] => {
+				const deletedIds: Set<string> = new Set(sessionIds);
 
-					return currentSessions.filter(
-						(session: SessionMetadata): boolean =>
-							!deletedIds.has(session.id),
-					);
-				},
-			);
+				return currentSessions.filter((session: SessionMetadata): boolean => !deletedIds.has(session.id));
+			});
 			setDeleteAllOpen(false);
 		} catch (error: unknown) {
-			setErrorMessage(
-				error instanceof Error ? error.message : labels.failedDeleteAll,
-			);
+			setErrorMessage(error instanceof Error ? error.message : labels.failedDeleteAll);
 		} finally {
 			setIsDeletingAll(false);
 		}
@@ -665,28 +640,24 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 					<Typography.Title level={3} className={styles.title}>
 						{t("settings.archivedSessions.title")}
 					</Typography.Title>
-					<Tag>{archivedSessions.length}</Tag>
+					<Tag>{archivedSessions.length + archivedFlows.length}</Tag>
 				</Space>
 				<Flex className={styles.toolbar} gap="small" wrap={false}>
 					<Input
 						allowClear={true}
 						prefix={<Icon name="search" />}
-						placeholder={t(
-							"settings.archivedSessions.searchPlaceholder",
-						)}
+						placeholder={t("settings.archivedSessions.searchPlaceholder")}
 						value={searchText}
 						className={styles.searchBox}
-						onChange={(
-							event: React.ChangeEvent<HTMLInputElement>,
-						): void => setSearchText(event.target.value)}
+						onChange={(event: React.ChangeEvent<HTMLInputElement>): void =>
+							setSearchText(event.target.value)
+						}
 					/>
 					<Select
 						className={styles.selectBox}
 						value={workspaceFilter}
 						options={workspaceOptions}
-						onChange={(value: string): void =>
-							setWorkspaceFilter(value)
-						}
+						onChange={(value: string): void => setWorkspaceFilter(value)}
 					/>
 					<Button
 						color="danger"
@@ -695,8 +666,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 						disabled={
 							filteredSessions.length === 0 ||
 							filteredSessions.some(
-								(session: SessionMetadata): boolean =>
-									session.worktree !== undefined,
+								(session: SessionMetadata): boolean => session.worktree !== undefined,
 							) ||
 							isLoading ||
 							busySessionId !== null
@@ -715,10 +685,10 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 			) : null}
 
 			<div className={styles.menuScroller}>
-				{filteredSessions.length === 0 ? (
+				{filteredSessions.length + filteredFlows.length === 0 ? (
 					<Empty
 						description={
-							archivedSessions.length === 0
+							archivedSessions.length + archivedFlows.length === 0
 								? t("settings.archivedSessions.empty.none")
 								: t("settings.archivedSessions.empty.noMatches")
 						}

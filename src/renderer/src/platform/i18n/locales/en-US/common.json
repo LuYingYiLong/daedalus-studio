@@ -3277,25 +3277,29 @@
 			"errors": { "import": "Import failed." }
 		},
 		"archivedSessions": {
-			"title": "Archived sessions",
-			"loading": "Loading archived sessions...",
-			"searchPlaceholder": "Search session...",
+			"title": "Archived sessions and Flows",
+			"loading": "Loading archived sessions and Flows...",
+			"searchPlaceholder": "Search sessions or Flows...",
 			"actions": {
 				"delete": "Delete",
-				"deleteAll": "Delete all",
+				"deleteAll": "Delete all chat sessions",
 				"restore": "Unarchive"
 			},
 			"aria": {
 				"delete": "Delete {{sessionTitle}}",
-				"restore": "Unarchive {{sessionTitle}}"
+				"restore": "Unarchive {{sessionTitle}}",
+				"restoreFlow": "Unarchive Flow {{flowTitle}}"
+			},
+			"types": {
+				"flow": "Flow"
 			},
 			"filters": {
 				"all": "All",
 				"noWorkspace": "No workspace"
 			},
 			"empty": {
-				"none": "No archived sessions",
-				"noMatches": "No matching archived sessions"
+				"none": "No archived sessions or Flows",
+				"noMatches": "No matching archived sessions or Flows"
 			},
 			"confirm": {
 				"deleteSession": {
@@ -3303,16 +3307,17 @@
 					"description": "This permanently deletes this archived session."
 				},
 				"deleteAll": {
-					"title": "Delete archived sessions?",
-					"description": "This will permanently delete {{count}} archived session matching the current filter.",
-					"description_other": "This will permanently delete {{count}} archived sessions matching the current filter."
+					"title": "Delete archived chat sessions?",
+					"description": "This will permanently delete {{count}} archived chat session matching the current filter.",
+					"description_other": "This will permanently delete {{count}} archived chat sessions matching the current filter."
 				}
 			},
 			"errors": {
 				"deleteAll": "Failed to delete archived sessions",
 				"deleteSession": "Failed to delete archived session",
 				"load": "Failed to load archived sessions",
-				"restore": "Failed to unarchive session"
+				"restore": "Failed to unarchive session",
+				"restoreFlow": "Failed to unarchive Flow"
 			}
 		},
 		"defaultModel": {

@@ -45,6 +45,10 @@ export async function archiveFlow(flowId: string, revision: number): Promise<Flo
 	return (await createBackendClient()).request("flow.archive", { flowId, revision });
 }
 
+export async function restoreFlow(flowId: string, revision: number): Promise<FlowDocument> {
+	return (await createBackendClient()).request("flow.restore", { flowId, revision });
+}
+
 export async function updateFlowTreeOrder(order: FlowTreeOrderUpdate): Promise<{ order: FlowTreeOrder; flows: FlowDocument[] }> {
 	return (await createBackendClient()).request("flow.tree.order.update", order);
 }
