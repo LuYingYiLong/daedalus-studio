@@ -39,6 +39,11 @@ export const MIN_BACKGROUND_IMAGE_OPACITY: number = 0.05;
 export const MAX_BACKGROUND_IMAGE_OPACITY: number = 1;
 export const BACKGROUND_IMAGE_OPACITY_STEP: number = 0.05;
 
+export const DEFAULT_BACKGROUND_TINT_OPACITY: number = 0.9;
+export const MIN_BACKGROUND_TINT_OPACITY: number = 0;
+export const MAX_BACKGROUND_TINT_OPACITY: number = 1;
+export const BACKGROUND_TINT_OPACITY_STEP: number = 0.05;
+
 export const DEFAULT_BACKGROUND_IMAGE_BLUR: number = 0;
 export const MIN_BACKGROUND_IMAGE_BLUR: number = 0;
 export const MAX_BACKGROUND_IMAGE_BLUR: number = 40;
@@ -52,6 +57,8 @@ export const BACKGROUND_IMAGE_VARIABLES: Readonly<Record<"image" | "opacity" | "
 	size: "--ds-background-size",
 	repeat: "--ds-background-repeat",
 };
+
+export const BACKGROUND_TINT_OPACITY_VARIABLE: string = "--ds-bg-tint-opacity";
 
 type BackgroundStyleTarget = {
 	setProperty(property: string, value: string): void;
@@ -86,6 +93,16 @@ export function normalizeBackgroundImageOpacity(
 		return fallback;
 	}
 	return Math.min(MAX_BACKGROUND_IMAGE_OPACITY, Math.max(MIN_BACKGROUND_IMAGE_OPACITY, value));
+}
+
+export function normalizeBackgroundTintOpacity(
+	value: unknown,
+	fallback: number = DEFAULT_BACKGROUND_TINT_OPACITY
+): number {
+	if (typeof value !== "number" || !Number.isFinite(value)) {
+		return fallback;
+	}
+	return Math.min(MAX_BACKGROUND_TINT_OPACITY, Math.max(MIN_BACKGROUND_TINT_OPACITY, value));
 }
 
 export function normalizeBackgroundImageBlur(
@@ -156,6 +173,7 @@ export function applyStudioBackgroundVariables(
 		opacity?: unknown;
 		blur?: unknown;
 		fit?: unknown;
+		tintOpacity?: unknown;
 	}
 ): void {
 	const url: string | null = buildAppearanceBackgroundUrl(params.image);
@@ -176,5 +194,9 @@ export function applyStudioBackgroundVariables(
 	style.setProperty(
 		BACKGROUND_IMAGE_VARIABLES.blur,
 		`${normalizeBackgroundImageBlur(params.blur)}px`
+	);
+	style.setProperty(
+		BACKGROUND_TINT_OPACITY_VARIABLE,
+		String(normalizeBackgroundTintOpacity(params.tintOpacity))
 	);
 }

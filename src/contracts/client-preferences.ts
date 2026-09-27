@@ -29,6 +29,7 @@ export type ClientPreferences = {
 	fontFamilyCode: string;
 	backgroundImage: BackgroundImagePreference | null;
 	backgroundImageOpacity: number;
+	backgroundTintOpacity: number;
 	backgroundImageBlur: number;
 	backgroundImageFit: BackgroundImageFit;
 	language: LanguagePreference;

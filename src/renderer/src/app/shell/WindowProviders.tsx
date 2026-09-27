@@ -38,6 +38,7 @@ function WindowProviders({
 		fontFamilyCode,
 		backgroundImage,
 		backgroundImageOpacity,
+		backgroundTintOpacity,
 		backgroundImageBlur,
 		backgroundImageFit,
 		animationsEnabled,
@@ -53,6 +54,7 @@ function WindowProviders({
 			fontFamilyCode={fontFamilyCode}
 			backgroundImage={backgroundImage}
 			backgroundImageOpacity={backgroundImageOpacity}
+			backgroundTintOpacity={backgroundTintOpacity}
 			backgroundImageBlur={backgroundImageBlur}
 			backgroundImageFit={backgroundImageFit}
 			uiFontSize={uiFontSize}

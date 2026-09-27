@@ -7,7 +7,7 @@ import { createStudioTheme, type StudioThemeVariant } from "@/ui/styles/studio-t
 import type { ResolvedTheme } from "@/domain/theme/studio-theme-preference";
 import { applyStudioAccentVariables } from "../../../../contracts/theme-color";
 import { applyStudioFontVariables } from "../../../../contracts/studio-fonts";
-import { applyStudioBackgroundVariables, DEFAULT_BACKGROUND_IMAGE_BLUR, DEFAULT_BACKGROUND_IMAGE_FIT, DEFAULT_BACKGROUND_IMAGE_OPACITY, type BackgroundImageFit, type BackgroundImagePreference } from "../../../../contracts/appearance-background";
+import { applyStudioBackgroundVariables, DEFAULT_BACKGROUND_IMAGE_BLUR, DEFAULT_BACKGROUND_IMAGE_FIT, DEFAULT_BACKGROUND_IMAGE_OPACITY, DEFAULT_BACKGROUND_TINT_OPACITY, type BackgroundImageFit, type BackgroundImagePreference } from "../../../../contracts/appearance-background";
 import { Icon } from "@/assets/icons";
 
 export type SharedVisualProvidersProps = {
@@ -19,6 +19,7 @@ export type SharedVisualProvidersProps = {
 	fontFamilyCode: string;
 	backgroundImage?: BackgroundImagePreference | null;
 	backgroundImageOpacity?: number;
+	backgroundTintOpacity?: number;
 	backgroundImageBlur?: number;
 	backgroundImageFit?: BackgroundImageFit;
 	uiFontSize: number;
@@ -37,6 +38,7 @@ function SharedVisualProviders({
 	fontFamilyCode,
 	backgroundImage = null,
 	backgroundImageOpacity = DEFAULT_BACKGROUND_IMAGE_OPACITY,
+	backgroundTintOpacity = DEFAULT_BACKGROUND_TINT_OPACITY,
 	backgroundImageBlur = DEFAULT_BACKGROUND_IMAGE_BLUR,
 	backgroundImageFit = DEFAULT_BACKGROUND_IMAGE_FIT,
 	uiFontSize,
@@ -76,10 +78,11 @@ function SharedVisualProviders({
 		applyStudioBackgroundVariables(document.documentElement.style, {
 			image: backgroundImage,
 			opacity: backgroundImageOpacity,
+			tintOpacity: backgroundTintOpacity,
 			blur: backgroundImageBlur,
 			fit: backgroundImageFit,
 		});
-	}, [backgroundImage, backgroundImageBlur, backgroundImageFit, backgroundImageOpacity]);
+	}, [backgroundImage, backgroundImageBlur, backgroundImageFit, backgroundImageOpacity, backgroundTintOpacity]);
 
 	useEffect((): void => {
 		document.documentElement.dataset.motion = animationsEnabled ? "on" : "off";

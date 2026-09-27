@@ -20,10 +20,13 @@ import SettingsList from "@/ui/SettingsList";
 import { DEFAULT_STUDIO_FONT_FAMILY, DEFAULT_STUDIO_FONT_FAMILY_CODE } from "../../../../../../contracts/studio-fonts";
 import {
 	BACKGROUND_IMAGE_OPACITY_STEP,
+	BACKGROUND_TINT_OPACITY_STEP,
 	MAX_BACKGROUND_IMAGE_BLUR,
 	MAX_BACKGROUND_IMAGE_OPACITY,
+	MAX_BACKGROUND_TINT_OPACITY,
 	MIN_BACKGROUND_IMAGE_BLUR,
 	MIN_BACKGROUND_IMAGE_OPACITY,
+	MIN_BACKGROUND_TINT_OPACITY,
 	buildAppearanceBackgroundUrl,
 	type BackgroundImageFit,
 } from "../../../../../../contracts/appearance-background";
@@ -51,6 +54,7 @@ type SettingKey =
 	| "codeFontSize"
 	| "backgroundImage"
 	| "backgroundImageOpacity"
+	| "backgroundTintOpacity"
 	| "backgroundImageBlur"
 	| "backgroundImageFit";
 
@@ -428,6 +432,34 @@ function AppearanceSettingsPage({
 								}}
 								onChangeComplete={(value: number): void => {
 									void save({ backgroundImageOpacity: value }, "backgroundImageOpacity");
+								}}
+							/>
+						</SettingsItem>
+						<SettingsItem
+							searchKey="item:appearance.backgroundTintOpacity"
+							title={t("settings.appearance.background.tintOpacity.title")}
+							description={t("settings.appearance.background.tintOpacity.description")}
+						>
+							<Slider
+								className={styles.backgroundSlider}
+								value={draft.backgroundTintOpacity}
+								min={MIN_BACKGROUND_TINT_OPACITY}
+								max={MAX_BACKGROUND_TINT_OPACITY}
+								step={BACKGROUND_TINT_OPACITY_STEP}
+								disabled={savingKey !== null || draft.backgroundImage === null}
+								tooltip={{
+									formatter: (value): string => `${Math.round((value ?? 0) * 100)}%`,
+								}}
+								onChange={(value: number): void => {
+									setDraft(
+										(preferences: ClientPreferences): ClientPreferences => ({
+											...preferences,
+											backgroundTintOpacity: value,
+										}),
+									);
+								}}
+								onChangeComplete={(value: number): void => {
+									void save({ backgroundTintOpacity: value }, "backgroundTintOpacity");
 								}}
 							/>
 						</SettingsItem>

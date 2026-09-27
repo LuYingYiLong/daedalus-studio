@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { DEFAULT_BACKGROUND_IMAGE_BLUR, DEFAULT_BACKGROUND_IMAGE_FIT, DEFAULT_BACKGROUND_IMAGE_OPACITY, normalizeBackgroundImage, normalizeBackgroundImageBlur, normalizeBackgroundImageFit, normalizeBackgroundImageOpacity } from "../../contracts/appearance-background";
+import { DEFAULT_BACKGROUND_IMAGE_BLUR, DEFAULT_BACKGROUND_IMAGE_FIT, DEFAULT_BACKGROUND_IMAGE_OPACITY, DEFAULT_BACKGROUND_TINT_OPACITY, normalizeBackgroundImage, normalizeBackgroundImageBlur, normalizeBackgroundImageFit, normalizeBackgroundImageOpacity, normalizeBackgroundTintOpacity } from "../../contracts/appearance-background";
 import { normalizeKeyboardShortcutOverrides, type KeyboardShortcutOverrides, type ShortcutPlatform } from "../../contracts/keyboard-shortcuts";
 import { DEFAULT_STUDIO_THEME_COLOR, normalizeStudioThemeColor } from "../../contracts/theme-color";
 import { DEFAULT_STUDIO_CODE_FONT_SIZE, DEFAULT_STUDIO_FONT_FAMILY, DEFAULT_STUDIO_FONT_FAMILY_CODE, DEFAULT_STUDIO_UI_FONT_SIZE, MAX_STUDIO_CODE_FONT_SIZE, MAX_STUDIO_UI_FONT_SIZE, MIN_STUDIO_CODE_FONT_SIZE, MIN_STUDIO_UI_FONT_SIZE, normalizeStudioFontFamily, normalizeStudioFontFamilyPatch, normalizeStudioFontSize } from "../../contracts/studio-fonts";
@@ -30,6 +30,7 @@ export const DEFAULT_CLIENT_PREFERENCES: ClientPreferences = {
 	fontFamilyCode: DEFAULT_STUDIO_FONT_FAMILY_CODE,
 	backgroundImage: null,
 	backgroundImageOpacity: DEFAULT_BACKGROUND_IMAGE_OPACITY,
+	backgroundTintOpacity: DEFAULT_BACKGROUND_TINT_OPACITY,
 	backgroundImageBlur: DEFAULT_BACKGROUND_IMAGE_BLUR,
 	backgroundImageFit: DEFAULT_BACKGROUND_IMAGE_FIT,
 	language: "system",
@@ -174,6 +175,7 @@ export function normalizeClientPreferences(value: unknown): {
 	const fontFamilyCode: string = normalizeStudioFontFamily(value.fontFamilyCode, DEFAULT_CLIENT_PREFERENCES.fontFamilyCode);
 	const backgroundImage: ClientPreferences["backgroundImage"] = normalizeBackgroundImage(value.backgroundImage);
 	const backgroundImageOpacity: number = normalizeBackgroundImageOpacity(value.backgroundImageOpacity, DEFAULT_CLIENT_PREFERENCES.backgroundImageOpacity);
+	const backgroundTintOpacity: number = normalizeBackgroundTintOpacity(value.backgroundTintOpacity, DEFAULT_CLIENT_PREFERENCES.backgroundTintOpacity);
 	const backgroundImageBlur: number = normalizeBackgroundImageBlur(value.backgroundImageBlur, DEFAULT_CLIENT_PREFERENCES.backgroundImageBlur);
 	const backgroundImageFit: ClientPreferences["backgroundImageFit"] = normalizeBackgroundImageFit(value.backgroundImageFit);
 	const languagePreference: ClientPreferences["language"] = value.language === "en-US" || value.language === "zh-CN" || value.language === "system" ? value.language : DEFAULT_CLIENT_PREFERENCES.language;
@@ -204,6 +206,7 @@ export function normalizeClientPreferences(value: unknown): {
 			fontFamilyCode,
 			backgroundImage,
 			backgroundImageOpacity,
+			backgroundTintOpacity,
 			backgroundImageBlur,
 			backgroundImageFit,
 			language: languagePreference,
@@ -233,6 +236,7 @@ export function normalizeClientPreferences(value: unknown): {
 			value.fontFamilyCode !== fontFamilyCode ||
 			JSON.stringify(value.backgroundImage ?? null) !== JSON.stringify(backgroundImage) ||
 			value.backgroundImageOpacity !== backgroundImageOpacity ||
+			value.backgroundTintOpacity !== backgroundTintOpacity ||
 			value.backgroundImageBlur !== backgroundImageBlur ||
 			value.backgroundImageFit !== backgroundImageFit ||
 			value.language !== languagePreference ||
@@ -244,7 +248,7 @@ export function normalizeClientPreferences(value: unknown): {
 			JSON.stringify(value.lastComposerModel ?? null) !== JSON.stringify(lastComposerModel) ||
 			JSON.stringify(value.newSessionComposer ?? null) !== JSON.stringify(newSessionComposer) ||
 			JSON.stringify(value.onboarding ?? null) !== JSON.stringify(onboarding) ||
-			Object.keys(value).some((key: string): boolean => !["allowComputerObservation", "allowComputerControl", "autoCheckForUpdates", "notifyOnRunCompleted", "minimizeToTrayOnClose", "theme", "themeColor", "animationsEnabled", "mascotEnabled", "mascotSize", "uiFontSize", "codeFontSize", "fontFamily", "fontFamilyCode", "backgroundImage", "backgroundImageOpacity", "backgroundImageBlur", "backgroundImageFit", "language", "webLinkOpenMode", "workspaceSidebar", "keyboardShortcuts", "flowSnapToGrid", "flowRunEntryByFlowId", "lastComposerModel", "newSessionComposer", "onboarding"].includes(key)),
+			Object.keys(value).some((key: string): boolean => !["allowComputerObservation", "allowComputerControl", "autoCheckForUpdates", "notifyOnRunCompleted", "minimizeToTrayOnClose", "theme", "themeColor", "animationsEnabled", "mascotEnabled", "mascotSize", "uiFontSize", "codeFontSize", "fontFamily", "fontFamilyCode", "backgroundImage", "backgroundImageOpacity", "backgroundTintOpacity", "backgroundImageBlur", "backgroundImageFit", "language", "webLinkOpenMode", "workspaceSidebar", "keyboardShortcuts", "flowSnapToGrid", "flowRunEntryByFlowId", "lastComposerModel", "newSessionComposer", "onboarding"].includes(key)),
 	};
 }
 
@@ -299,6 +303,9 @@ export function normalizeClientPreferencesPatch(value: unknown): ClientPreferenc
 	}
 	if (typeof value.backgroundImageOpacity === "number" && Number.isFinite(value.backgroundImageOpacity)) {
 		patch.backgroundImageOpacity = normalizeBackgroundImageOpacity(value.backgroundImageOpacity, DEFAULT_CLIENT_PREFERENCES.backgroundImageOpacity);
+	}
+	if (typeof value.backgroundTintOpacity === "number" && Number.isFinite(value.backgroundTintOpacity)) {
+		patch.backgroundTintOpacity = normalizeBackgroundTintOpacity(value.backgroundTintOpacity, DEFAULT_CLIENT_PREFERENCES.backgroundTintOpacity);
 	}
 	if (typeof value.backgroundImageBlur === "number" && Number.isFinite(value.backgroundImageBlur)) {
 		patch.backgroundImageBlur = normalizeBackgroundImageBlur(value.backgroundImageBlur, DEFAULT_CLIENT_PREFERENCES.backgroundImageBlur);

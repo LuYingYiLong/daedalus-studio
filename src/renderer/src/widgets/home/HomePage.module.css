@@ -85,17 +85,13 @@
 	border-radius: var(--ds-space-2);
 }
 
-:global([data-studio-background-image="true"]) .agentMain {
-	background-color: transparent;
-}
-
 .scheduledTasksOverlay {
 	position: absolute;
 	inset: 0;
 	z-index: 30;
 	min-width: 0;
 	min-height: 0;
-	background: var(--ds-bg);
+	background: transparent;
 	pointer-events: none;
 	opacity: 0;
 	transform: translate3d(0, 16px, 0);
@@ -108,10 +104,6 @@
 	pointer-events: auto;
 	opacity: 1;
 	transform: none;
-}
-
-:global([data-studio-background-image="true"]) .scheduledTasksOverlay {
-	background: transparent;
 }
 
 .agentMain[data-main-surface="scheduledTasks"] > :not(.scheduledTasksOverlay) {

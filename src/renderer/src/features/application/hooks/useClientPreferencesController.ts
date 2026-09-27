@@ -33,6 +33,7 @@ export type ClientPreferencesController = {
 	fontFamilyCode: string;
 	backgroundImage: BackgroundImagePreference | null;
 	backgroundImageOpacity: number;
+	backgroundTintOpacity: number;
 	backgroundImageBlur: number;
 	backgroundImageFit: BackgroundImageFit;
 	animationsEnabled: boolean;
@@ -47,6 +48,7 @@ function useClientPreferencesController(): ClientPreferencesController {
 	const [fontFamilyCode, setFontFamilyCode] = useState<string>(() => getCachedClientPreferences().fontFamilyCode);
 	const [backgroundImage, setBackgroundImage] = useState<BackgroundImagePreference | null>(() => getCachedClientPreferences().backgroundImage);
 	const [backgroundImageOpacity, setBackgroundImageOpacity] = useState<number>(() => getCachedClientPreferences().backgroundImageOpacity);
+	const [backgroundTintOpacity, setBackgroundTintOpacity] = useState<number>(() => getCachedClientPreferences().backgroundTintOpacity);
 	const [backgroundImageBlur, setBackgroundImageBlur] = useState<number>(() => getCachedClientPreferences().backgroundImageBlur);
 	const [backgroundImageFit, setBackgroundImageFit] = useState<BackgroundImageFit>(() => getCachedClientPreferences().backgroundImageFit);
 	const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => getCachedClientPreferences().animationsEnabled);
@@ -62,6 +64,7 @@ function useClientPreferencesController(): ClientPreferencesController {
 		setFontFamilyCode(preferences.fontFamilyCode);
 		setBackgroundImage(preferences.backgroundImage);
 		setBackgroundImageOpacity(preferences.backgroundImageOpacity);
+		setBackgroundTintOpacity(preferences.backgroundTintOpacity);
 		setBackgroundImageBlur(preferences.backgroundImageBlur);
 		setBackgroundImageFit(preferences.backgroundImageFit);
 		setAnimationsEnabled(preferences.animationsEnabled);
@@ -111,6 +114,7 @@ function useClientPreferencesController(): ClientPreferencesController {
 		fontFamilyCode,
 		backgroundImage,
 		backgroundImageOpacity,
+		backgroundTintOpacity,
 		backgroundImageBlur,
 		backgroundImageFit,
 		animationsEnabled,

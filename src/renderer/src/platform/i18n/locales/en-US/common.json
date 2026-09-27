@@ -3979,6 +3979,10 @@
 					"title": "Opacity",
 					"description": "Control how strongly the background image shows through; lower values fade it out."
 				},
+				"tintOpacity": {
+					"title": "Content tint opacity",
+					"description": "Adjust the tint on chat, Flow, and other content areas; lower values show more of the background image."
+				},
 				"blur": {
 					"title": "Blur",
 					"description": "Blur the background image to reduce visual noise."

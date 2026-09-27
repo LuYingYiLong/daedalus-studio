@@ -11,7 +11,7 @@
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
-	background: var(--ds-bg);
+	background: var(--ds-bg-tint);
 }
 
 .header {
@@ -114,12 +114,6 @@
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
-	background: var(--ds-bg);
-}
-
-:global([data-studio-background-image="true"]) .flowSurface,
-:global([data-studio-background-image="true"]) .canvasRegion {
-	background: transparent;
 }
 
 .contextMenuAnchor {
