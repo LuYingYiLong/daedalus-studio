@@ -742,6 +742,7 @@ test.describe("Daedalus Flow node workflow", () => {
 			userPromptInputBox!.y + userPromptInputBox!.height / 2,
 			{ steps: 12 },
 		);
+		await expect(userPromptInput).toHaveCSS("opacity", "1");
 		await mainWindow.mouse.up();
 		await expect(mainWindow.locator("[data-flow-canvas-layer]" )).toHaveAttribute("data-flow-edge-count", "1");
 		await expect(userPromptNode.locator("textarea")).toHaveCount(0);

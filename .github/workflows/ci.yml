@@ -152,7 +152,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: LuYingYiLong/daedalus-backend
-          ref: b2ad724e1a23ceabf34b5848cf266a7201418000
+          ref: 6a191768dd737af9be128d5788bb1edba1044739
           path: backend-source
 
       - name: Setup Node.js
