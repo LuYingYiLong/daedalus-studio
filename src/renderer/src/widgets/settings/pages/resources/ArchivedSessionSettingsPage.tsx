@@ -1,7 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Empty, Flex, Input, Menu, Modal, Popconfirm, Select, Space, Tag, Tooltip, Typography } from "antd";
+import {
+	Alert,
+	Button,
+	Empty,
+	Flex,
+	Input,
+	Menu,
+	Modal,
+	Popconfirm,
+	Select,
+	Space,
+	Tag,
+	Tooltip,
+	Typography,
+} from "antd";
 import type { MenuProps } from "antd";
 import {
 	deleteArchivedSession,
@@ -678,11 +692,7 @@ function ArchivedSessionSettingsPage(): React.JSX.Element | null {
 				</Flex>
 			</header>
 
-			{errorMessage !== null ? (
-				<Typography.Text type="danger" className={styles.errorText}>
-					{errorMessage}
-				</Typography.Text>
-			) : null}
+			{errorMessage !== null ? <Alert title={errorMessage} type="error" /> : null}
 
 			<div className={styles.menuScroller}>
 				{filteredSessions.length + filteredFlows.length === 0 ? (
