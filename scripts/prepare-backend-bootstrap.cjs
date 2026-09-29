@@ -1,5 +1,6 @@
 const {
 	copyFileSync,
+	cpSync,
 	createReadStream,
 	existsSync,
 	mkdirSync,
@@ -195,6 +196,14 @@ function readPayloadManifest(payloadDir) {
 	if (!existsSync(manifestPath) || !existsSync(executablePath) || !existsSync(sandboxHelperPath)) {
 		fail(`Backend payload is incomplete at ${payloadDir}.`);
 	}
+	const mediaPath = join(payloadDir, "media");
+	if (
+		!existsSync(join(mediaPath, "node.exe"))
+		|| !existsSync(join(mediaPath, "image-worker.cjs"))
+		|| !existsSync(join(mediaPath, "node_modules", "sharp", "package.json"))
+	) {
+		fail("Backend payload is missing the Flow image runtime at " + mediaPath + ".");
+	}
 	const manifestBytes = readFileSync(manifestPath);
 	const manifest = JSON.parse(manifestBytes.toString("utf8"));
 	assertPayloadManifest(manifest);
@@ -213,7 +222,7 @@ function readPayloadManifest(payloadDir) {
 	) {
 		fail("Backend Windows sandbox helper failed size or SHA-256 verification.");
 	}
-	return { manifest, manifestBytes, manifestPath, executablePath, sandboxHelperPath };
+	return { manifest, manifestBytes, manifestPath, executablePath, sandboxHelperPath, mediaPath };
 }
 
 function installPayload(payloadDir) {
@@ -223,6 +232,12 @@ function installPayload(payloadDir) {
 	mkdirSync(tempDir, { recursive: true });
 	copyFileSync(payload.executablePath, join(tempDir, executableName));
 	copyFileSync(payload.sandboxHelperPath, join(tempDir, sandboxHelperName));
+	cpSync(payload.mediaPath, join(tempDir, "media"), {
+		recursive: true,
+		dereference: true,
+		errorOnExist: true,
+		force: false
+	});
 	writeFileSync(join(tempDir, manifestName), payload.manifestBytes);
 	rmSync(targetDir, { recursive: true, force: true });
 	renameSync(tempDir, targetDir);
@@ -297,16 +312,51 @@ function extractArchive(archivePath, destinationDir) {
 		"Add-Type -AssemblyName System.IO.Compression.FileSystem",
 		"$archive = [System.IO.Compression.ZipFile]::OpenRead($env:DAEDALUS_ARCHIVE_PATH)",
 		"try {",
-		"  $allowed = @('daedalus-backend.exe', 'daedalus-windows-sandbox-helper.exe', 'backend-manifest.json')",
+		"  $allowedRootFiles = @('daedalus-backend.exe', 'daedalus-windows-sandbox-helper.exe', 'backend-manifest.json')",
 		"  $seen = @{}",
+		"  $entryCount = 0",
+		"  $totalUncompressedBytes = [long]0",
+		"  $maxEntries = 20000",
+		"  $maxUncompressedBytes = [long]536870912",
+		"  $destinationRoot = [System.IO.Path]::GetFullPath($env:DAEDALUS_EXTRACT_DIR)",
+		"  $destinationPrefix = $destinationRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar",
 		"  foreach ($entry in $archive.Entries) {",
-		"    if ($entry.FullName -notin $allowed -or $seen.ContainsKey($entry.FullName)) {",
-		"      throw \"Unexpected or duplicate archive entry: $($entry.FullName)\"",
+		"    $entryCount += 1",
+		"    if ($entryCount -gt $maxEntries) { throw 'Backend archive contains too many entries.' }",
+		"    $entryName = $entry.FullName",
+		"    $isDirectory = $entryName.EndsWith('/')",
+		"    $normalizedName = if ($isDirectory) { $entryName.TrimEnd('/') } else { $entryName }",
+		"    if ([string]::IsNullOrWhiteSpace($normalizedName) -or $entryName.Contains([char]92) -or $entryName.StartsWith('/') -or $entryName.Contains(':')) {",
+		"      throw \"Unsafe archive entry path: $entryName\"",
 		"    }",
-		"    $seen[$entry.FullName] = $true",
-		"    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, (Join-Path $env:DAEDALUS_EXTRACT_DIR $entry.FullName), $false)",
+		"    $invalidSegment = $false",
+		"    foreach ($segment in $normalizedName.Split([char]'/')) {",
+		"      if ([string]::IsNullOrEmpty($segment) -or $segment -eq '.' -or $segment -eq '..') { $invalidSegment = $true; break }",
+		"    }",
+		"    if ($invalidSegment) { throw \"Unsafe archive entry path: $entryName\" }",
+		"    $isAllowedRootFile = -not $isDirectory -and $normalizedName -in $allowedRootFiles",
+		"    $isMediaEntry = ($isDirectory -and $normalizedName -eq 'media') -or $normalizedName.StartsWith('media/')",
+		"    if (-not $isAllowedRootFile -and -not $isMediaEntry) {",
+		"      throw \"Unexpected archive entry: $entryName\"",
+		"    }",
+		"    if ($seen.ContainsKey($normalizedName)) { throw \"Duplicate archive entry: $entryName\" }",
+		"    $seen[$normalizedName] = $true",
+		"    $relativePath = $normalizedName.Replace('/', [System.IO.Path]::DirectorySeparatorChar)",
+		"    $destinationPath = [System.IO.Path]::GetFullPath((Join-Path $destinationRoot $relativePath))",
+		"    if (-not $destinationPath.StartsWith($destinationPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {",
+		"      throw \"Archive entry escapes destination: $entryName\"",
+		"    }",
+		"    if ($isDirectory) {",
+		"      New-Item -ItemType Directory -Path $destinationPath -Force | Out-Null",
+		"      continue",
+		"    }",
+		"    $totalUncompressedBytes += $entry.Length",
+		"    if ($totalUncompressedBytes -gt $maxUncompressedBytes) { throw 'Backend archive expands beyond the size limit.' }",
+		"    $parentPath = Split-Path -Parent $destinationPath",
+		"    New-Item -ItemType Directory -Path $parentPath -Force | Out-Null",
+		"    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $destinationPath, $false)",
 		"  }",
-		"  foreach ($required in $allowed) { if (-not $seen.ContainsKey($required)) { throw \"Missing archive entry: $required\" } }",
+		"  foreach ($required in $allowedRootFiles) { if (-not $seen.ContainsKey($required)) { throw \"Missing archive entry: $required\" } }",
 		"} finally { $archive.Dispose() }"
 	].join("\n");
 	const result = spawnSync(
