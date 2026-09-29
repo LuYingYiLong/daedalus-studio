@@ -162,6 +162,12 @@ jobs:
           if ($files.Count -ne 3) {
             throw "Packaged backend bootstrap must contain exactly the backend, sandbox helper and manifest."
           }
+          $mediaDir = Join-Path $backendDir "media"
+          foreach ($relativePath in @("node.exe", "image-worker.cjs", "node_modules\sharp\package.json")) {
+            if (-not (Test-Path -LiteralPath (Join-Path $mediaDir $relativePath) -PathType Leaf)) {
+              throw "Packaged backend Flow image runtime is missing $relativePath."
+            }
+          }
           $sandboxPath = Join-Path $backendDir "daedalus-windows-sandbox-helper.exe"
           if (
             -not (Test-Path -LiteralPath $sandboxPath -PathType Leaf) `
@@ -251,21 +257,6 @@ jobs:
             build/browser-extension/daedalus-browser-stable.zip
           if-no-files-found: error
 
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag_name }}
-          target_commitish: ${{ github.sha }}
-          name: Daedalus Studio ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag_name }}
-          draft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
-          prerelease: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
-          overwrite_files: true
-          files: |
-            release/*.exe
-            release/*.blockmap
-            release/latest.yml
-            build/browser-extension/daedalus-browser-stable.zip
-
   build-linux:
     name: Build Linux deb package
     runs-on: ubuntu-latest
@@ -320,6 +311,15 @@ jobs:
           deb="$(find release -maxdepth 1 -type f -name '*.deb' -print -quit)"
           test -n "$deb"
           dpkg-deb --info "$deb"
+          extracted="$(mktemp -d)"
+          dpkg-deb --extract "$deb" "$extracted"
+          backend_dir="$(find "$extracted" -type f -path '*/resources/backend-bootstrap/daedalus-backend' -print -quit)"
+          test -n "$backend_dir"
+          backend_dir="$(dirname "$backend_dir")"
+          test -x "$backend_dir/daedalus-backend"
+          test -x "$backend_dir/media/node"
+          test -f "$backend_dir/media/image-worker.cjs"
+          test -f "$backend_dir/media/node_modules/sharp/package.json"
 
       - name: Upload Linux deb package
         uses: actions/upload-artifact@v4
@@ -327,3 +327,47 @@ jobs:
           name: daedalus-studio-linux-deb
           path: release/*.deb
           if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - build-windows
+      - build-linux
+
+    steps:
+      - name: Download Windows release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: daedalus-studio-windows
+          path: release-assets/windows
+
+      - name: Download Linux deb package
+        uses: actions/download-artifact@v4
+        with:
+          name: daedalus-studio-linux-deb
+          path: release-assets/linux
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets/publish
+          find release-assets/windows -type f -exec cp -t release-assets/publish {} +
+          find release-assets/linux -type f -name '*.deb' -exec cp -t release-assets/publish {} +
+          test -f release-assets/publish/latest.yml
+          test -f release-assets/publish/daedalus-browser-stable.zip
+          test -n "$(find release-assets/publish -maxdepth 1 -name '*.exe' -print -quit)"
+          test -n "$(find release-assets/publish -maxdepth 1 -name '*.deb' -print -quit)"
+          find release-assets/publish -maxdepth 1 -type f -printf '%f\n' | sort
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag_name }}
+          target_commitish: ${{ github.sha }}
+          name: Daedalus Studio ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag_name }}
+          draft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
+          prerelease: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
+          overwrite_files: true
+          files: release-assets/publish/*

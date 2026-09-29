@@ -2,7 +2,7 @@
 "use strict";
 
 const { execFileSync } = require("node:child_process");
-const { chmod, copyFile, mkdir, readFile, rm } = require("node:fs/promises");
+const { chmod, copyFile, cp, mkdir, readFile, rm } = require("node:fs/promises");
 const { existsSync } = require("node:fs");
 const { join, resolve } = require("node:path");
 
@@ -44,8 +44,16 @@ execFileSync(npmCommand, ["run", "release:sea:linux"], {
 
 const sourceExecutable = join(payloadDir, executableName);
 const sourceManifest = join(payloadDir, manifestName);
+const sourceMedia = join(payloadDir, "media");
 if (!existsSync(sourceExecutable) || !existsSync(sourceManifest)) {
   throw new Error("[linux-backend] SEA build did not produce the expected payload.");
+}
+if (
+  !existsSync(join(sourceMedia, "node")) ||
+  !existsSync(join(sourceMedia, "image-worker.cjs")) ||
+  !existsSync(join(sourceMedia, "node_modules", "sharp", "package.json"))
+) {
+  throw new Error("[linux-backend] SEA build did not produce the Flow image runtime.");
 }
 
 await rm(targetDir, { recursive: true, force: true });
@@ -54,7 +62,9 @@ const targetExecutable = join(targetDir, executableName);
 await copyFile(sourceExecutable, targetExecutable);
 await chmod(targetExecutable, 0o755);
 await copyFile(sourceManifest, join(targetDir, manifestName));
-console.log(`[linux-backend] staged executable and manifest in ${targetDir}`);
+await cp(sourceMedia, join(targetDir, "media"), { recursive: true, dereference: true });
+await chmod(join(targetDir, "media", "node"), 0o755);
+console.log(`[linux-backend] staged executable, manifest, and media runtime in ${targetDir}`);
 
 })().catch((error) => {
   console.error(error instanceof Error ? error.message : error);

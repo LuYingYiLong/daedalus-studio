@@ -177,10 +177,20 @@ jobs:
 
       - name: Build and verify Linux deb package
         run: |
+          set -euo pipefail
           npm run build:linux -- --publish never
           deb="$(find release -maxdepth 1 -type f -name '*.deb' -print -quit)"
           test -n "$deb"
           dpkg-deb --info "$deb"
+          extracted="$(mktemp -d)"
+          dpkg-deb --extract "$deb" "$extracted"
+          backend_dir="$(find "$extracted" -type f -path '*/resources/backend-bootstrap/daedalus-backend' -print -quit)"
+          test -n "$backend_dir"
+          backend_dir="$(dirname "$backend_dir")"
+          test -x "$backend_dir/daedalus-backend"
+          test -x "$backend_dir/media/node"
+          test -f "$backend_dir/media/image-worker.cjs"
+          test -f "$backend_dir/media/node_modules/sharp/package.json"
 
       - name: Upload Linux deb package
         uses: actions/upload-artifact@v4

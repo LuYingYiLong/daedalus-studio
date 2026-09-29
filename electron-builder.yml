@@ -30,6 +30,7 @@ win:
         - daedalus-backend.exe
         - daedalus-windows-sandbox-helper.exe
         - backend-manifest.json
+        - media/**/*
     - from: build/daedalus-bridge
       to: daedalus-bridge
       filter:
@@ -58,6 +59,7 @@ linux:
       filter:
         - daedalus-backend
         - backend-manifest.json
+        - media/**/*
   artifactName: "Daedalus-Studio-${version}-${arch}.${ext}"
   target:
     - target: deb
