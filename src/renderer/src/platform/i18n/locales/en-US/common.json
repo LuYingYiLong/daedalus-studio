@@ -3690,7 +3690,7 @@
 				"requestsTrend": "Request trend",
 				"tokensTrend": "Token trend",
 				"providerShare": "Provider token share",
-				"modelTokens": "Model token usage"
+				"modelTokens": "Model input tokens (provider-reported)"
 			},
 			"empty": {
 				"noUsage": "No usage data yet"
@@ -3709,6 +3709,18 @@
 			"cacheSegments": {
 				"hit": "Cache hit tokens",
 				"miss": "Non-cache tokens"
+			},
+			"cacheDiagnostics": {
+				"title": "Cache diagnostics (overview includes estimated usage)",
+				"provider": "Select Provider",
+				"model": "Select model",
+				"category": "Request class",
+				"inputShare": "Input token share",
+				"providerHitRate": "Provider-reported hit rate",
+				"providerCoverage": "Provider usage coverage",
+				"unknownInput": "Unknown-cache tokens",
+				"categories": { "conversation": "Conversation", "review": "Model review", "auxiliary": "Other auxiliary" },
+				"variants": { "all": "All versions", "legacy": "Legacy", "optimized": "Optimized", "unknown": "Historical unknown" }
 			}
 		},
 		"skills": {

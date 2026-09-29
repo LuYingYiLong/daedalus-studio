@@ -3680,7 +3680,7 @@
 				"requestsTrend": "请求趋势",
 				"tokensTrend": "Token 趋势",
 				"providerShare": "Provider token 占比",
-				"modelTokens": "模型 token 用量"
+				"modelTokens": "模型输入 token（Provider 报告）"
 			},
 			"empty": {
 				"noUsage": "暂无用量数据"
@@ -3699,6 +3699,18 @@
 			"cacheSegments": {
 				"hit": "缓存命中 token",
 				"miss": "未命中 token"
+			},
+			"cacheDiagnostics": {
+				"title": "缓存命中诊断（总览仍包含估算用量）",
+				"provider": "选择 Provider",
+				"model": "选择模型",
+				"category": "请求类别",
+				"inputShare": "输入 token 占比",
+				"providerHitRate": "Provider 报告命中率",
+				"providerCoverage": "Provider 用量覆盖率",
+				"unknownInput": "缓存状态未知 token",
+				"categories": { "conversation": "主对话", "review": "模型审查", "auxiliary": "其他辅助请求" },
+				"variants": { "all": "全部版本", "legacy": "旧版", "optimized": "优化版", "unknown": "历史未知" }
 			}
 		},
 		"skills": {

@@ -1,5 +1,5 @@
 import { Column, Line, Pie } from "@ant-design/charts";
-import { Alert, Card, Empty, Segmented, Statistic, theme as antdTheme, Tooltip, Typography } from "antd";
+import { Alert, Card, Empty, Segmented, Select, Space, Statistic, theme as antdTheme, Tooltip, Typography } from "antd";
 import { useMemo, useState } from "react";
 import { useRequest } from "ahooks";
 import { useTranslation } from "react-i18next";
@@ -11,7 +11,9 @@ import {
 	type UsageMetricsGroupSummary,
 	type UsageMetricsLog,
 	type UsageMetricsSummary,
-	type UsageMetricsTrendPoint
+	type UsageMetricsTrendPoint,
+	type UsageOperationClass,
+	type PromptVariant
 } from "@/platform/rpc/usage-metrics-api";
 import styles from "./StatisticsSettingsPage.module.css";
 import SettingsPageSkeleton from "@/ui/SettingsPageSkeleton";
@@ -49,9 +51,19 @@ type TokenHeatmapCell = {
 
 type StatisticsData = {
 	summary: UsageMetricsSummary;
+	providerSummary: UsageMetricsSummary;
 	trends: UsageMetricsTrendPoint[];
 	recentLogs: UsageMetricsLog[];
+	diagnosticSummary: UsageMetricsSummary;
+	diagnosticByClass: Record<UsageOperationClass, UsageMetricsSummary>;
+	providerByClass: Record<UsageOperationClass, UsageMetricsSummary>;
 };
+
+const OPERATION_CLASSES: UsageOperationClass[] = ["conversation", "review", "auxiliary"];
+
+function inputTokenTotal(summary: Pick<UsageMetricsSummary, "inputTokens" | "cacheReadTokens" | "cacheCreationTokens">): number {
+	return summary.inputTokens + summary.cacheReadTokens + summary.cacheCreationTokens;
+}
 
 function getTimeRangeFilters(range: TimeRangeKey): UsageMetricsFilters | undefined {
 	if (range === "all") {
@@ -152,13 +164,14 @@ function toTopGroupRows(groups: UsageMetricsGroupSummary[], limit: number): Dist
 }
 
 function toModelTokenSegmentRows(groups: UsageMetricsGroupSummary[], limit: number, labels: { hit: string; miss: string }): ModelTokenSegmentRow[] {
-	return groups
-		.filter((group: UsageMetricsGroupSummary): boolean => group.realTotalTokens > 0)
+	return [...groups]
+		.filter((group: UsageMetricsGroupSummary): boolean => group.inputTokens + group.cacheReadTokens + group.cacheCreationTokens > 0)
+		.sort((left, right): number => inputTokenTotal(right) - inputTokenTotal(left))
 		.slice(0, limit)
 		.flatMap((group: UsageMetricsGroupSummary): ModelTokenSegmentRow[] => {
 			const modelLabel: string = group.key || "unknown";
 			const hitTokens: number = Math.max(0, group.cacheReadTokens);
-			const missTokens: number = Math.max(0, group.realTotalTokens - hitTokens);
+			const missTokens: number = Math.max(0, group.inputTokens + group.cacheCreationTokens);
 			const totalTokens: number = Math.max(1, hitTokens + missTokens);
 			return [
 				{
@@ -236,18 +249,32 @@ function createTokenHeatmapCells(points: UsageMetricsTrendPoint[], range: TimeRa
 	return cells;
 }
 
-async function loadStatisticsData(range: TimeRangeKey): Promise<StatisticsData> {
+async function loadStatisticsData(range: TimeRangeKey, promptVariant: PromptVariant | "all", diagnosticProvider?: string, diagnosticModel?: string): Promise<StatisticsData> {
 	const filters: UsageMetricsFilters | undefined = getTimeRangeFilters(range);
-	const [summary, trends, recentLogs] = await Promise.all([
+	const diagnosticFilters: UsageMetricsFilters = {
+		...filters,
+		...(promptVariant === "all" ? {} : { promptVariant }),
+		...(diagnosticProvider === undefined ? {} : { provider: diagnosticProvider }),
+		...(diagnosticModel === undefined ? {} : { model: diagnosticModel })
+	};
+	const [summary, providerSummary, trends, recentLogs, diagnosticSummary, ...classSummaries] = await Promise.all([
 		fetchUsageMetricsSummary(filters),
+		fetchUsageMetricsSummary({ ...filters, usageSource: "provider" }),
 		fetchUsageMetricsTrends({ ...filters, bucket: "day" }),
-		listUsageMetricsLogs({ ...filters, limit: 100 })
+		listUsageMetricsLogs({ ...filters, limit: 100 }),
+		fetchUsageMetricsSummary(diagnosticFilters),
+		...OPERATION_CLASSES.map((operationClass): Promise<UsageMetricsSummary> => fetchUsageMetricsSummary({ ...diagnosticFilters, operationClass })),
+		...OPERATION_CLASSES.map((operationClass): Promise<UsageMetricsSummary> => fetchUsageMetricsSummary({ ...diagnosticFilters, operationClass, usageSource: "provider" }))
 	]);
 
 	return {
 		summary,
+		providerSummary,
 		trends: trends.points,
-		recentLogs: recentLogs.logs
+		recentLogs: recentLogs.logs,
+		diagnosticSummary,
+		diagnosticByClass: Object.fromEntries(OPERATION_CLASSES.map((operationClass, index) => [operationClass, classSummaries[index]])) as Record<UsageOperationClass, UsageMetricsSummary>,
+		providerByClass: Object.fromEntries(OPERATION_CLASSES.map((operationClass, index) => [operationClass, classSummaries[index + OPERATION_CLASSES.length]])) as Record<UsageOperationClass, UsageMetricsSummary>
 	};
 }
 
@@ -263,15 +290,24 @@ function StatisticsSettingsPage(): React.JSX.Element {
 	const { t } = useTranslation();
 	const { token } = antdTheme.useToken();
 	const [range, setRange] = useState<TimeRangeKey>("30d");
+	const [promptVariant, setPromptVariant] = useState<PromptVariant | "all">("all");
+	const [diagnosticProvider, setDiagnosticProvider] = useState<string | undefined>();
+	const [diagnosticModel, setDiagnosticModel] = useState<string | undefined>();
 	const {
 		data,
 		loading: isLoading,
 		error
-	} = useRequest((): Promise<StatisticsData> => loadStatisticsData(range), {
-		refreshDeps: [range]
+	} = useRequest((): Promise<StatisticsData> => loadStatisticsData(range, promptVariant, diagnosticProvider, diagnosticModel), {
+		refreshDeps: [range, promptVariant, diagnosticProvider, diagnosticModel]
 	});
 
 	const summary: UsageMetricsSummary | null = data?.summary ?? null;
+	const diagnosticModelOptions = (summary?.byModel ?? [])
+		.filter((group: UsageMetricsGroupSummary): boolean => diagnosticProvider !== undefined && group.key.startsWith(`${diagnosticProvider}/`))
+		.map((group: UsageMetricsGroupSummary): { value: string; label: string } => {
+			const model = group.key.slice(diagnosticProvider!.length + 1);
+			return { value: model, label: model };
+		});
 	const totalTokenUsage: { value: string; suffix: string } | null = summary === null
 		? null
 		: formatTokenUsage(summary.realTotalTokens, t("settings.statistics.metrics.tokensSuffix"));
@@ -281,11 +317,11 @@ function StatisticsSettingsPage(): React.JSX.Element {
 		return toTopGroupRows(summary?.byProvider ?? [], 8);
 	}, [summary?.byProvider]);
 	const modelRows: ModelTokenSegmentRow[] = useMemo((): ModelTokenSegmentRow[] => {
-		return toModelTokenSegmentRows(summary?.byModel ?? [], 10, {
+		return toModelTokenSegmentRows(data?.providerSummary.byModel ?? [], 10, {
 			hit: t("settings.statistics.cacheSegments.hit"),
 			miss: t("settings.statistics.cacheSegments.miss")
 		});
-	}, [summary?.byModel, t]);
+	}, [data?.providerSummary.byModel, t]);
 	const requestTrendData = useMemo((): Array<{ bucket: string; requests: number }> => {
 		return (data?.trends ?? []).map((point: UsageMetricsTrendPoint) => ({
 			bucket: formatBucket(point.bucket),
@@ -408,6 +444,53 @@ function StatisticsSettingsPage(): React.JSX.Element {
 								value={formatDuration(averageFirstTokenMs)}
 							/>
 						</div>
+
+						<Card title={t("settings.statistics.cacheDiagnostics.title")}>
+							<Space wrap className={styles.cacheFilters}>
+								<Select
+									allowClear
+									placeholder={t("settings.statistics.cacheDiagnostics.provider")}
+									value={diagnosticProvider}
+									onChange={(value: string | undefined): void => { setDiagnosticProvider(value); setDiagnosticModel(undefined); }}
+									options={(summary?.byProvider ?? []).map((group: UsageMetricsGroupSummary) => ({ value: group.key, label: group.key }))}
+								/>
+								<Select
+									allowClear
+									disabled={diagnosticProvider === undefined}
+									placeholder={t("settings.statistics.cacheDiagnostics.model")}
+									value={diagnosticModel}
+									onChange={setDiagnosticModel}
+									options={diagnosticModelOptions}
+								/>
+								<Segmented<PromptVariant | "all">
+									value={promptVariant}
+									onChange={setPromptVariant}
+									options={(["all", "legacy", "optimized", "unknown"] as const).map((value) => ({ value, label: t(`settings.statistics.cacheDiagnostics.variants.${value}`) }))}
+								/>
+							</Space>
+							<div className={styles.cacheDiagnostics}>
+								<div className={styles.cacheDiagnosticsRow}>
+									<strong>{t("settings.statistics.cacheDiagnostics.category")}</strong>
+									<strong>{t("settings.statistics.cacheDiagnostics.inputShare")}</strong>
+									<strong>{t("settings.statistics.cacheDiagnostics.providerHitRate")}</strong>
+									<strong>{t("settings.statistics.cacheDiagnostics.providerCoverage")}</strong>
+									<strong>{t("settings.statistics.cacheDiagnostics.unknownInput")}</strong>
+								</div>
+								{OPERATION_CLASSES.map((operationClass) => {
+									const group = data?.diagnosticByClass[operationClass];
+									const providerGroup = data?.providerByClass[operationClass];
+									if (group === undefined || providerGroup === undefined) return null;
+									const allInput = inputTokenTotal(data?.diagnosticSummary ?? summary);
+									return <div className={styles.cacheDiagnosticsRow} key={operationClass}>
+										<span>{t(`settings.statistics.cacheDiagnostics.categories.${operationClass}`)}</span>
+										<span>{formatPercent(allInput > 0 ? inputTokenTotal(group) / allInput : 0)}</span>
+										<span>{providerGroup.providerRows > 0 ? formatPercent(providerGroup.cacheHitRate) : "–"}</span>
+										<span>{formatPercent(group.requests > 0 ? providerGroup.providerRows / group.requests : 0)}</span>
+										<span>{formatInteger(Math.max(0, inputTokenTotal(group) - inputTokenTotal(providerGroup)))}</span>
+									</div>;
+								})}
+							</div>
+						</Card>
 
 						<Card title={t("settings.statistics.heatmap.title")} className={styles.heatmapCard}>
 							{heatmapHasActivity ? (

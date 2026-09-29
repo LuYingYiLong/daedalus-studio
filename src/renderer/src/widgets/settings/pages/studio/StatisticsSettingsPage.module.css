@@ -114,6 +114,30 @@
 	min-width: 0;
 }
 
+.cacheFilters {
+	margin-bottom: var(--ds-space-3);
+}
+
+.cacheFilters :global(.ant-select) {
+	min-width: 150px;
+}
+
+.cacheDiagnostics {
+	display: grid;
+	min-width: 0;
+	overflow-x: auto;
+}
+
+.cacheDiagnosticsRow {
+	display: grid;
+	grid-template-columns: minmax(120px, 1.4fr) repeat(4, minmax(110px, 1fr));
+	gap: var(--ds-space-2);
+	min-width: 620px;
+	padding: var(--ds-space-2);
+	border-bottom: 1px solid var(--ds-border);
+	font-variant-numeric: tabular-nums;
+}
+
 .heatmapScroller {
 	width: 100%;
 	min-width: 0;

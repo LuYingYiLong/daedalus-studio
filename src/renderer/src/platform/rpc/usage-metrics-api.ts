@@ -4,6 +4,8 @@ export type UsageSource = "provider" | "estimated" | "missing";
 export type UsageMetricsStatus = "success" | "error" | "cancelled";
 export type UsageInputTokenSemantics = "fresh" | "total";
 export type UsageTrendBucket = "hour" | "day";
+export type UsageOperationClass = "conversation" | "review" | "auxiliary";
+export type PromptVariant = "legacy" | "optimized" | "unknown";
 
 export type UsageMetricsFilters = {
 	startAt?: string;
@@ -13,6 +15,8 @@ export type UsageMetricsFilters = {
 	sessionId?: string;
 	workspaceId?: string;
 	operation?: string;
+	operationClass?: UsageOperationClass;
+	promptVariant?: PromptVariant;
 	status?: UsageMetricsStatus;
 	usageSource?: UsageSource;
 };
@@ -61,6 +65,8 @@ export type UsageMetricsLog = {
 	sessionId?: string;
 	workspaceId?: string;
 	operation: string;
+	operationClass: UsageOperationClass;
+	promptVariant: PromptVariant;
 	phaseId?: string;
 	provider: string;
 	model: string;
