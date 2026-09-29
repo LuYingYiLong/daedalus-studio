@@ -3,6 +3,7 @@ import {
 	useMemo,
 	useRef,
 	useState,
+	type PointerEvent as ReactPointerEvent,
 	type ReactElement,
 	type ReactNode,
 } from "react";
@@ -46,9 +47,12 @@ import BranchActionDialog from "@/widgets/git/BranchActionDialog";
 import CommitActionDialog from "@/widgets/git/CommitActionDialog";
 import CreateBranchDialog from "@/widgets/git/CreateBranchDialog";
 import { useGitActionDialogController } from "@/features/git/useGitActionDialogController";
-import GitDiffReviewCommentDialog, {
+import GitDiffReviewCommentEditor from "./GitDiffReviewCommentEditor";
+import {
+	createReviewCommentTarget,
+	getReviewLineCoordinates,
 	type GitDiffReviewCommentTarget,
-} from "./GitDiffReviewCommentDialog";
+} from "./git-diff-review-comment-selection";
 import {
 	getSourceFolderDisplayName,
 	resolveGitReviewRequestSourceFolderId,
@@ -84,6 +88,13 @@ type ReviewCommentData = {
 	comment?: string;
 };
 
+type ReviewDragSelection = {
+	path: string;
+	hunkIndex: number;
+	startIndex: number;
+	endIndex: number;
+};
+
 function getDataRecord(value: unknown): Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value)
 		? (value as Record<string, unknown>)
@@ -114,25 +125,6 @@ function createContextId(): string {
 	return typeof crypto.randomUUID === "function"
 		? `git-review-comment-${crypto.randomUUID()}`
 		: `git-review-comment-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function getLineText(change: ChangeData): string {
-	return change.content.replace(/^[+-]/u, "").slice(0, 500);
-}
-
-function getCommentTarget(
-	filePath: string,
-	change: ChangeData,
-): GitDiffReviewCommentTarget | null {
-	if (change.type === "normal") {
-		return null;
-	}
-	return {
-		path: filePath,
-		oldLine: change.type === "delete" ? change.lineNumber : undefined,
-		newLine: change.type === "insert" ? change.lineNumber : undefined,
-		lineText: getLineText(change),
-	};
 }
 
 function parseFilePatch(
@@ -209,6 +201,9 @@ function GitDiffReviewPanel({
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [commentTarget, setCommentTarget] =
 		useState<GitDiffReviewCommentTarget | null>(null);
+	const [dragSelection, setDragSelection] =
+		useState<ReviewDragSelection | null>(null);
+	const reviewDragCleanupRef = useRef<(() => void) | null>(null);
 
 	async function loadFile(
 		path: string,
@@ -376,6 +371,7 @@ function GitDiffReviewPanel({
 	}, [onSourceFolderChange, selectedSourceFolderId, sourceFolderId]);
 
 	useEffect((): void => {
+		reviewDragCleanupRef.current?.();
 		summaryRequestIdRef.current += 1;
 		fileRequestIdsRef.current.clear();
 		setSummary(null);
@@ -385,12 +381,17 @@ function GitDiffReviewPanel({
 		setExpandedKeys([]);
 		setErrorMessage(null);
 		setCommentTarget(null);
+		setDragSelection(null);
 		setIsLoadingSummary(false);
 		setIsLoadingMore(false);
 		if (selectedSourceFolderId !== null) {
 			void loadSummary(true);
 		}
 	}, [gitStateRevision, selectedSourceFolderId, workspaceId]);
+
+	useEffect(() => {
+		return (): void => reviewDragCleanupRef.current?.();
+	}, []);
 
 	const reviewComments: AdditionalContextItem[] =
 		useMemo((): AdditionalContextItem[] => {
@@ -477,15 +478,156 @@ function GitDiffReviewPanel({
 		setExpandedKeys(autoExpandableKeys);
 	}
 
+	function startReviewDrag(
+		event: ReactPointerEvent<HTMLButtonElement>,
+		path: string,
+		hunk: HunkData,
+		hunkIndex: number,
+		startIndex: number,
+	): void {
+		if (event.button !== 0) {
+			return;
+		}
+		const hunkElement: Element | null =
+			event.currentTarget.closest("tbody.diff-hunk");
+		if (hunkElement === null) {
+			return;
+		}
+		event.preventDefault();
+		event.stopPropagation();
+		reviewDragCleanupRef.current?.();
+		setCommentTarget(null);
+		const pointerId: number = event.pointerId;
+		hunkElement.setPointerCapture(pointerId);
+		const indexByKey: Map<string, number> = new Map(
+			hunk.changes.map((change: ChangeData, index: number) => [
+				getChangeKey(change),
+				index,
+			]),
+		);
+		let endIndex: number = startIndex;
+		setDragSelection({ path, hunkIndex, startIndex, endIndex });
+
+		function updateEnd(clientX: number, clientY: number): void {
+			const pointedElement: Element | null = document.elementFromPoint(
+				clientX,
+				clientY,
+			);
+			const row: Element | null =
+				pointedElement?.closest("tr.diff-line") ?? null;
+			if (row === null || !hunkElement?.contains(row)) {
+				return;
+			}
+			const changeKey: string | null = row
+				.querySelector(".diff-code[data-change-key]")
+				?.getAttribute("data-change-key") ?? null;
+			const nextIndex: number | undefined =
+				changeKey === null ? undefined : indexByKey.get(changeKey);
+			if (nextIndex === undefined || nextIndex === endIndex) {
+				return;
+			}
+			endIndex = nextIndex;
+			setDragSelection({ path, hunkIndex, startIndex, endIndex });
+		}
+
+		function cleanup(): void {
+			if (hunkElement?.hasPointerCapture(pointerId)) {
+				hunkElement.releasePointerCapture(pointerId);
+			}
+			window.removeEventListener("pointermove", handlePointerMove, true);
+			window.removeEventListener("pointerup", handlePointerUp, true);
+			window.removeEventListener("pointercancel", handlePointerCancel, true);
+			window.removeEventListener("blur", cancelDrag);
+			if (reviewDragCleanupRef.current === cleanup) {
+				reviewDragCleanupRef.current = null;
+			}
+		}
+
+		function handlePointerMove(pointerEvent: PointerEvent): void {
+			if (pointerEvent.pointerId === pointerId) {
+				updateEnd(pointerEvent.clientX, pointerEvent.clientY);
+			}
+		}
+
+		function handlePointerUp(pointerEvent: PointerEvent): void {
+			if (pointerEvent.pointerId !== pointerId) {
+				return;
+			}
+			updateEnd(pointerEvent.clientX, pointerEvent.clientY);
+			cleanup();
+			setDragSelection(null);
+			setCommentTarget(
+				createReviewCommentTarget(
+					path,
+					hunk,
+					hunkIndex,
+					startIndex,
+					endIndex,
+				),
+			);
+		}
+
+		function cancelDrag(): void {
+			cleanup();
+			setDragSelection(null);
+		}
+
+		function handlePointerCancel(pointerEvent: PointerEvent): void {
+			if (pointerEvent.pointerId === pointerId) {
+				cancelDrag();
+			}
+		}
+
+		reviewDragCleanupRef.current = cleanup;
+		window.addEventListener("pointermove", handlePointerMove, true);
+		window.addEventListener("pointerup", handlePointerUp, true);
+		window.addEventListener("pointercancel", handlePointerCancel, true);
+		window.addEventListener("blur", cancelDrag);
+	}
+
+	function submitReviewComment(comment: string): void {
+		if (commentTarget === null) {
+			return;
+		}
+		onAddContext({
+			id: createContextId(),
+			kind: "git_diff_comment",
+			title: commentTarget.path,
+			subtitle:
+				commentTarget.lineStart === commentTarget.lineEnd
+					? t("review.commentDialog.contextMeta", {
+						line: commentTarget.lineStart,
+					})
+					: t("review.commentDialog.contextRangeMeta", {
+						start: commentTarget.lineStart,
+						end: commentTarget.lineEnd,
+					}),
+			pinned: true,
+			source: "manual",
+			resourcePath: commentTarget.path,
+			summary: comment,
+			data: {
+				workspaceId,
+				sourceFolderId: selectedSourceFolderId,
+				oldLine: commentTarget.oldLine,
+				newLine: commentTarget.newLine,
+				lineStart: commentTarget.lineStart,
+				lineEnd: commentTarget.lineEnd,
+				lineText: commentTarget.lineText,
+				comment,
+			},
+		});
+		setCommentTarget(null);
+	}
+
 	function renderComments(
 		filePath: string,
 		hunk: HunkData,
+		hunkIndex: number,
 	): Record<string, ReactNode> {
 		const widgets: Record<string, ReactNode> = {};
-		for (const change of hunk.changes) {
-			if (change.type === "normal") {
-				continue;
-			}
+		for (const [index, change] of hunk.changes.entries()) {
+			const coordinates = getReviewLineCoordinates(change);
 			const matchingComments: AdditionalContextItem[] =
 				reviewComments.filter(
 					(item: AdditionalContextItem): boolean => {
@@ -493,18 +635,16 @@ function GitDiffReviewPanel({
 							getReviewCommentData(item);
 						return (
 							item.resourcePath === filePath &&
-							data.oldLine ===
-								(change.type === "delete"
-									? change.lineNumber
-									: undefined) &&
-							data.newLine ===
-								(change.type === "insert"
-									? change.lineNumber
-									: undefined)
+							data.oldLine === coordinates.oldLine &&
+							data.newLine === coordinates.newLine
 						);
 					},
 				);
-			if (matchingComments.length === 0) {
+			const isEditorRow: boolean =
+				commentTarget?.path === filePath &&
+				commentTarget.hunkIndex === hunkIndex &&
+				commentTarget.endIndex === index;
+			if (matchingComments.length === 0 && !isEditorRow) {
 				continue;
 			}
 			widgets[getChangeKey(change)] = (
@@ -527,6 +667,13 @@ function GitDiffReviewPanel({
 							</div>
 						),
 					)}
+					{isEditorRow && commentTarget !== null ? (
+						<GitDiffReviewCommentEditor
+							target={commentTarget}
+							onCancel={(): void => setCommentTarget(null)}
+							onSubmit={submitReviewComment}
+						/>
+					) : null}
 				</div>
 			);
 		}
@@ -537,6 +684,19 @@ function GitDiffReviewPanel({
 		file: WorkspaceGitDiffFileSummary,
 		parsedFile: FileData,
 	): ReactElement {
+		const rowLocations: Map<string, { hunkIndex: number; index: number }> =
+			new Map();
+		parsedFile.hunks.forEach((hunk: HunkData, hunkIndex: number): void => {
+			hunk.changes.forEach((change: ChangeData, index: number): void => {
+				rowLocations.set(getChangeKey(change), { hunkIndex, index });
+			});
+		});
+		const activeSelection: ReviewDragSelection | GitDiffReviewCommentTarget | null =
+			dragSelection?.path === file.path
+				? dragSelection
+				: commentTarget?.path === file.path
+					? commentTarget
+					: null;
 		return (
 			<Diff
 				viewType="unified"
@@ -544,30 +704,74 @@ function GitDiffReviewPanel({
 				hunks={parsedFile.hunks}
 				gutterType="default"
 				className={styles.diffTable}
+				generateLineClassName={({ changes, defaultGenerate }): string => {
+					const location = rowLocations.get(getChangeKey(changes[0]));
+					if (
+						activeSelection === null ||
+						location === undefined ||
+						location.hunkIndex !== activeSelection.hunkIndex ||
+						location.index <
+							Math.min(activeSelection.startIndex, activeSelection.endIndex) ||
+						location.index >
+							Math.max(activeSelection.startIndex, activeSelection.endIndex)
+					) {
+						return defaultGenerate();
+					}
+					return `${defaultGenerate()} ${styles.selectedLine}`;
+				}}
 				renderGutter={(options: GutterOptions): ReactNode => {
-					const target: GitDiffReviewCommentTarget | null =
-						options.inHoverState
-							? getCommentTarget(file.path, options.change)
-							: null;
-					const shouldShowCommentButton: boolean =
-						target !== null &&
-						((options.change.type === "insert" &&
-							options.side === "new") ||
-							(options.change.type === "delete" &&
-								options.side === "old"));
+					if (options.side === "old") {
+						return null;
+					}
+					const location = rowLocations.get(getChangeKey(options.change));
+					const isDragEnd: boolean =
+						dragSelection?.path === file.path &&
+						location !== undefined &&
+						dragSelection.hunkIndex === location.hunkIndex &&
+						dragSelection.endIndex === location.index;
+					const showCommentButton: boolean =
+						location !== undefined &&
+						(dragSelection !== null
+							? isDragEnd
+							: options.inHoverState);
 					return (
 						<>
-							{options.wrapInAnchor(options.renderDefault())}
-							{shouldShowCommentButton ? (
+							{options.wrapInAnchor(
+								options.change.type === "delete"
+									? options.change.lineNumber
+									: options.renderDefault(),
+							)}
+							{showCommentButton && location !== undefined ? (
 								<Button
 									size="small"
 									className={styles.addCommentButton}
 									aria-label={t("review.commentDialog.open")}
+									onPointerDown={(
+										event: ReactPointerEvent<HTMLButtonElement>,
+									): void => {
+										startReviewDrag(
+											event,
+											file.path,
+											parsedFile.hunks[location.hunkIndex],
+											location.hunkIndex,
+											location.index,
+										);
+									}}
 									onClick={(
 										event: React.MouseEvent<HTMLButtonElement>,
 									): void => {
 										event.stopPropagation();
-										setCommentTarget(target);
+										if (event.detail === 0) {
+											setCommentTarget(
+												createReviewCommentTarget(
+													file.path,
+													parsedFile.hunks[location.hunkIndex],
+													location.hunkIndex,
+													location.index,
+													location.index,
+												),
+											);
+										}
 									}}
 									icon={<Icon name="add" />}
 								/>
@@ -578,8 +782,8 @@ function GitDiffReviewPanel({
 				widgets={Object.assign(
 					{},
 					...parsedFile.hunks.map(
-						(hunk: HunkData): Record<string, ReactNode> =>
-							renderComments(file.path, hunk),
+						(hunk: HunkData, hunkIndex: number): Record<string, ReactNode> =>
+							renderComments(file.path, hunk, hunkIndex),
 					),
 				)}
 			>
@@ -658,7 +862,9 @@ function GitDiffReviewPanel({
 				title={t("review.notices.diffParseFailed")}
 			/>
 		) : (
-			renderDiff(file, parsedFile)
+			<div className={styles.diffViewport}>
+				{renderDiff(file, parsedFile)}
+			</div>
 		);
 	}
 
@@ -811,39 +1017,6 @@ function GitDiffReviewPanel({
 					</div>
 				)}
 			</div>
-			<GitDiffReviewCommentDialog
-				target={commentTarget}
-				onCancel={(): void => setCommentTarget(null)}
-				onSubmit={(comment: string): void => {
-					if (commentTarget === null) {
-						return;
-					}
-					onAddContext({
-						id: createContextId(),
-						kind: "git_diff_comment",
-						title: commentTarget.path,
-						subtitle: t("review.commentDialog.contextMeta", {
-							line:
-								commentTarget.newLine ??
-								commentTarget.oldLine ??
-								0,
-						}),
-						pinned: true,
-						source: "manual",
-						resourcePath: commentTarget.path,
-						summary: comment,
-						data: {
-							workspaceId,
-							sourceFolderId: selectedSourceFolderId,
-							oldLine: commentTarget.oldLine,
-							newLine: commentTarget.newLine,
-							lineText: commentTarget.lineText,
-							comment,
-						},
-					});
-					setCommentTarget(null);
-				}}
-			/>
 			<CommitActionDialog {...gitActions.commitDialogProps} />
 			<BranchActionDialog {...gitActions.branchDialogProps} />
 			<CreateBranchDialog {...gitActions.createBranchDialogProps} />

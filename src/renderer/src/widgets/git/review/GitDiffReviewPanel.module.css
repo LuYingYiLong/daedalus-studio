@@ -89,12 +89,12 @@
 }
 
 .diffContent {
-	display: grid;
+	width: 100%;
 	min-width: 0;
 }
 
 .fileCollapse {
-	display: grid;
+	width: 100%;
 	min-width: 0;
 	background: transparent;
 }
@@ -160,8 +160,18 @@
 	padding: var(--ds-space-2);
 }
 
-.diffTable {
+.diffViewport {
 	width: 100%;
+	min-width: 0;
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	container-type: inline-size;
+}
+
+.diffTable {
+	width: max-content;
+	min-width: 100%;
+	table-layout: auto;
 	font-size: var(--diff-font-size);
 	line-height: 1.55;
 	background: var(--diff-background-color);
@@ -206,6 +216,11 @@
 	background-color: var(--diff-code-delete-background-color);
 }
 
+.diffTable .selectedLine :global(.diff-gutter),
+.diffTable .selectedLine :global(.diff-code) {
+	background-color: var(--ds-accent-muted);
+}
+
 .diffTable :global(.diff-code-insert .diff-code-edit) {
 	background-color: var(--diff-code-insert-edit-background-color);
 }
@@ -220,6 +235,15 @@
 
 .diffTable :global(.diff-decoration) {
 	background-color: var(--ds-bg-sunken);
+}
+
+.diffTable :global(col.diff-gutter-col:first-child),
+.diffTable :global(.diff-line > .diff-gutter:first-child) {
+	display: none;
+}
+
+.diffTable :global(col.diff-gutter-col:nth-child(2)) {
+	width: 48px;
 }
 
 .diffTable :global(.diff-gutter) {
@@ -243,6 +267,10 @@
 .reviewComments {
 	display: grid;
 	gap: 4px;
+	position: sticky;
+	left: 0;
+	box-sizing: border-box;
+	width: 100cqi;
 	padding: 4px 8px 6px 56px;
 	background: var(--ds-surface-sunken);
 }
@@ -261,8 +289,9 @@
 }
 
 .diffTable :global(.diff-code) {
-	overflow-wrap: anywhere;
-	white-space: pre-wrap;
+	overflow-wrap: normal;
+	white-space: pre;
+	word-break: normal;
 }
 
 .hunkHeader {

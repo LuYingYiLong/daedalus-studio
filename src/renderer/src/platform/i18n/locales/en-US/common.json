@@ -1893,13 +1893,11 @@
 			"description": "This preview was not loaded so the review panel stays responsive."
 		},
 		"commentDialog": {
-			"title": "Request changes",
-			"open": "Request changes on this line",
-			"target": "{{path}}, line {{line}}",
+			"open": "Add inline review comment",
 			"label": "What should change?",
-			"required": "Enter the requested change.",
 			"submit": "Add comment",
-			"contextMeta": "Review comment on line {{line}}"
+			"contextMeta": "Review comment on line {{line}}",
+			"contextRangeMeta": "Review comment on lines {{start}}–{{end}}"
 		},
 		"errors": {
 			"loadDiff": "Failed to load git diff.",

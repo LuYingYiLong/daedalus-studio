@@ -2,6 +2,7 @@ import { useRef, type Dispatch, type SetStateAction } from "react";
 import { saveImageAttachment, saveTextAttachment } from "@/platform/rpc/image-attachment-api";
 import type { AdditionalContextItem, WorkbenchPatch, WorkbenchPatchResult, WorkbenchSnapshot, WorkspaceConfig } from "@/platform/rpc/types";
 import { createImageImportTask, prepareImageFile, type ImageImport } from "./image-import";
+import { patchContextForCurrentSession } from "./context-patch";
 import type { PastedTextAttachmentInput } from "@/domain/conversation/pasted-text-attachment";
 import {
 	CONTEXT_SUBTITLE_MAX_CHARS,
@@ -79,7 +80,21 @@ export default function useWorkspaceContextController(params: WorkspaceContextCo
 	}
 
 	function patchContext(action: ContextPatchAction): void {
-		params.queueWorkbenchPatch({ additionalContextAction: action }, true);
+		void patchContextForCurrentSession(action, {
+			getNavigationVersion: () => latest.current.getNavigationVersion(),
+			getActiveSessionId: () => latest.current.getActiveSessionId(),
+			ensureActiveSessionId: () => latest.current.ensureActiveSessionId(),
+			queueWorkbenchPatch: (patch, immediate) => latest.current.queueWorkbenchPatch(patch, immediate),
+			sendWorkbenchPatch: (patch, applyResult, beforeSend) => latest.current.sendWorkbenchPatch(patch, applyResult, beforeSend),
+			applyWorkbench: (workbench) => latest.current.applyWorkbench(workbench),
+		}).then((result): void => {
+			if (result === "unavailable") {
+				latest.current.showTransientError("Please open a session before adding context.");
+			}
+		}).catch((error: unknown): void => {
+			latest.current.showTransientError(error instanceof Error ? error.message : "Failed to add context");
+			console.error("[App] add context failed", error);
+		});
 	}
 
 	async function handleAddImageFiles(files: File[]): Promise<void> {

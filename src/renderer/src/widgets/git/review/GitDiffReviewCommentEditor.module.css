@@ -1,0 +1,19 @@
+.editor {
+	width: 100%;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-surface-elevated);
+}
+
+.input {
+	border: 0;
+	box-shadow: none !important;
+	background: transparent !important;
+}
+
+.actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--ds-space-1);
+	padding: 0 var(--ds-space-1) var(--ds-space-1) 0;
+}

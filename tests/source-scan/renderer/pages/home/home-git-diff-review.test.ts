@@ -162,7 +162,7 @@ describe("HomePage git diff review source", () => {
 		expect(reviewPanelSource).toContain('kind: "git_diff_comment"');
 		expect(reviewPanelSource).toContain("onAddContext({");
 		expect(reviewPanelSource).toContain("onRemoveContext(item.id)");
-		expect(reviewPanelSource).toContain("<GitDiffReviewCommentDialog");
+		expect(reviewPanelSource).toContain("<GitDiffReviewCommentEditor");
 	});
 
 	it("uses dnd-kit to reorder dock tabs", () => {

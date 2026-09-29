@@ -107,6 +107,11 @@ function getMeta(item: AdditionalContextItem, t: TFunction<"common">): string {
 
 	if (item.kind === "git_diff_comment") {
 		const data: Record<string, unknown> = getDataRecord(item);
+		const lineStart: number = typeof data.lineStart === "number" ? data.lineStart : 0;
+		const lineEnd: number = typeof data.lineEnd === "number" ? data.lineEnd : 0;
+		if (lineStart > 0 && lineEnd > 0 && lineStart !== lineEnd) {
+			return t("chat.contextStrip.display.linesRange", { start: lineStart, end: lineEnd });
+		}
 		const line: number = typeof data.newLine === "number" ? data.newLine : typeof data.oldLine === "number" ? data.oldLine : 0;
 		return line > 0 ? t("chat.contextStrip.display.line", { line }) : t("chat.contextStrip.display.reviewComment");
 	}

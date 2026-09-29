@@ -1888,13 +1888,11 @@
 			"description": "为保持审阅面板流畅，未加载该文件预览。"
 		},
 		"commentDialog": {
-			"title": "请求更改",
-			"open": "请求更改此行",
-			"target": "{{path}}，第 {{line}} 行",
+			"open": "添加行内评论",
 			"label": "需要如何更改？",
-			"required": "请输入请求更改的内容。",
 			"submit": "添加评论",
-			"contextMeta": "第 {{line}} 行审阅评论"
+			"contextMeta": "第 {{line}} 行审阅评论",
+			"contextRangeMeta": "第 {{start}}–{{end}} 行审阅评论"
 		},
 		"errors": {
 			"loadDiff": "加载 Git diff 失败。",
