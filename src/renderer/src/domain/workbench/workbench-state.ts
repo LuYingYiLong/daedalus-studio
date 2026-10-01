@@ -1,6 +1,15 @@
 import type { BackendEvent } from "@/platform/rpc/transport/backend-rpc-client";
 import { isSubagentScopedEvent } from "@/domain/run/backend-event-state";
-import type { SessionOpenResult, SessionTimelineResult, TimelineAssistantBlock, TimelineBlock, TimelineBodyPart, TimelineDividerBlock, TimelineDividerModelRef, WorkbenchSnapshot } from "@/platform/rpc/types";
+import type {
+	SessionOpenResult,
+	SessionTimelineResult,
+	TimelineAssistantBlock,
+	TimelineBlock,
+	TimelineBodyPart,
+	TimelineDividerBlock,
+	TimelineDividerModelRef,
+	WorkbenchSnapshot,
+} from "@/platform/rpc/types";
 
 export type TimelinePageState = {
 	sessionId: string | null;
@@ -23,19 +32,16 @@ export const emptyTimelinePage: TimelinePageState = {
 	blockCount: 0,
 	blockOffset: 0,
 	hasMoreBefore: false,
-	hasMoreAfter: false
+	hasMoreAfter: false,
 };
 
 export const MAX_TIMELINE_WINDOW_BLOCKS: number = 400;
-const TIMELINE_STREAM_DELTA_EVENTS: ReadonlySet<string> = new Set([
-	"agent.message.delta",
-	"agent.thinking.delta"
-]);
+const TIMELINE_STREAM_DELTA_EVENTS: ReadonlySet<string> = new Set(["agent.message.delta", "agent.thinking.delta"]);
 
 export const initialWorkbenchSessionState: WorkbenchSessionState = {
 	activeSessionId: null,
 	workbench: null,
-	timeline: emptyTimelinePage
+	timeline: emptyTimelinePage,
 };
 
 export type TimelineEventApplyOptions = {
@@ -50,14 +56,14 @@ export function applyWorkbenchSnapshot(current: WorkbenchSnapshot | null, next: 
 	const currentRunSequence: number | undefined = current?.activeRun.sequence;
 	const nextRunSequence: number | undefined = next.activeRun.sequence;
 	if (
-		current !== null
-		&& typeof currentRunSequence === "number"
-		&& typeof nextRunSequence === "number"
-		&& nextRunSequence < currentRunSequence
+		current !== null &&
+		typeof currentRunSequence === "number" &&
+		typeof nextRunSequence === "number" &&
+		nextRunSequence < currentRunSequence
 	) {
 		return {
 			...next,
-			activeRun: current.activeRun
+			activeRun: current.activeRun,
 		};
 	}
 
@@ -105,10 +111,10 @@ function coalesceTimelineStreamingEvents(events: readonly BackendEvent[]): Backe
 	for (const event of events) {
 		const previousEvent: BackendEvent | undefined = coalescedEvents[coalescedEvents.length - 1];
 		if (
-			previousEvent === undefined
-			|| !isTimelineStreamingDeltaEvent(event)
-			|| !isTimelineStreamingDeltaEvent(previousEvent)
-			|| getTimelineStreamingEventKey(previousEvent) !== getTimelineStreamingEventKey(event)
+			previousEvent === undefined ||
+			!isTimelineStreamingDeltaEvent(event) ||
+			!isTimelineStreamingDeltaEvent(previousEvent) ||
+			getTimelineStreamingEventKey(previousEvent) !== getTimelineStreamingEventKey(event)
 		) {
 			coalescedEvents.push(event);
 			continue;
@@ -121,8 +127,8 @@ function coalesceTimelineStreamingEvents(events: readonly BackendEvent[]): Backe
 			data: {
 				...previousData,
 				...currentData,
-				text: getStringValue(previousData, "text") + getStringValue(currentData, "text")
-			}
+				text: getStringValue(previousData, "text") + getStringValue(currentData, "text"),
+			},
 		};
 	}
 
@@ -140,7 +146,7 @@ function appendMarkdownPart(parts: TimelineBodyPart[], text: string): TimelineBo
 	if (lastPart?.type === "markdown") {
 		nextParts[nextParts.length - 1] = {
 			...lastPart,
-			text: lastPart.text + text
+			text: lastPart.text + text,
 		};
 		return nextParts;
 	}
@@ -154,7 +160,10 @@ function appendFinalMarkdownPart(parts: TimelineBodyPart[], text: string): Timel
 	}
 
 	const existingContent: string = parts
-		.filter((part: TimelineBodyPart): part is Extract<TimelineBodyPart, { type: "markdown" }> => part.type === "markdown")
+		.filter(
+			(part: TimelineBodyPart): part is Extract<TimelineBodyPart, { type: "markdown" }> =>
+				part.type === "markdown",
+		)
 		.map((part: Extract<TimelineBodyPart, { type: "markdown" }>): string => part.text)
 		.join("");
 
@@ -191,20 +200,22 @@ function getActivityMetadata(data: Record<string, unknown>): TimelineActivityMet
 		...(activityGroupId.length === 0 ? {} : { activityGroupId }),
 		...(activityPartId.length === 0 ? {} : { activityPartId }),
 		...(activityPartKind === "thinking" || activityPartKind === "tool" ? { activityPartKind } : {}),
-		...(activityGroupId.length === 0 || activityPartId.length === 0 ? {} : {
-			activityGroupStats: {
-				editedFiles: typeof stats.editedFiles === "number" ? stats.editedFiles : 0,
-				commands: typeof stats.commands === "number" ? stats.commands : 0,
-				...(typeof stats.tools === "number" ? { tools: stats.tools } : {}),
-				thoughts: typeof stats.thoughts === "number" ? stats.thoughts : 0
-			}
-		})
+		...(activityGroupId.length === 0 || activityPartId.length === 0
+			? {}
+			: {
+					activityGroupStats: {
+						editedFiles: typeof stats.editedFiles === "number" ? stats.editedFiles : 0,
+						commands: typeof stats.commands === "number" ? stats.commands : 0,
+						...(typeof stats.tools === "number" ? { tools: stats.tools } : {}),
+						thoughts: typeof stats.thoughts === "number" ? stats.thoughts : 0,
+					},
+				}),
 	};
 }
 
 function mergeToolActivityMetadata(
 	current: TimelineActivityMetadata,
-	incoming: TimelineActivityMetadata
+	incoming: TimelineActivityMetadata,
 ): TimelineActivityMetadata {
 	if (incoming.detailLevel === "compacted") {
 		return { ...current, ...incoming };
@@ -219,17 +230,25 @@ function mergeToolActivityMetadata(
 	return {
 		...current,
 		activityGroupStats: {
-			editedFiles: Math.max(current.activityGroupStats?.editedFiles ?? 0, incoming.activityGroupStats.editedFiles),
+			editedFiles: Math.max(
+				current.activityGroupStats?.editedFiles ?? 0,
+				incoming.activityGroupStats.editedFiles,
+			),
 			commands: Math.max(current.activityGroupStats?.commands ?? 0, incoming.activityGroupStats.commands),
 			...(current.activityGroupStats?.tools !== undefined || incoming.activityGroupStats.tools !== undefined
 				? { tools: Math.max(current.activityGroupStats?.tools ?? 0, incoming.activityGroupStats.tools ?? 0) }
 				: {}),
-			thoughts: Math.max(current.activityGroupStats?.thoughts ?? 0, incoming.activityGroupStats.thoughts)
-		}
+			thoughts: Math.max(current.activityGroupStats?.thoughts ?? 0, incoming.activityGroupStats.thoughts),
+		},
 	};
 }
 
-function appendThinkingPart(parts: TimelineBodyPart[], text: string, done: boolean, metadata: TimelineActivityMetadata = {}): TimelineBodyPart[] {
+function appendThinkingPart(
+	parts: TimelineBodyPart[],
+	text: string,
+	done: boolean,
+	metadata: TimelineActivityMetadata = {},
+): TimelineBodyPart[] {
 	const nextParts: TimelineBodyPart[] = [...parts];
 
 	const lastPart: TimelineBodyPart | undefined = nextParts.at(-1);
@@ -237,7 +256,7 @@ function appendThinkingPart(parts: TimelineBodyPart[], text: string, done: boole
 		nextParts[nextParts.length - 1] = {
 			...lastPart,
 			text: lastPart.text + text,
-			...metadata
+			...metadata,
 		};
 		return nextParts;
 	}
@@ -252,7 +271,9 @@ function appendThinkingPart(parts: TimelineBodyPart[], text: string, done: boole
 			nextParts[index] = {
 				...part,
 				done: true,
-				...(part.activityGroupId === metadata.activityGroupId || metadata.activityGroupId === undefined ? metadata : {})
+				...(part.activityGroupId === metadata.activityGroupId || metadata.activityGroupId === undefined
+					? metadata
+					: {}),
 			};
 			return nextParts;
 		}
@@ -277,14 +298,18 @@ function finishRunningThinkingParts(parts: TimelineBodyPart[]): TimelineBodyPart
 
 const MAX_TERMINAL_RUNTIME_STREAM_CHARS: number = 6000;
 
-function appendTerminalRuntimeTail(current: string, delta: string, omittedChars: number): { text: string; omittedChars: number } {
+function appendTerminalRuntimeTail(
+	current: string,
+	delta: string,
+	omittedChars: number,
+): { text: string; omittedChars: number } {
 	const combined: string = current + delta;
 	if (combined.length <= MAX_TERMINAL_RUNTIME_STREAM_CHARS) {
 		return { text: combined, omittedChars };
 	}
 	return {
 		text: combined.slice(-MAX_TERMINAL_RUNTIME_STREAM_CHARS),
-		omittedChars: omittedChars + combined.length - MAX_TERMINAL_RUNTIME_STREAM_CHARS
+		omittedChars: omittedChars + combined.length - MAX_TERMINAL_RUNTIME_STREAM_CHARS,
 	};
 }
 
@@ -295,7 +320,11 @@ function truncateTextByCodePoints(text: string, count: number): { text: string; 
 	return { text: codePoints.slice(0, codePoints.length - removed).join(""), removed };
 }
 
-function discardAttemptText(parts: TimelineBodyPart[], type: "markdown" | "thinking", count: number): TimelineBodyPart[] {
+function discardAttemptText(
+	parts: TimelineBodyPart[],
+	type: "markdown" | "thinking",
+	count: number,
+): TimelineBodyPart[] {
 	let remaining: number = Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0;
 	if (remaining === 0) return parts;
 	const nextParts: TimelineBodyPart[] = [...parts];
@@ -322,15 +351,20 @@ function appendProviderReconnectPart(parts: TimelineBodyPart[], data: Record<str
 	const reconnectId: string = getStringValue(data, "reconnectId");
 	const revision: number = getFiniteNumber(data, "revision");
 	if (reconnectId.length === 0 || revision <= 0) return parts;
-	const existingIndex: number = parts.findIndex((part: TimelineBodyPart): boolean => (
-		part.type === "provider_reconnect" && part.reconnectId === reconnectId
-	));
-	const existing: Extract<TimelineBodyPart, { type: "provider_reconnect" }> | undefined = existingIndex >= 0
-		? parts[existingIndex] as Extract<TimelineBodyPart, { type: "provider_reconnect" }>
-		: undefined;
+	const existingIndex: number = parts.findIndex(
+		(part: TimelineBodyPart): boolean => part.type === "provider_reconnect" && part.reconnectId === reconnectId,
+	);
+	const existing: Extract<TimelineBodyPart, { type: "provider_reconnect" }> | undefined =
+		existingIndex >= 0
+			? (parts[existingIndex] as Extract<TimelineBodyPart, { type: "provider_reconnect" }>)
+			: undefined;
 	if (existing !== undefined && existing.revision >= revision) return parts;
 
-	let nextParts: TimelineBodyPart[] = discardAttemptText(parts, "markdown", getFiniteNumber(data, "discardedMessageCodePoints"));
+	let nextParts: TimelineBodyPart[] = discardAttemptText(
+		parts,
+		"markdown",
+		getFiniteNumber(data, "discardedMessageCodePoints"),
+	);
 	nextParts = discardAttemptText(nextParts, "thinking", getFiniteNumber(data, "discardedThinkingCodePoints"));
 	const status: string = getStringValue(data, "status");
 	const reason: string = getStringValue(data, "reason");
@@ -341,25 +375,29 @@ function appendProviderReconnectPart(parts: TimelineBodyPart[], data: Record<str
 		provider: getStringValue(data, "provider"),
 		model: getStringValue(data, "model"),
 		status: status === "reconnecting" || status === "recovered" || status === "failed" ? status : "waiting",
-		reason: reason === "idle_timeout" || reason === "gateway" || reason === "rate_limit" || reason === "server" ? reason : "transport",
+		reason:
+			reason === "idle_timeout" || reason === "gateway" || reason === "rate_limit" || reason === "server"
+				? reason
+				: "transport",
 		attempt: Math.max(0, Math.trunc(getFiniteNumber(data, "attempt"))),
-		maxAttempts: getFiniteNumber(data, "maxAttempts") === 15
-			? 15
-			: getFiniteNumber(data, "maxAttempts") === 2 ? 2 : 5,
+		maxAttempts:
+			getFiniteNumber(data, "maxAttempts") === 15 ? 15 : getFiniteNumber(data, "maxAttempts") === 2 ? 2 : 5,
 		timeoutMs: Math.max(0, Math.trunc(getFiniteNumber(data, "timeoutMs"))),
 		autoExtended: data.autoExtended === true,
-		...(getStringValue(data, "retryAt").length === 0 ? {} : { retryAt: getStringValue(data, "retryAt") })
+		...(getStringValue(data, "retryAt").length === 0 ? {} : { retryAt: getStringValue(data, "retryAt") }),
 	};
-	const currentIndex: number = nextParts.findIndex((item: TimelineBodyPart): boolean => (
-		item.type === "provider_reconnect" && item.reconnectId === reconnectId
-	));
+	const currentIndex: number = nextParts.findIndex(
+		(item: TimelineBodyPart): boolean => item.type === "provider_reconnect" && item.reconnectId === reconnectId,
+	);
 	if (currentIndex < 0) return [...nextParts, part];
-	return nextParts.map((item: TimelineBodyPart, index: number): TimelineBodyPart => index === currentIndex ? part : item);
+	return nextParts.map(
+		(item: TimelineBodyPart, index: number): TimelineBodyPart => (index === currentIndex ? part : item),
+	);
 }
 
 function mergeTerminalOutputProgress(
 	events: Record<string, unknown>[],
-	normalizedEvent: Record<string, unknown>
+	normalizedEvent: Record<string, unknown>,
 ): Record<string, unknown>[] {
 	const delta: unknown = normalizedEvent.terminalOutputDelta;
 	if (!isRecord(delta) || (delta.stream !== "stdout" && delta.stream !== "stderr")) {
@@ -367,10 +405,13 @@ function mergeTerminalOutputProgress(
 	}
 	const sequence: number = typeof delta.sequence === "number" && Number.isFinite(delta.sequence) ? delta.sequence : 0;
 	const deltaText: string = getStringValue(delta, "text");
-	const deltaOmittedChars: number = typeof delta.omittedChars === "number" && Number.isFinite(delta.omittedChars)
-		? Math.max(0, Math.floor(delta.omittedChars))
-		: 0;
-	const existingIndex: number = events.findIndex((item: Record<string, unknown>): boolean => item.code === "terminal_output");
+	const deltaOmittedChars: number =
+		typeof delta.omittedChars === "number" && Number.isFinite(delta.omittedChars)
+			? Math.max(0, Math.floor(delta.omittedChars))
+			: 0;
+	const existingIndex: number = events.findIndex(
+		(item: Record<string, unknown>): boolean => item.code === "terminal_output",
+	);
 	const existingEvent: Record<string, unknown> = existingIndex < 0 ? {} : events[existingIndex]!;
 	const runtimeOutput: Record<string, unknown> = isRecord(existingEvent.terminalRuntimeOutput)
 		? existingEvent.terminalRuntimeOutput
@@ -381,36 +422,43 @@ function mergeTerminalOutputProgress(
 	}
 	const stream: "stdout" | "stderr" = delta.stream;
 	const currentText: string = typeof runtimeOutput[stream] === "string" ? runtimeOutput[stream] : "";
-	const omittedKey: "stdoutOmittedChars" | "stderrOmittedChars" = stream === "stdout" ? "stdoutOmittedChars" : "stderrOmittedChars";
+	const omittedKey: "stdoutOmittedChars" | "stderrOmittedChars" =
+		stream === "stdout" ? "stdoutOmittedChars" : "stderrOmittedChars";
 	const currentOmittedChars: number = typeof runtimeOutput[omittedKey] === "number" ? runtimeOutput[omittedKey] : 0;
-	const nextTail = appendTerminalRuntimeTail(currentText, deltaText, Math.max(currentOmittedChars, deltaOmittedChars));
+	const nextTail = appendTerminalRuntimeTail(
+		currentText,
+		deltaText,
+		Math.max(currentOmittedChars, deltaOmittedChars),
+	);
 	const mergedEvent: Record<string, unknown> = {
 		...normalizedEvent,
 		terminalRuntimeOutput: {
 			...runtimeOutput,
 			[stream]: nextTail.text,
 			[omittedKey]: nextTail.omittedChars,
-			lastSequence: sequence
-		}
+			lastSequence: sequence,
+		},
 	};
 	delete mergedEvent.terminalOutputDelta;
 
 	if (existingIndex < 0) {
 		return [...events, mergedEvent];
 	}
-	return events.map((item: Record<string, unknown>, index: number): Record<string, unknown> => (
-		index === existingIndex ? mergedEvent : item
-	));
+	return events.map(
+		(item: Record<string, unknown>, index: number): Record<string, unknown> =>
+			index === existingIndex ? mergedEvent : item,
+	);
 }
 
 function appendToolPart(parts: TimelineBodyPart[], event: BackendEvent): TimelineBodyPart[] {
 	const data: Record<string, unknown> = getEventData(event);
-	const toolCallId: string = getStringValue(data, "toolCallId")
-		|| getStringValue(data, "approvalId")
-		|| `${getStringValue(data, "toolName") || "tool"}:${getTransportEventId(event)}`;
+	const toolCallId: string =
+		getStringValue(data, "toolCallId") ||
+		getStringValue(data, "approvalId") ||
+		`${getStringValue(data, "toolName") || "tool"}:${getTransportEventId(event)}`;
 	const normalizedEvent: Record<string, unknown> = {
 		...data,
-		type: event.event.startsWith("agent.tool.") ? event.event.replace("agent.tool.", "tool.") : event.event
+		type: event.event.startsWith("agent.tool.") ? event.event.replace("agent.tool.", "tool.") : event.event,
 	};
 
 	for (const part of parts) {
@@ -420,33 +468,48 @@ function appendToolPart(parts: TimelineBodyPart[], event: BackendEvent): Timelin
 					return item;
 				}
 
-				const nextEvents: Record<string, unknown>[] = normalizedEvent.code === "terminal_output"
-					? mergeTerminalOutputProgress(item.events, normalizedEvent)
-					: normalizedEvent.type === "tool.result" && isRecord(normalizedEvent.terminalDisplay)
-						? [...item.events.filter((toolEvent: Record<string, unknown>): boolean => toolEvent.code !== "terminal_output"), normalizedEvent]
-						: [...item.events, normalizedEvent];
+				const nextEvents: Record<string, unknown>[] =
+					normalizedEvent.code === "terminal_output"
+						? mergeTerminalOutputProgress(item.events, normalizedEvent)
+						: normalizedEvent.type === "tool.result" && isRecord(normalizedEvent.terminalDisplay)
+							? [
+									...item.events.filter(
+										(toolEvent: Record<string, unknown>): boolean =>
+											toolEvent.code !== "terminal_output",
+									),
+									normalizedEvent,
+								]
+							: [...item.events, normalizedEvent];
 				return {
 					...item,
 					// A result may be delivered after streamed prose. Keep this card in
 					// the activity group established by its first event.
 					...mergeToolActivityMetadata(item, getActivityMetadata(data)),
-					events: nextEvents
+					events: nextEvents,
 				};
 			});
 		}
 	}
 
-	return [...parts, {
-		type: "tool",
-		tool_call_id: toolCallId,
-		...getActivityMetadata(data),
-		events: normalizedEvent.code === "terminal_output"
-			? mergeTerminalOutputProgress([], normalizedEvent)
-			: [normalizedEvent]
-	}];
+	return [
+		...parts,
+		{
+			type: "tool",
+			tool_call_id: toolCallId,
+			...getActivityMetadata(data),
+			events:
+				normalizedEvent.code === "terminal_output"
+					? mergeTerminalOutputProgress([], normalizedEvent)
+					: [normalizedEvent],
+		},
+	];
 }
 
-function toolPartMatchesEvent(part: Extract<TimelineBodyPart, { type: "tool" }>, toolCallId: string, data: Record<string, unknown>): boolean {
+function toolPartMatchesEvent(
+	part: Extract<TimelineBodyPart, { type: "tool" }>,
+	toolCallId: string,
+	data: Record<string, unknown>,
+): boolean {
 	if (part.tool_call_id === toolCallId) {
 		return true;
 	}
@@ -465,9 +528,11 @@ function toolPartMatchesEvent(part: Extract<TimelineBodyPart, { type: "tool" }>,
 }
 
 function getToolCallKey(data: Record<string, unknown>, event: BackendEvent): string {
-	return getStringValue(data, "toolCallId")
-		|| getStringValue(data, "approvalId")
-		|| `${getStringValue(data, "toolName") || "tool"}:${getTransportEventId(event)}`;
+	return (
+		getStringValue(data, "toolCallId") ||
+		getStringValue(data, "approvalId") ||
+		`${getStringValue(data, "toolName") || "tool"}:${getTransportEventId(event)}`
+	);
 }
 
 function getImageGenerationPrompt(data: Record<string, unknown>): string {
@@ -496,7 +561,7 @@ function appendImageGenerationPart(parts: TimelineBodyPart[], event: BackendEven
 			type: "image_generation",
 			status: "running",
 			toolCallId,
-			prompt: getImageGenerationPrompt(data)
+			prompt: getImageGenerationPrompt(data),
 		};
 	} else if (event.event === "agent.tool.result") {
 		const imageGeneration: unknown = data.imageGeneration;
@@ -512,8 +577,11 @@ function appendImageGenerationPart(parts: TimelineBodyPart[], event: BackendEven
 			provider: getStringValue(imageGeneration, "provider"),
 			model: getStringValue(imageGeneration, "model"),
 			artifacts: Array.isArray(artifactsValue)
-				? artifactsValue.filter(isRecord) as Extract<TimelineBodyPart, { type: "image_generation" }>["artifacts"]
-				: []
+				? (artifactsValue.filter(isRecord) as Extract<
+						TimelineBodyPart,
+						{ type: "image_generation" }
+					>["artifacts"])
+				: [],
 		};
 	} else if (event.event === "agent.tool.error") {
 		nextPart = {
@@ -521,7 +589,7 @@ function appendImageGenerationPart(parts: TimelineBodyPart[], event: BackendEven
 			status: "failed",
 			toolCallId,
 			prompt: getImageGenerationPrompt(data),
-			error: getStringValue(data, "message")
+			error: getStringValue(data, "message"),
 		};
 	}
 
@@ -537,7 +605,7 @@ function appendImageGenerationPart(parts: TimelineBodyPart[], event: BackendEven
 		replaced = true;
 		return {
 			...nextPart,
-			prompt: nextPart.prompt.length > 0 ? nextPart.prompt : part.prompt
+			prompt: nextPart.prompt.length > 0 ? nextPart.prompt : part.prompt,
 		};
 	});
 
@@ -548,18 +616,24 @@ function appendSummaryStartPart(parts: TimelineBodyPart[], event: BackendEvent):
 	const data: Record<string, unknown> = getEventData(event);
 	const stepRunId: string = getStringValue(data, "stepRunId");
 
-	if (stepRunId.length > 0 && parts.some((part: TimelineBodyPart): boolean => part.type === "summary_start" && part.stepRunId === stepRunId)) {
+	if (
+		stepRunId.length > 0 &&
+		parts.some((part: TimelineBodyPart): boolean => part.type === "summary_start" && part.stepRunId === stepRunId)
+	) {
 		return parts;
 	}
 
-	return [...parts, {
-		type: "summary_start",
-		runId: getStringValue(data, "runId"),
-		stepId: getStringValue(data, "stepId"),
-		stepRunId,
-		title: getStringValue(data, "title") || "Summary",
-		foldTitle: getStringValue(data, "foldTitle") || "Process"
-	}];
+	return [
+		...parts,
+		{
+			type: "summary_start",
+			runId: getStringValue(data, "runId"),
+			stepId: getStringValue(data, "stepId"),
+			stepRunId,
+			title: getStringValue(data, "title") || "Summary",
+			foldTitle: getStringValue(data, "foldTitle") || "Process",
+		},
+	];
 }
 
 function appendCompressionPart(parts: TimelineBodyPart[], event: BackendEvent): TimelineBodyPart[] {
@@ -567,23 +641,22 @@ function appendCompressionPart(parts: TimelineBodyPart[], event: BackendEvent): 
 	const compressionId: string = getStringValue(data, "compressionId");
 	if (compressionId.length === 0) return parts;
 	const statusValue: string = getStringValue(data, "status");
-	const status: Extract<TimelineBodyPart, { type: "compression" }>["status"] = (
-		statusValue === "completed" || statusValue === "skipped" || statusValue === "failed"
-	) ? statusValue : "running";
+	const status: Extract<TimelineBodyPart, { type: "compression" }>["status"] =
+		statusValue === "completed" || statusValue === "skipped" || statusValue === "failed" ? statusValue : "running";
 	const nextPart: Extract<TimelineBodyPart, { type: "compression" }> = {
 		type: "compression",
 		compressionId,
 		status,
 		summary: getStringValue(data, "summary"),
-		reason: getStringValue(data, "reason")
+		reason: getStringValue(data, "reason"),
 	};
-	const existingIndex: number = parts.findIndex((part: TimelineBodyPart): boolean => (
-		part.type === "compression" && part.compressionId === compressionId
-	));
+	const existingIndex: number = parts.findIndex(
+		(part: TimelineBodyPart): boolean => part.type === "compression" && part.compressionId === compressionId,
+	);
 	if (existingIndex < 0) return [...parts, nextPart];
-	return parts.map((part: TimelineBodyPart, index: number): TimelineBodyPart => (
-		index === existingIndex ? nextPart : part
-	));
+	return parts.map(
+		(part: TimelineBodyPart, index: number): TimelineBodyPart => (index === existingIndex ? nextPart : part),
+	);
 }
 
 function appendPluginTimelinePart(parts: TimelineBodyPart[], event: BackendEvent): TimelineBodyPart[] {
@@ -597,17 +670,24 @@ function appendPluginTimelinePart(parts: TimelineBodyPart[], event: BackendEvent
 		pluginId: pluginId.slice(0, 240),
 		partType: partType.slice(0, 240),
 		...(getStringValue(data, "title").length === 0 ? {} : { title: getStringValue(data, "title").slice(0, 200) }),
-		...(getStringValue(data, "summary").length === 0 ? {} : { summary: getStringValue(data, "summary").slice(0, 1200) }),
+		...(getStringValue(data, "summary").length === 0
+			? {}
+			: { summary: getStringValue(data, "summary").slice(0, 1200) }),
 		...(getStringValue(data, "icon").length === 0 ? {} : { icon: getStringValue(data, "icon").slice(0, 80) }),
-		...(["info", "success", "warning", "error"].includes(getStringValue(data, "status")) ? { status: getStringValue(data, "status") as "info" | "success" | "warning" | "error" } : {}),
-		data: Object.fromEntries(Object.entries(payload).slice(0, 64))
+		...(["info", "success", "warning", "error"].includes(getStringValue(data, "status"))
+			? { status: getStringValue(data, "status") as "info" | "success" | "warning" | "error" }
+			: {}),
+		data: Object.fromEntries(Object.entries(payload).slice(0, 64)),
 	};
 	return [...parts, nextPart];
 }
 
 function getAssistantContent(parts: TimelineBodyPart[], fallback: string): string {
 	const content: string = parts
-		.filter((part: TimelineBodyPart): part is Extract<TimelineBodyPart, { type: "markdown" }> => part.type === "markdown")
+		.filter(
+			(part: TimelineBodyPart): part is Extract<TimelineBodyPart, { type: "markdown" }> =>
+				part.type === "markdown",
+		)
 		.map((part: Extract<TimelineBodyPart, { type: "markdown" }>): string => part.text)
 		.join("");
 
@@ -624,7 +704,9 @@ function bodyPartHasRunId(part: TimelineBodyPart, runId: string): boolean {
 	}
 
 	if (part.type === "tool") {
-		return part.events.some((toolEvent: Record<string, unknown>): boolean => getStringValue(toolEvent, "runId") === runId);
+		return part.events.some(
+			(toolEvent: Record<string, unknown>): boolean => getStringValue(toolEvent, "runId") === runId,
+		);
 	}
 
 	return false;
@@ -644,7 +726,9 @@ function bodyPartHasPlanId(part: TimelineBodyPart, planId: string): boolean {
 	}
 
 	if (part.type === "tool") {
-		return part.events.some((toolEvent: Record<string, unknown>): boolean => getStringValue(toolEvent, "planId") === planId);
+		return part.events.some(
+			(toolEvent: Record<string, unknown>): boolean => getStringValue(toolEvent, "planId") === planId,
+		);
 	}
 
 	return false;
@@ -662,7 +746,12 @@ function getCanonicalEventRequestId(event: BackendEvent): string {
 	if (requestId.length > 0) {
 		const mode: string = getStringValue(data, "mode");
 		const planId: string = getStringValue(data, "planId");
-		if (event.event.startsWith("plan.") || mode === "plan" || planId.length > 0 || event.event === "agent.message.done") {
+		if (
+			event.event.startsWith("plan.") ||
+			mode === "plan" ||
+			planId.length > 0 ||
+			event.event === "agent.message.done"
+		) {
 			return requestId;
 		}
 	}
@@ -731,11 +820,14 @@ function rewriteEventForTimeline(blocks: TimelineBlock[], event: BackendEvent): 
 	return {
 		...event,
 		requestId,
-		data
+		data,
 	};
 }
 
-function replaceOrAppendPlanPart(parts: TimelineBodyPart[], planPart: Extract<TimelineBodyPart, { type: "plan" }>): TimelineBodyPart[] {
+function replaceOrAppendPlanPart(
+	parts: TimelineBodyPart[],
+	planPart: Extract<TimelineBodyPart, { type: "plan" }>,
+): TimelineBodyPart[] {
 	const existingIndex: number = parts.findIndex((part: TimelineBodyPart): boolean => {
 		return part.type === "plan" && part.planId === planPart.planId;
 	});
@@ -763,15 +855,15 @@ function hasStatusCode(parts: readonly TimelineBodyPart[], code: string): boolea
 }
 
 function hasErrorStatusDetails(parts: readonly TimelineBodyPart[], details: string): boolean {
-	return details.length > 0 && parts.some((part: TimelineBodyPart): boolean => {
-		return part.type === "status" && part.status === "error" && part.details === details;
-	});
+	return (
+		details.length > 0 &&
+		parts.some((part: TimelineBodyPart): boolean => {
+			return part.type === "status" && part.status === "error" && part.details === details;
+		})
+	);
 }
 
-function failRunningImageGenerationParts(
-	parts: readonly TimelineBodyPart[],
-	error: string
-): TimelineBodyPart[] {
+function failRunningImageGenerationParts(parts: readonly TimelineBodyPart[], error: string): TimelineBodyPart[] {
 	return parts.map((part: TimelineBodyPart): TimelineBodyPart => {
 		return part.type === "image_generation" && part.status === "running"
 			? { ...part, status: "failed", error }
@@ -811,20 +903,25 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 			const details: string = getStringValue(terminal, "message") || "Unknown backend error";
 			nextParts = finishRunningThinkingParts(failRunningImageGenerationParts(nextParts, details));
 			if (!hasErrorStatusDetails(nextParts, details)) {
-				nextParts = [...nextParts, {
-					type: "status",
-					status: "error",
-					title: "Run failed",
-					details,
-					code: "agent_run_error"
-				}];
+				nextParts = [
+					...nextParts,
+					{
+						type: "status",
+						status: "error",
+						title: "Run failed",
+						details,
+						code: "agent_run_error",
+					},
+				];
 			}
 		} else if (stage === "cancelled") {
 			nextParts = restorePlanDraftParts(nextParts);
 			nextStatus = "stopped";
 			nextCompletionStatus = "stopped";
 			completedAtUtc = getStringValue(terminal, "completedAt") || nowIso;
-			nextParts = finishRunningThinkingParts(failRunningImageGenerationParts(nextParts, "Image generation was cancelled."));
+			nextParts = finishRunningThinkingParts(
+				failRunningImageGenerationParts(nextParts, "Image generation was cancelled."),
+			);
 		} else if (stage === "completed") {
 			nextStatus = undefined;
 			nextCompletionStatus = "responded";
@@ -835,17 +932,23 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 			nextStatus = undefined;
 			nextCompletionStatus = undefined;
 			completedAtUtc = nowIso;
-			nextParts = finishRunningThinkingParts(failRunningImageGenerationParts(nextParts, "Image generation was interrupted."));
+			nextParts = finishRunningThinkingParts(
+				failRunningImageGenerationParts(nextParts, "Image generation was interrupted."),
+			);
 			if (!hasStatusCode(nextParts, "agent_run_interrupted")) {
-				nextParts = [...nextParts, {
-					type: "status",
-					status: "warning",
-					title: "Run interrupted",
-					details: "The backend stopped before this run reached a terminal state. Retry from its safe checkpoint.",
-					code: "agent_run_interrupted",
-					actionLabel: "Retry from checkpoint",
-					actionId: `retry_agent_run:${getStringValue(data, "runId")}`
-				}];
+				nextParts = [
+					...nextParts,
+					{
+						type: "status",
+						status: "warning",
+						title: "Run interrupted",
+						details:
+							"The backend stopped before this run reached a terminal state. Retry from its safe checkpoint.",
+						code: "agent_run_interrupted",
+						actionLabel: "Retry from checkpoint",
+						actionId: `retry_agent_run:${getStringValue(data, "runId")}`,
+					},
+				];
 			}
 		} else {
 			nextStatus = "running";
@@ -868,14 +971,18 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		nextParts = appendPluginTimelinePart(nextParts, event);
 	} else if (event.event === "agent.status") {
 		const title: string = getStringValue(data, "title") || getStringValue(data, "stage");
-		const details: string = getStringValue(data, "details") || getStringValue(data, "detail") || getStringValue(data, "message");
-		nextParts = [...nextParts, {
-			type: "status",
-			status: getStringValue(data, "status") || "message",
-			title,
-			details,
-			code: getStringValue(data, "code")
-		}];
+		const details: string =
+			getStringValue(data, "details") || getStringValue(data, "detail") || getStringValue(data, "message");
+		nextParts = [
+			...nextParts,
+			{
+				type: "status",
+				status: getStringValue(data, "status") || "message",
+				title,
+				details,
+				code: getStringValue(data, "code"),
+			},
+		];
 	} else if (event.event.startsWith("agent.tool.")) {
 		nextParts = appendImageGenerationPart(appendToolPart(nextParts, event), event);
 	} else if (event.event === "plan.draft") {
@@ -884,7 +991,12 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 			nextParts = replaceOrAppendPlanPart(nextParts, {
 				type: "plan",
 				planId,
-				title: nextParts.find((part): part is Extract<TimelineBodyPart, { type: "plan" }> => part.type === "plan" && part.planId === planId)?.title ?? (getStringValue(data, "title") || "Plan"),
+				title:
+					nextParts.find(
+						(part): part is Extract<TimelineBodyPart, { type: "plan" }> =>
+							part.type === "plan" && part.planId === planId,
+					)?.title ??
+					(getStringValue(data, "title") || "Plan"),
 				status: "streaming",
 				previewMarkdown: getStringValue(data, "previewMarkdown"),
 				draftMarkdown: getStringValue(data, "markdown"),
@@ -902,7 +1014,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 				planId,
 				title: getStringValue(data, "title") || "Plan",
 				status: getStringValue(data, "status"),
-				previewMarkdown: getStringValue(data, "previewMarkdown") || getStringValue(data, "markdown")
+				previewMarkdown: getStringValue(data, "previewMarkdown") || getStringValue(data, "markdown"),
 			});
 		}
 	} else if (event.event === "plan.error") {
@@ -912,13 +1024,16 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		completedAtUtc = nowIso;
 		const details: string = getStringValue(data, "message") || "Unknown backend error";
 		if (!hasErrorStatusDetails(nextParts, details)) {
-			nextParts = [...nextParts, {
-				type: "status",
-				status: "error",
-				title: "后端返回错误",
-				details,
-				code: getStringValue(data, "code") || "agent_run_error"
-			}];
+			nextParts = [
+				...nextParts,
+				{
+					type: "status",
+					status: "error",
+					title: "Backend returned an error",
+					details,
+					code: getStringValue(data, "code") || "agent_run_error",
+				},
+			];
 		}
 	} else if (event.event === "agent.message.done") {
 		nextStatus = undefined;
@@ -935,44 +1050,52 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		completedAtUtc,
 		status: nextStatus,
 		completionStatus: nextCompletionStatus,
-		bodyParts: nextParts
+		bodyParts: nextParts,
 	};
 }
 
 function shouldCreateAssistantBlock(event: BackendEvent): boolean {
-	return event.event === "agent.run.state"
-		|| event.event === "agent.message.delta"
-		|| event.event === "agent.thinking.delta"
-		|| event.event === "agent.provider.reconnect"
-		|| event.event === "agent.summary.started"
-		|| event.event === "agent.context.compression"
-		|| event.event === "plugin.timeline.part"
-		|| event.event.startsWith("agent.tool.")
-		|| event.event === "agent.status"
-		|| event.event === "plan.generated"
-		|| event.event === "plan.revised"
-		|| event.event === "plan.edited"
-		|| event.event === "plan.draft"
-		|| event.event === "plan.error";
+	return (
+		event.event === "agent.run.state" ||
+		event.event === "agent.message.delta" ||
+		event.event === "agent.thinking.delta" ||
+		event.event === "agent.provider.reconnect" ||
+		event.event === "agent.summary.started" ||
+		event.event === "agent.context.compression" ||
+		event.event === "plugin.timeline.part" ||
+		event.event.startsWith("agent.tool.") ||
+		event.event === "agent.status" ||
+		event.event === "plan.generated" ||
+		event.event === "plan.revised" ||
+		event.event === "plan.edited" ||
+		event.event === "plan.draft" ||
+		event.event === "plan.error"
+	);
 }
 
 function createLiveAssistantBlock(event: BackendEvent): TimelineAssistantBlock {
 	const nowIso: string = new Date().toISOString();
 	const requestId: string = getCanonicalEventRequestId(event);
 
-	return updateAssistantBlockFromEvent({
-		id: `live:${requestId}:assistant`,
-		type: "assistant",
-		requestId,
-		content: "",
-		startedAtUtc: nowIso,
-		completedAtUtc: nowIso,
-		status: "running",
-		bodyParts: []
-	}, event);
+	return updateAssistantBlockFromEvent(
+		{
+			id: `live:${requestId}:assistant`,
+			type: "assistant",
+			requestId,
+			content: "",
+			startedAtUtc: nowIso,
+			completedAtUtc: nowIso,
+			status: "running",
+			bodyParts: [],
+		},
+		event,
+	);
 }
 
-function insertLiveAssistantBlockInRequestOrder(blocks: TimelineBlock[], assistantBlock: TimelineAssistantBlock): TimelineBlock[] {
+function insertLiveAssistantBlockInRequestOrder(
+	blocks: TimelineBlock[],
+	assistantBlock: TimelineAssistantBlock,
+): TimelineBlock[] {
 	for (let index: number = blocks.length - 1; index >= 0; index -= 1) {
 		if (blocks[index]?.requestId === assistantBlock.requestId) {
 			return [...blocks.slice(0, index + 1), assistantBlock, ...blocks.slice(index + 1)];
@@ -1021,7 +1144,9 @@ function applyModelChangeDividerEvent(blocks: TimelineBlock[], event: BackendEve
 			heavyPartCount: 0,
 		},
 	};
-	const requestBlockIndex: number = blocks.findIndex((block: TimelineBlock): boolean => block.requestId === requestId);
+	const requestBlockIndex: number = blocks.findIndex(
+		(block: TimelineBlock): boolean => block.requestId === requestId,
+	);
 	return requestBlockIndex < 0
 		? [...blocks, divider]
 		: [...blocks.slice(0, requestBlockIndex), divider, ...blocks.slice(requestBlockIndex)];
@@ -1030,7 +1155,7 @@ function applyModelChangeDividerEvent(blocks: TimelineBlock[], event: BackendEve
 export function applyBackendEventToTimeline(
 	blocks: TimelineBlock[],
 	event: BackendEvent,
-	options: TimelineEventApplyOptions = {}
+	options: TimelineEventApplyOptions = {},
 ): TimelineBlock[] {
 	if (isSubagentScopedEvent(event) && options.includeSubagent !== true) {
 		return blocks;
@@ -1063,11 +1188,12 @@ export function applyBackendEventToTimeline(
 export function applyBackendEventsToTimeline(
 	blocks: TimelineBlock[],
 	events: readonly BackendEvent[],
-	options: TimelineEventApplyOptions = {}
+	options: TimelineEventApplyOptions = {},
 ): TimelineBlock[] {
 	return coalesceTimelineStreamingEvents(events).reduce(
-		(currentBlocks: TimelineBlock[], event: BackendEvent): TimelineBlock[] => applyBackendEventToTimeline(currentBlocks, event, options),
-		blocks
+		(currentBlocks: TimelineBlock[], event: BackendEvent): TimelineBlock[] =>
+			applyBackendEventToTimeline(currentBlocks, event, options),
+		blocks,
 	);
 }
 
@@ -1078,7 +1204,7 @@ export function createTimelinePageFromOpenResult(result: SessionOpenResult): Tim
 		blockCount: result.blockCount,
 		blockOffset: result.blockOffset,
 		hasMoreBefore: result.hasMoreBefore,
-		hasMoreAfter: result.hasMoreAfter
+		hasMoreAfter: result.hasMoreAfter,
 	};
 }
 
@@ -1089,7 +1215,7 @@ export function createTimelinePageFromTimelineResult(result: SessionTimelineResu
 		blockCount: result.blockCount,
 		blockOffset: result.blockOffset,
 		hasMoreBefore: result.hasMoreBefore,
-		hasMoreAfter: result.hasMoreAfter
+		hasMoreAfter: result.hasMoreAfter,
 	};
 }
 
@@ -1097,7 +1223,7 @@ export function mergeTimelineBefore(current: TimelinePageState, page: TimelinePa
 	if (current.sessionId !== null && page.sessionId !== null && current.sessionId !== page.sessionId) {
 		console.warn("[Timeline] ignored previous page for different session", {
 			currentSessionId: current.sessionId,
-			pageSessionId: page.sessionId
+			pageSessionId: page.sessionId,
 		});
 		return current;
 	}
@@ -1105,7 +1231,7 @@ export function mergeTimelineBefore(current: TimelinePageState, page: TimelinePa
 	const knownIds: Set<string> = new Set(page.blocks.map((block: TimelineBlock): string => block.id));
 	const mergedBlocks: TimelineBlock[] = [
 		...page.blocks,
-		...current.blocks.filter((block: TimelineBlock): boolean => !knownIds.has(block.id))
+		...current.blocks.filter((block: TimelineBlock): boolean => !knownIds.has(block.id)),
 	];
 	const trimmedBlocks: TimelineBlock[] = mergedBlocks.slice(0, MAX_TIMELINE_WINDOW_BLOCKS);
 	const trimmedAfterCount: number = Math.max(0, mergedBlocks.length - trimmedBlocks.length);
@@ -1115,7 +1241,7 @@ export function mergeTimelineBefore(current: TimelinePageState, page: TimelinePa
 		sessionId: current.sessionId ?? page.sessionId,
 		blocks: trimmedBlocks,
 		hasMoreAfter: current.hasMoreAfter || trimmedAfterCount > 0,
-		blockCount: Math.max(current.blockCount, page.blockCount)
+		blockCount: Math.max(current.blockCount, page.blockCount),
 	};
 }
 
@@ -1123,7 +1249,7 @@ export function mergeTimelineAfter(current: TimelinePageState, page: TimelinePag
 	if (current.sessionId !== null && page.sessionId !== null && current.sessionId !== page.sessionId) {
 		console.warn("[Timeline] ignored next page for different session", {
 			currentSessionId: current.sessionId,
-			pageSessionId: page.sessionId
+			pageSessionId: page.sessionId,
 		});
 		return current;
 	}
@@ -1131,12 +1257,11 @@ export function mergeTimelineAfter(current: TimelinePageState, page: TimelinePag
 	const knownIds: Set<string> = new Set(current.blocks.map((block: TimelineBlock): string => block.id));
 	const mergedBlocks: TimelineBlock[] = [
 		...current.blocks,
-		...page.blocks.filter((block: TimelineBlock): boolean => !knownIds.has(block.id))
+		...page.blocks.filter((block: TimelineBlock): boolean => !knownIds.has(block.id)),
 	];
 	const trimmedBeforeCount: number = Math.max(0, mergedBlocks.length - MAX_TIMELINE_WINDOW_BLOCKS);
-	const trimmedBlocks: TimelineBlock[] = trimmedBeforeCount > 0
-		? mergedBlocks.slice(trimmedBeforeCount)
-		: mergedBlocks;
+	const trimmedBlocks: TimelineBlock[] =
+		trimmedBeforeCount > 0 ? mergedBlocks.slice(trimmedBeforeCount) : mergedBlocks;
 
 	return {
 		...page,
@@ -1144,6 +1269,6 @@ export function mergeTimelineAfter(current: TimelinePageState, page: TimelinePag
 		blockOffset: current.blockOffset + trimmedBeforeCount,
 		blocks: trimmedBlocks,
 		hasMoreBefore: current.hasMoreBefore || trimmedBeforeCount > 0,
-		blockCount: Math.max(current.blockCount, page.blockCount)
+		blockCount: Math.max(current.blockCount, page.blockCount),
 	};
 }
