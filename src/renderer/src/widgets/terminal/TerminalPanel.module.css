@@ -81,6 +81,7 @@
 }
 
 .terminalHost {
+	grid-row: 3;
 	min-width: 0;
 	min-height: 0;
 	height: 100%;
