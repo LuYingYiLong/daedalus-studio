@@ -1164,6 +1164,8 @@ export type TimelineBodyPart =
 			title: string;
 			status: string;
 			previewMarkdown: string;
+			draftMarkdown?: string;
+			previousPreviewMarkdown?: string;
 	  }
 	| {
 			type: "inline_diff";

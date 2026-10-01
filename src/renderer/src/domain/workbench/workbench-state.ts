@@ -749,6 +749,15 @@ function replaceOrAppendPlanPart(parts: TimelineBodyPart[], planPart: Extract<Ti
 	});
 }
 
+function restorePlanDraftParts(parts: TimelineBodyPart[], planId: string = ""): TimelineBodyPart[] {
+	return parts.flatMap((part): TimelineBodyPart[] => {
+		if (part.type !== "plan" || part.status !== "streaming" || (planId && part.planId !== planId)) return [part];
+		return part.previousPreviewMarkdown
+			? [{ ...part, status: "ready", previewMarkdown: part.previousPreviewMarkdown, draftMarkdown: undefined }]
+			: [];
+	});
+}
+
 function hasStatusCode(parts: readonly TimelineBodyPart[], code: string): boolean {
 	return parts.some((part: TimelineBodyPart): boolean => part.type === "status" && part.code === code);
 }
@@ -795,6 +804,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		const stage: string = getStringValue(data, "stage");
 		const terminal: Record<string, unknown> = isRecord(data.terminal) ? data.terminal : {};
 		if (stage === "failed") {
+			nextParts = restorePlanDraftParts(nextParts);
 			nextStatus = "failed";
 			nextCompletionStatus = undefined;
 			completedAtUtc = getStringValue(terminal, "completedAt") || nowIso;
@@ -810,6 +820,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 				}];
 			}
 		} else if (stage === "cancelled") {
+			nextParts = restorePlanDraftParts(nextParts);
 			nextStatus = "stopped";
 			nextCompletionStatus = "stopped";
 			completedAtUtc = getStringValue(terminal, "completedAt") || nowIso;
@@ -820,6 +831,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 			completedAtUtc = getStringValue(terminal, "completedAt") || nowIso;
 			nextParts = finishRunningThinkingParts(nextParts);
 		} else if (stage === "interrupted") {
+			nextParts = restorePlanDraftParts(nextParts);
 			nextStatus = undefined;
 			nextCompletionStatus = undefined;
 			completedAtUtc = nowIso;
@@ -866,7 +878,22 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		}];
 	} else if (event.event.startsWith("agent.tool.")) {
 		nextParts = appendImageGenerationPart(appendToolPart(nextParts, event), event);
-	} else if (event.event === "plan.generated" || event.event === "plan.revised") {
+	} else if (event.event === "plan.draft") {
+		const planId = getStringValue(data, "planId");
+		if (planId.length > 0) {
+			nextParts = replaceOrAppendPlanPart(nextParts, {
+				type: "plan",
+				planId,
+				title: nextParts.find((part): part is Extract<TimelineBodyPart, { type: "plan" }> => part.type === "plan" && part.planId === planId)?.title ?? (getStringValue(data, "title") || "Plan"),
+				status: "streaming",
+				previewMarkdown: getStringValue(data, "previewMarkdown"),
+				draftMarkdown: getStringValue(data, "markdown"),
+				previousPreviewMarkdown: getStringValue(data, "previousPreviewMarkdown"),
+			});
+		}
+	} else if (event.event === "plan.draft.closed") {
+		nextParts = restorePlanDraftParts(nextParts, getStringValue(data, "planId"));
+	} else if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.edited") {
 		const planId: string = getStringValue(data, "planId");
 
 		if (planId.length > 0) {
@@ -879,6 +906,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 			});
 		}
 	} else if (event.event === "plan.error") {
+		nextParts = restorePlanDraftParts(nextParts);
 		nextStatus = "failed";
 		nextCompletionStatus = undefined;
 		completedAtUtc = nowIso;
@@ -887,7 +915,7 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 			nextParts = [...nextParts, {
 				type: "status",
 				status: "error",
-				title: "鍚庣杩斿洖閿欒",
+				title: "后端返回错误",
 				details,
 				code: getStringValue(data, "code") || "agent_run_error"
 			}];
@@ -923,6 +951,8 @@ function shouldCreateAssistantBlock(event: BackendEvent): boolean {
 		|| event.event === "agent.status"
 		|| event.event === "plan.generated"
 		|| event.event === "plan.revised"
+		|| event.event === "plan.edited"
+		|| event.event === "plan.draft"
 		|| event.event === "plan.error";
 }
 

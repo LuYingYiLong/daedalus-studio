@@ -93,7 +93,7 @@ function normalizePlanApproval(value: unknown): PlanApprovalState | null {
 }
 
 export function getPlanApprovalFromEvent(event: BackendEvent): PlanApprovalState | null {
-	if (event.event !== "plan.generated" && event.event !== "plan.revised") {
+	if (event.event !== "plan.generated" && event.event !== "plan.revised" && event.event !== "plan.edited") {
 		return null;
 	}
 
@@ -113,7 +113,7 @@ export function shouldClearPlanClarificationForEvent(event: BackendEvent, clarif
 		return false;
 	}
 
-	if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.approved" || event.event === "plan.execution.started" || event.event === "plan.error") {
+	if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.edited" || event.event === "plan.approved" || event.event === "plan.execution.started" || event.event === "plan.error") {
 		const planId: string = getStringField(event.data, "planId").trim();
 		return planId.length === 0 || planId === clarification.planId;
 	}

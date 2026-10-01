@@ -2216,7 +2216,13 @@
 			}
 		},
 		"plan": {
-			"open": "Open plan"
+			"open": "Open plan",
+			"drafting": "Drafting plan",
+			"save": "Save plan",
+			"cancel": "Cancel",
+			"discardTitle": "Discard unsaved changes?",
+			"discardDescription": "Closing the editor will discard your unsaved plan changes.",
+			"changed": "The plan changed during this edit. Copy your draft, then close and reopen the editor."
 		},
 		"thinking": {
 			"label": "Thought process",

@@ -46,6 +46,16 @@ export async function getPlan(
 	});
 }
 
+export async function updatePlan(
+	planId: string,
+	sessionId: string,
+	expectedUpdatedAt: string,
+	markdown: string,
+): Promise<PlanResult> {
+	const client = await createBackendClient();
+	return client.request<PlanResult>("plan.update", { planId, sessionId, expectedUpdatedAt, markdown });
+}
+
 export async function submitPlanClarification(
 	planId: string,
 	submission: PlanClarificationSubmission,

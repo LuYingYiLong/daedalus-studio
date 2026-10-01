@@ -719,6 +719,44 @@ describe("workbench-state", () => {
 		expect(assistant.status).toBe("running");
 	});
 
+	it("shows transient plan Markdown and replaces it with the saved plan", () => {
+		const draft = applyBackendEventToTimeline([], {
+			type: "event",
+			id: "request-plan",
+			event: "plan.draft",
+			data: { requestId: "request-plan", planId: "plan-a", status: "streaming", markdown: "# Partial", previewMarkdown: "# Partial" }
+		});
+		const draftBlock = draft[0];
+		expect(draftBlock?.type).toBe("assistant");
+		if (draftBlock?.type !== "assistant") throw new Error("Expected assistant block");
+		expect(draftBlock.bodyParts).toContainEqual(expect.objectContaining({ type: "plan", status: "streaming", draftMarkdown: "# Partial" }));
+		const completed = applyBackendEventToTimeline(draft, {
+			type: "event",
+			id: "request-plan",
+			event: "plan.generated",
+			data: { requestId: "request-plan", planId: "plan-a", status: "ready", title: "Plan", previewMarkdown: "# Complete" }
+		});
+		const completedBlock = completed[0];
+		if (completedBlock?.type !== "assistant") throw new Error("Expected assistant block");
+		expect(completedBlock.bodyParts.filter((part) => part.type === "plan")).toEqual([
+			expect.objectContaining({ planId: "plan-a", status: "ready", previewMarkdown: "# Complete" })
+		]);
+	});
+
+	it("restores the prior plan after a failed streamed revision", () => {
+		const draft = applyBackendEventToTimeline([], {
+			type: "event", id: "request-plan", event: "plan.draft",
+			data: { requestId: "request-plan", planId: "plan-a", markdown: "# New", previewMarkdown: "# New", previousPreviewMarkdown: "# Old" }
+		});
+		const restored = applyBackendEventToTimeline(draft, {
+			type: "event", id: "request-plan", event: "plan.draft.closed",
+			data: { requestId: "request-plan", planId: "plan-a" }
+		});
+		const assistant = restored[0];
+		if (assistant?.type !== "assistant") throw new Error("Expected assistant block");
+		expect(assistant.bodyParts).toContainEqual(expect.objectContaining({ type: "plan", status: "ready", previewMarkdown: "# Old" }));
+	});
+
 	it("renders historical plan.error events as visible backend errors", () => {
 		const blocks: TimelineBlock[] = applyBackendEventToTimeline([], {
 			type: "event",

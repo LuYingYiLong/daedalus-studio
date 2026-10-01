@@ -22,7 +22,25 @@
 	);
 }
 
-.modalMarkdown {
-	max-height: 520px;
-	overflow-y: auto;
+.modalEditor {
+	position: relative;
+	height: min(65vh, 600px);
+	min-height: 320px;
+}
+
+.loading {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+}
+
+.actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--ds-space-2);
+}
+
+.error {
+	margin-bottom: var(--ds-space-2);
 }

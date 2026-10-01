@@ -2210,7 +2210,13 @@
 			}
 		},
 		"plan": {
-			"open": "打开计划"
+			"open": "打开计划",
+			"drafting": "正在生成计划",
+			"save": "保存计划",
+			"cancel": "取消",
+			"discardTitle": "放弃未保存的修改？",
+			"discardDescription": "关闭编辑器后，未保存的计划修改会丢失。",
+			"changed": "计划已在其他操作中更新。请复制当前草稿，再关闭并重新打开编辑器。"
 		},
 		"thinking": {
 			"label": "思考过程",

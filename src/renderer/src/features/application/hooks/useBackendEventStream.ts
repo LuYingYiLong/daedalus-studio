@@ -164,7 +164,7 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 					dedupeKey: `goal_completed:${goal.goalId}:${goal.revision}`
 				});
 			}
-		} else if (event.event === "plan.generated" || event.event === "plan.revised") {
+		} else if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.edited") {
 			const planTodo: WorkflowTodoSnapshot | null = createWorkflowTodoSnapshotFromPlanData(event.data);
 			if (planTodo !== null) {
 				params.showWorkflowTodo(planTodo);
@@ -212,7 +212,7 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 			}
 		}
 
-		if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.approved" || event.event === "plan.execution.started" || event.event === "plan.error" || event.event === "agent.run.state") {
+		if (event.event === "plan.generated" || event.event === "plan.revised" || event.event === "plan.edited" || event.event === "plan.approved" || event.event === "plan.execution.started" || event.event === "plan.error" || event.event === "agent.run.state") {
 			params.setLatestPlanClarification((currentClarification: PlanClarificationState | null): PlanClarificationState | null => {
 				if (currentClarification === null) {
 					return null;
