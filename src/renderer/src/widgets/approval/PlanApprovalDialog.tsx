@@ -19,7 +19,7 @@ function PlanApprovalDialog({
 	isRevising,
 	errorMessage,
 	onApprove,
-	onRevise
+	onRevise,
 }: PlanApprovalDialogProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [revisionFeedback, setRevisionFeedback] = useState<string>("");

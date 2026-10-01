@@ -14,18 +14,16 @@
 	overflow-x: hidden;
 	overflow-y: auto;
 	scrollbar-width: none;
-	mask-image: linear-gradient(
-		to bottom,
-		rgb(0 0 0) 0%,
-		rgb(0 0 0) calc(100% - 48px),
-		transparent 100%
-	);
+	mask-image: linear-gradient(to bottom, rgb(0 0 0) 0%, rgb(0 0 0) calc(100% - 48px), transparent 100%);
 }
 
 .modalEditor {
 	position: relative;
 	height: min(65vh, 600px);
 	min-height: 320px;
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	overflow: hidden;
 }
 
 .loading {

@@ -38,23 +38,32 @@ function PlanPart({ part }: PlanPartProps): React.JSX.Element {
 		let cancelled = false;
 		setLoading(true);
 		setError(null);
-		void getPlan(part.planId).then((plan: PlanResult): void => {
-			if (cancelled) return;
-			const current = editStateRef.current;
-			if (current.loadedPlan !== null && current.draft !== current.savedMarkdown && current.loadedPlan.updatedAt !== plan.updatedAt) {
-				setError(t("chat.plan.changed"));
-				return;
-			}
-			setLoadedPlan(plan);
-			setDraft(plan.markdown ?? "");
-			setSavedMarkdown(plan.markdown ?? "");
-			setPreview(plan.previewMarkdown);
-		}).catch((cause: unknown): void => {
-			if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
-		}).finally((): void => {
-			if (!cancelled) setLoading(false);
-		});
-		return (): void => { cancelled = true; };
+		void getPlan(part.planId)
+			.then((plan: PlanResult): void => {
+				if (cancelled) return;
+				const current = editStateRef.current;
+				if (
+					current.loadedPlan !== null &&
+					current.draft !== current.savedMarkdown &&
+					current.loadedPlan.updatedAt !== plan.updatedAt
+				) {
+					setError(t("chat.plan.changed"));
+					return;
+				}
+				setLoadedPlan(plan);
+				setDraft(plan.markdown ?? "");
+				setSavedMarkdown(plan.markdown ?? "");
+				setPreview(plan.previewMarkdown);
+			})
+			.catch((cause: unknown): void => {
+				if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
+			})
+			.finally((): void => {
+				if (!cancelled) setLoading(false);
+			});
+		return (): void => {
+			cancelled = true;
+		};
 	}, [modalOpen, part.planId, part.status, t]);
 
 	const close = useCallback((): void => {
@@ -63,7 +72,10 @@ function PlanPart({ part }: PlanPartProps): React.JSX.Element {
 			Modal.confirm({
 				title: t("chat.plan.discardTitle"),
 				content: t("chat.plan.discardDescription"),
-				onOk: (): void => { setDraft(savedMarkdown); setModalOpen(false); },
+				onOk: (): void => {
+					setDraft(savedMarkdown);
+					setModalOpen(false);
+				},
 			});
 			return;
 		}
@@ -90,7 +102,10 @@ function PlanPart({ part }: PlanPartProps): React.JSX.Element {
 
 	async function copyPlan(): Promise<void> {
 		try {
-			const markdown = part.status === "streaming" ? part.draftMarkdown ?? preview : (await getPlan(part.planId)).markdown ?? preview;
+			const markdown =
+				part.status === "streaming"
+					? (part.draftMarkdown ?? preview)
+					: ((await getPlan(part.planId)).markdown ?? preview);
 			await copyTextToClipboard(markdown);
 			setCopied(true);
 			window.setTimeout((): void => setCopied(false), 1200);
@@ -105,35 +120,79 @@ function PlanPart({ part }: PlanPartProps): React.JSX.Element {
 		setModalOpen(true);
 	}
 
-	return <div>
-		<Card
-			title={title}
-			extra={<div>
-				<Tooltip title={t("chat.plan.open")}><Button type="text" icon={<Icon name="distraction-free" />} onClick={openPlan} /></Tooltip>
-				<Tooltip title={copied ? t("chat.common.copied") : t("chat.common.copy")}><Button type="text" icon={<Icon name="copy" />} onClick={(): void => { void copyPlan(); }} /></Tooltip>
-			</div>}
-			className={styles.planCard}
-			classNames={{ body: styles.planCardBody }}
-		>
-			<div className={`${styles.markdownPreview} markdown-body`}><MarkdownContent streaming={part.status === "streaming"}>{preview}</MarkdownContent></div>
-		</Card>
-		<Modal
-			title={title}
-			open={modalOpen}
-			width="min(1000px, 94vw)"
-			footer={<div className={styles.actions}>
-				<Button onClick={close}>{t("chat.plan.cancel")}</Button>
-				{editable ? <Button type="primary" loading={saving} disabled={!dirty || !draft.trim()} onClick={(): void => { void save(); }}>{t("chat.plan.save")}</Button> : null}
-			</div>}
-			onCancel={close}
-			destroyOnHidden={true}
-		>
-			{error ? <Alert type="error" showIcon title={error} className={styles.error} /> : null}
-			<div className={styles.modalEditor}>
-				{loading ? <Spin className={styles.loading} /> : <PlanMarkdownEditor planId={part.planId} value={part.status === "streaming" && !dirty ? part.draftMarkdown ?? "" : draft} readOnly={!editable || saving} onChange={setDraft} />}
-			</div>
-		</Modal>
-	</div>;
+	return (
+		<div>
+			<Card
+				title={title}
+				extra={
+					<div>
+						<Tooltip title={t("chat.plan.open")}>
+							<Button
+								shape="circle"
+								type="text"
+								icon={<Icon name="distraction-free" />}
+								onClick={openPlan}
+							/>
+						</Tooltip>
+						<Tooltip title={copied ? t("chat.common.copied") : t("chat.common.copy")}>
+							<Button
+								shape="circle"
+								type="text"
+								icon={<Icon name="copy" />}
+								onClick={(): void => {
+									void copyPlan();
+								}}
+							/>
+						</Tooltip>
+					</div>
+				}
+				className={styles.planCard}
+				classNames={{ body: styles.planCardBody }}
+			>
+				<div className={`${styles.markdownPreview} markdown-body`}>
+					<MarkdownContent streaming={part.status === "streaming"}>{preview}</MarkdownContent>
+				</div>
+			</Card>
+			<Modal
+				title={title}
+				open={modalOpen}
+				width="min(1000px, 94vw)"
+				footer={
+					<div className={styles.actions}>
+						<Button onClick={close}>{t("chat.plan.cancel")}</Button>
+						{editable ? (
+							<Button
+								type="primary"
+								loading={saving}
+								disabled={!dirty || !draft.trim()}
+								onClick={(): void => {
+									void save();
+								}}
+							>
+								{t("chat.plan.save")}
+							</Button>
+						) : null}
+					</div>
+				}
+				onCancel={close}
+				destroyOnHidden={true}
+			>
+				{error ? <Alert type="error" showIcon title={error} className={styles.error} /> : null}
+				<div className={styles.modalEditor}>
+					{loading ? (
+						<Spin className={styles.loading} />
+					) : (
+						<PlanMarkdownEditor
+							planId={part.planId}
+							value={part.status === "streaming" && !dirty ? (part.draftMarkdown ?? "") : draft}
+							readOnly={!editable || saving}
+							onChange={setDraft}
+						/>
+					)}
+				</div>
+			</Modal>
+		</div>
+	);
 }
 
 export default React.memo(PlanPart);
