@@ -859,19 +859,83 @@
 				"builtin/template": { "template": "Template", "inputs": "Inputs" },
 				"builtin/merge": { "mode": "Mode", "separator": "Separator", "inputs": "Inputs" },
 				"builtin/json-extract": { "input": "JSON", "pointer": "JSON pointer" },
-				"builtin/condition": { "input": "Input", "pointer": "JSON pointer", "operator": "Operator", "value": "Expected value" },
+				"builtin/condition": {
+					"input": "Input",
+					"pointer": "JSON pointer",
+					"operator": "Operator",
+					"value": "Expected value"
+				},
 				"builtin/file-input": { "path": "File path", "mode": "Read mode" },
-				"builtin/flow-input": { "label": "Name", "dataType": "Type", "cardinality": "Cardinality", "defaultValue": "Default value" },
+				"builtin/flow-input": {
+					"label": "Name",
+					"dataType": "Type",
+					"cardinality": "Cardinality",
+					"defaultValue": "Default value"
+				},
 				"builtin/provider": { "provider": "Provider" },
 				"builtin/model": { "provider": "Provider", "model": "Model" },
-				"builtin/llm": { "user-prompt": "User prompt", "system-prompt": "System prompt", "provider": "Provider", "model": "Model", "reasoningEffort": "Reasoning effort" },
+				"builtin/llm": {
+					"user-prompt": "User prompt",
+					"system-prompt": "System prompt",
+					"provider": "Provider",
+					"model": "Model",
+					"reasoningEffort": "Reasoning effort"
+				},
 				"builtin/tool": { "input": "Input", "toolName": "Tool", "args": "Arguments", "bindings": "Bindings" },
-				"builtin/command": { "stdin": "Standard input", "commandLine": "Command", "cwd": "Working directory", "env": "Environment", "timeoutMs": "Timeout" },
+				"builtin/command": {
+					"stdin": "Standard input",
+					"commandLine": "Command",
+					"cwd": "Working directory",
+					"env": "Environment",
+					"timeoutMs": "Timeout"
+				},
 				"builtin/output": { "input": "Input", "format": "Output format" },
-				"builtin/text-to-image": { "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "aspectRatio": "Aspect ratio", "style": "Style", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
-				"builtin/image-to-image": { "image": "Input image", "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
-				"builtin/text-to-video": { "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "size": "Size", "durationMs": "Duration", "fps": "Frame rate", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
-				"builtin/image-to-video": { "image": "Input image", "prompt": "Prompt", "provider": "Provider", "model": "Model", "negativePrompt": "Negative prompt", "size": "Size", "durationMs": "Duration", "fps": "Frame rate", "seed": "Seed", "count": "Count", "outputFormat": "Output format" },
+				"builtin/text-to-image": {
+					"prompt": "Prompt",
+					"provider": "Provider",
+					"model": "Model",
+					"negativePrompt": "Negative prompt",
+					"aspectRatio": "Aspect ratio",
+					"style": "Style",
+					"seed": "Seed",
+					"count": "Count",
+					"outputFormat": "Output format"
+				},
+				"builtin/image-to-image": {
+					"image": "Input image",
+					"prompt": "Prompt",
+					"provider": "Provider",
+					"model": "Model",
+					"negativePrompt": "Negative prompt",
+					"seed": "Seed",
+					"count": "Count",
+					"outputFormat": "Output format"
+				},
+				"builtin/text-to-video": {
+					"prompt": "Prompt",
+					"provider": "Provider",
+					"model": "Model",
+					"negativePrompt": "Negative prompt",
+					"size": "Size",
+					"durationMs": "Duration",
+					"fps": "Frame rate",
+					"seed": "Seed",
+					"count": "Count",
+					"outputFormat": "Output format"
+				},
+				"builtin/image-to-video": {
+					"image": "Input image",
+					"prompt": "Prompt",
+					"provider": "Provider",
+					"model": "Model",
+					"negativePrompt": "Negative prompt",
+					"size": "Size",
+					"durationMs": "Duration",
+					"fps": "Frame rate",
+					"seed": "Seed",
+					"count": "Count",
+					"outputFormat": "Output format"
+				},
 				"builtin/media-output": { "format": "Display mode" },
 				"builtin/note": { "text": "Content" },
 				"builtin/number": {
@@ -2259,6 +2323,11 @@
 			"openReviewAria": "Open review for {{filePath}}",
 			"showMoreFiles": "Show {{count}} more files",
 			"collapseFiles": "Collapse files",
+			"preview": {
+				"loading": "Loading diff…",
+				"loadFailed": "Could not load diff",
+				"unavailable": "No text diff is available for this file"
+			},
 			"actions": {
 				"undo": "Undo",
 				"review": "Review"
@@ -3723,8 +3792,17 @@
 				"providerHitRate": "Provider-reported hit rate",
 				"providerCoverage": "Provider usage coverage",
 				"unknownInput": "Unknown-cache tokens",
-				"categories": { "conversation": "Conversation", "review": "Model review", "auxiliary": "Other auxiliary" },
-				"variants": { "all": "All versions", "legacy": "Legacy", "optimized": "Optimized", "unknown": "Historical unknown" }
+				"categories": {
+					"conversation": "Conversation",
+					"review": "Model review",
+					"auxiliary": "Other auxiliary"
+				},
+				"variants": {
+					"all": "All versions",
+					"legacy": "Legacy",
+					"optimized": "Optimized",
+					"unknown": "Historical unknown"
+				}
 			}
 		},
 		"skills": {

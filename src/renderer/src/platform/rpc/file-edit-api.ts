@@ -2,6 +2,7 @@ import { createBackendClient } from "@/platform/rpc/transport/backend-client";
 
 export type FileEditSnapshot = {
 	path: string;
+	absolutePath?: string;
 	sourceFolderId?: string;
 	existedBefore: boolean;
 	existsAfter: boolean;
