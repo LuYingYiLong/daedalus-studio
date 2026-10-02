@@ -49,11 +49,15 @@ export function WorkspaceIconView({
 export function WorkspaceTreeIconView({
 	workspace,
 	expanded,
+	className,
+	style,
 }: {
 	workspace: Pick<WorkspaceConfig, "icon" | "color">;
 	expanded?: boolean;
+	className?: string;
+	style?: CSSProperties;
 }): React.JSX.Element {
 	const configuredIconName: string = WORKSPACE_ICON_NAMES[workspace.icon] ?? "folder";
 	const iconName: string = configuredIconName === "folder" && expanded === true ? "folder-open" : configuredIconName;
-	return <Icon name={iconName} style={getWorkspaceIconStyle(workspace.color)} />;
+	return <Icon name={iconName} className={className} style={{ ...style, ...getWorkspaceIconStyle(workspace.color) }} />;
 }
