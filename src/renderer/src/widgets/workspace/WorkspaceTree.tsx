@@ -255,10 +255,7 @@ function createSessionTreePresentation(
 		currentWorkspaceId !== undefined ||
 		options.moveWorkspaces.some((workspace: WorkspaceConfig): boolean => workspace.id !== currentWorkspaceId);
 	const canMove: boolean =
-		session.worktree === undefined &&
-		!isRunning &&
-		options.movingSessionId === null &&
-		hasMoveTargets;
+		session.worktree === undefined && !isRunning && options.movingSessionId === null && hasMoveTargets;
 	const moveDisabledReason: string | null =
 		session.worktree !== undefined
 			? labels.moveSessionWorktreeBlocked
@@ -296,12 +293,14 @@ function createSessionTreePresentation(
 				children: [
 					...(currentWorkspaceId === undefined
 						? []
-						: [{
-								key: "move:unbound",
-								label: labels.moveSessionToUnbound,
-								icon: <Icon name="folder-open" />,
-								disabled: options.movingSessionId !== null,
-							}]),
+						: [
+								{
+									key: "move:unbound",
+									label: labels.moveSessionToUnbound,
+									icon: <Icon name="folder-open" />,
+									disabled: options.movingSessionId !== null,
+								},
+							]),
 					...options.moveWorkspaces.map((workspace: WorkspaceConfig) => ({
 						key: `move:workspace:${workspace.id}`,
 						label: workspace.name,

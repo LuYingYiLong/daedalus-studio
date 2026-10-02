@@ -747,6 +747,20 @@ function FlowTree({
 											event.stopPropagation();
 										}}
 									>
+										<Dropdown menu={workspaceMenu} trigger={["click"]}>
+											<Button
+												type="text"
+												shape="circle"
+												size="small"
+												aria-label={t("workspaceTree.aria.workspaceActions", { workspaceName: workspace.name })}
+												className={styles.workspaceActionButton}
+												icon={<Icon name="more-v" width={16} height={16} />}
+												onClick={(event: MouseEvent<HTMLElement>): void => {
+													event.preventDefault();
+													event.stopPropagation();
+												}}
+											/>
+										</Dropdown>
 										<Tooltip title={t("flow.actions.newInWorkspace")}>
 											<Button
 												type="text"
