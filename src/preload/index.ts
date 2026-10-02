@@ -643,6 +643,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		pickWorkspaceDirectory: (): Promise<string | null> => {
 			return ipcRenderer.invoke("workspace-fs:pick-directory");
 		},
+		validateSourceDirectory: (directoryPath: string): Promise<string> => {
+			return ipcRenderer.invoke("workspace-fs:validate-source-directory", directoryPath);
+		},
 		pickWorkspaceFiles: (params: { workspaceRoot: string }): Promise<Array<{ name: string; relativePath: string; resourcePath: string; kind: "file" | "folder" }> | null> => {
 			return ipcRenderer.invoke("workspace-fs:pick-files", params);
 		},

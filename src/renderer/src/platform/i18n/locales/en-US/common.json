@@ -505,6 +505,8 @@
 			"namePlaceholder": "Project name",
 			"sourceFolders": "Source folders",
 			"addFolder": "Add folder",
+			"emptyFolders": "Drag folders here or click Add folder.",
+			"dropFoldersOnly": "Only folders from the file manager can be added.",
 			"addFailed": "Failed to add source folder.",
 			"duplicateFolder": "This source folder is already in the project.",
 			"nameRequired": "Project name cannot be empty.",

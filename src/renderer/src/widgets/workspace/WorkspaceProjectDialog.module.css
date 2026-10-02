@@ -33,6 +33,25 @@
 	margin: 0px !important;
 }
 
+.sourceDropZone {
+	border: 1px dashed transparent;
+	border-radius: var(--ant-border-radius);
+	transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.sourceDropZoneEmpty {
+	min-height: 104px;
+}
+
+.sourceDropZoneActive {
+	border-color: var(--ds-accent);
+	background: var(--ds-accent-subtle);
+}
+
+.sourceEmpty {
+	margin-block: 18px;
+}
+
 .sourceMenu {
 	max-height: min(420px, 55vh);
 	overflow-y: auto;

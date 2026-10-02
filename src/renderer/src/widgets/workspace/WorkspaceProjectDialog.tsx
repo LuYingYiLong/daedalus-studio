@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import { Button, Flex, Input, Menu, Modal, Popover, Space, Tag, Tooltip, Typography } from "antd";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Empty, Flex, Input, Menu, Modal, Popover, Space, Tag, Tooltip, Typography } from "antd";
 import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 import type { WorkspaceColor, WorkspaceConfig, WorkspaceIcon, WorkspaceSourceFolder } from "@/platform/rpc/types";
 import { configureEnvironment, updateWorkspace } from "@/platform/rpc/workspace-api";
 import { Icon } from "@/assets/icons";
+import { getLocalPathForFile } from "@/features/workspace/controllers/context-helpers";
 import {
 	getWorkspaceIconStyle,
 	WORKSPACE_COLOR_VALUES,
@@ -83,12 +84,16 @@ export default function WorkspaceProjectDialog({
 	const [addingFolder, setAddingFolder] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 	const [appearanceOpen, setAppearanceOpen] = useState<boolean>(false);
+	const [dragActive, setDragActive] = useState<boolean>(false);
+	const dragDepth = useRef<number>(0);
 
 	useEffect((): void => {
 		if (open) {
 			setDraft(workspace === null ? createEmptyDraft() : createDraft(workspace));
 			setError(null);
 			setAppearanceOpen(false);
+			setDragActive(false);
+			dragDepth.current = 0;
 		}
 	}, [open, workspace]);
 
@@ -232,6 +237,39 @@ export default function WorkspaceProjectDialog({
 		},
 	);
 
+	function appendSourceFolders(paths: readonly string[]): void {
+		if (draft === null) {
+			return;
+		}
+		const existingPaths: Set<string> = new Set(draft.sourceFolders.map((source): string => pathKey(source.path)));
+		const newPaths: string[] = paths.filter((path): boolean => {
+			const key: string = pathKey(path);
+			if (existingPaths.has(key)) {
+				return false;
+			}
+			existingPaths.add(key);
+			return true;
+		});
+		if (newPaths.length === 0) {
+			setError(t("workspaceTree.projectEditor.duplicateFolder", {
+				defaultValue: "This source folder is already in the project.",
+			}));
+			return;
+		}
+		setDraft((current): WorkspaceProjectDraft | null => {
+			if (current === null) {
+				return null;
+			}
+			const sourceFolders: WorkspaceSourceFolder[] = newPaths.map(createClientSourceFolder);
+			return {
+				...current,
+				sourceFolders: [...current.sourceFolders, ...sourceFolders],
+				primarySourceFolderId: current.primarySourceFolderId || sourceFolders[0]!.id,
+			};
+		});
+		setError(null);
+	}
+
 	async function handleAddFolder(): Promise<void> {
 		if (draft === null || addingFolder) {
 			return;
@@ -242,32 +280,39 @@ export default function WorkspaceProjectDialog({
 			if (selectedPath === null) {
 				return;
 			}
-			if (draft.sourceFolders.some((source): boolean => pathKey(source.path) === pathKey(selectedPath))) {
-				setError(
-					t("workspaceTree.projectEditor.duplicateFolder", {
-						defaultValue: "This source folder is already in the project.",
-					}),
-				);
-				return;
-			}
-			setDraft((current): WorkspaceProjectDraft | null => {
-				if (current === null) {
-					return null;
-				}
-				const sourceFolder: WorkspaceSourceFolder = createClientSourceFolder(selectedPath);
-				return {
-					...current,
-					sourceFolders: [...current.sourceFolders, sourceFolder],
-					primarySourceFolderId: current.primarySourceFolderId || sourceFolder.id,
-				};
-			});
-			setError(null);
+			appendSourceFolders([selectedPath]);
 		} catch (addError: unknown) {
 			setError(
 				addError instanceof Error
 					? addError.message
 					: t("workspaceTree.projectEditor.addFailed", { defaultValue: "Failed to add source folder." }),
 			);
+		} finally {
+			setAddingFolder(false);
+		}
+	}
+
+	async function handleDroppedFolders(files: FileList): Promise<void> {
+		if (draft === null || addingFolder) {
+			return;
+		}
+		const paths: Array<string | null> = Array.from(files, getLocalPathForFile);
+		if (paths.length === 0 || paths.some((path): boolean => path === null)) {
+			setError(t("workspaceTree.projectEditor.dropFoldersOnly", {
+				defaultValue: "Only folders from the file manager can be added.",
+			}));
+			return;
+		}
+		try {
+			setAddingFolder(true);
+			const directories: string[] = await Promise.all(paths.map((path): Promise<string> =>
+				window.electronAPI.workspaceFs.validateSourceDirectory(path!),
+			));
+			appendSourceFolders(directories);
+		} catch {
+			setError(t("workspaceTree.projectEditor.dropFoldersOnly", {
+				defaultValue: "Only folders from the file manager can be added.",
+			}));
 		} finally {
 			setAddingFolder(false);
 		}
@@ -413,16 +458,54 @@ export default function WorkspaceProjectDialog({
 								{t("workspaceTree.projectEditor.addFolder", { defaultValue: "Add folder" })}
 							</Button>
 						</Flex>
-						<Menu
-							className={styles.sourceMenu}
-							items={sourceFolderItems}
-							selectedKeys={[draft.primarySourceFolderId]}
-							onClick={({ key }): void =>
-								setDraft((current): WorkspaceProjectDraft | null =>
-									current === null ? null : { ...current, primarySourceFolderId: String(key) },
-								)
-							}
-						/>
+						<div
+							className={`${styles.sourceDropZone} ${draft.sourceFolders.length === 0 ? styles.sourceDropZoneEmpty : ""} ${dragActive ? styles.sourceDropZoneActive : ""}`}
+							onDragEnter={(event): void => {
+								if (!event.dataTransfer.types.includes("Files")) return;
+								event.preventDefault();
+								dragDepth.current += 1;
+								setDragActive(true);
+							}}
+							onDragOver={(event): void => {
+								if (!event.dataTransfer.types.includes("Files")) return;
+								event.preventDefault();
+								event.dataTransfer.dropEffect = "copy";
+							}}
+							onDragLeave={(event): void => {
+								if (!event.dataTransfer.types.includes("Files")) return;
+								dragDepth.current = Math.max(0, dragDepth.current - 1);
+								if (dragDepth.current === 0) setDragActive(false);
+							}}
+							onDrop={(event): void => {
+								if (!event.dataTransfer.types.includes("Files")) return;
+								event.preventDefault();
+								event.stopPropagation();
+								dragDepth.current = 0;
+								setDragActive(false);
+								void handleDroppedFolders(event.dataTransfer.files);
+							}}
+						>
+							{draft.sourceFolders.length === 0 ? (
+								<Empty
+									className={styles.sourceEmpty}
+									image={Empty.PRESENTED_IMAGE_SIMPLE}
+									description={t("workspaceTree.projectEditor.emptyFolders", {
+										defaultValue: "Drag folders here or click Add folder.",
+									})}
+								/>
+							) : (
+								<Menu
+									className={styles.sourceMenu}
+									items={sourceFolderItems}
+									selectedKeys={[draft.primarySourceFolderId]}
+									onClick={({ key }): void =>
+										setDraft((current): WorkspaceProjectDraft | null =>
+											current === null ? null : { ...current, primarySourceFolderId: String(key) },
+										)
+									}
+								/>
+							)}
+						</div>
 						{error === null ? null : <Typography.Text type="danger">{error}</Typography.Text>}
 					</Flex>
 				</div>

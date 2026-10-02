@@ -503,6 +503,8 @@
 			"namePlaceholder": "项目名称",
 			"sourceFolders": "源文件夹",
 			"addFolder": "添加文件夹",
+			"emptyFolders": "将文件夹拖到此处，或点击添加文件夹",
+			"dropFoldersOnly": "只能添加从文件管理器拖入的文件夹。",
 			"addFailed": "添加源文件夹失败。",
 			"duplicateFolder": "该源文件夹已在项目中。",
 			"nameRequired": "项目名称不能为空。",

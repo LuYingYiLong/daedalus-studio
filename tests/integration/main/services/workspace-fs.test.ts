@@ -3,9 +3,18 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdtempSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, createWorkspaceMediaFileUrl, getPickedWorkspaceDirectory, importFlowImageInput, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceFile, openWorkspaceLaunchTarget, readWorkspaceTextFile, revealWorkspaceFile, searchWorkspaceEntries, statWorkspaceFile, stopGodotRuntimeTestProcess, writeWorkspaceTextFile, type WorkspaceLaunchSpawnOptions } from "@main/services/workspace-fs";
+import { createWorkspaceEntriesFromAbsolutePaths, createWorkspaceEntryFromAbsolutePath, createWorkspaceMediaFileUrl, getPickedWorkspaceDirectory, importFlowImageInput, listWorkspaceChildren, listWorkspaceLaunchTargets, openWorkspaceDirectory, openWorkspaceFile, openWorkspaceLaunchTarget, readWorkspaceTextFile, revealWorkspaceFile, searchWorkspaceEntries, statWorkspaceFile, stopGodotRuntimeTestProcess, validateWorkspaceSourceDirectory, writeWorkspaceTextFile, type WorkspaceLaunchSpawnOptions } from "@main/services/workspace-fs";
 
 describe("workspace-fs", () => {
+	it("accepts dropped source directories but rejects files and non-absolute paths", async () => {
+		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-source-folder-"));
+		const filePath: string = join(root, "note.txt");
+		await writeFile(filePath, "hello", "utf8");
+		await expect(validateWorkspaceSourceDirectory(root)).resolves.toBe(await realpath(root));
+		await expect(validateWorkspaceSourceDirectory(filePath)).rejects.toThrow("workspace_source_folder_not_directory");
+		await expect(validateWorkspaceSourceDirectory("note.txt")).rejects.toThrow("workspace_source_folder_path_invalid");
+	});
+
 	it("reads UTF-8 text with a stable fingerprint and rejects binary or oversized editor input", async () => {
 		const root: string = mkdtempSync(join(tmpdir(), "daedalus-studio-workspace-"));
 		await writeFile(join(root, "note.txt"), "你好 Daedalus", "utf8");

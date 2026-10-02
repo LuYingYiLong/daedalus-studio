@@ -531,6 +531,7 @@ declare global {
 				}>;
 			}>;
 			pickWorkspaceDirectory: () => Promise<string | null>;
+			validateSourceDirectory: (directoryPath: string) => Promise<string>;
 			pickWorkspaceFiles: (params: { workspaceRoot: string }) => Promise<Array<{
 				name: string;
 				relativePath: string;

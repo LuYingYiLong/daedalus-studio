@@ -813,6 +813,17 @@ export async function pickWorkspaceDirectory(owner: BrowserWindow | undefined): 
 	return getPickedWorkspaceDirectory(result);
 }
 
+export async function validateWorkspaceSourceDirectory(directoryPath: string): Promise<string> {
+	if (typeof directoryPath !== "string" || !isAbsolute(directoryPath)) {
+		throw new Error("workspace_source_folder_path_invalid");
+	}
+	const resolvedPath: string = await realpath(directoryPath);
+	if (!(await stat(resolvedPath)).isDirectory()) {
+		throw new Error("workspace_source_folder_not_directory");
+	}
+	return resolvedPath;
+}
+
 export async function pickWorkspaceFiles(owner: BrowserWindow | undefined, params: WorkspaceFsPickEntriesParams): Promise<WorkspaceFsPickEntriesResult> {
 	const options: Electron.OpenDialogOptions = {
 		title: "Add files from workspace",
@@ -1119,6 +1130,9 @@ export function registerWorkspaceFsIpc(): void {
 	});
 	ipcMain.handle("workspace-fs:pick-directory", async (event): Promise<WorkspaceFsPickDirectoryResult> => {
 		return pickWorkspaceDirectory(BrowserWindow.fromWebContents(event.sender) ?? undefined);
+	});
+	ipcMain.handle("workspace-fs:validate-source-directory", async (_event, directoryPath: string): Promise<string> => {
+		return validateWorkspaceSourceDirectory(directoryPath);
 	});
 	ipcMain.handle("workspace-fs:pick-files", async (event, params: WorkspaceFsPickEntriesParams): Promise<WorkspaceFsPickEntriesResult> => {
 		return pickWorkspaceFiles(BrowserWindow.fromWebContents(event.sender) ?? undefined, params);

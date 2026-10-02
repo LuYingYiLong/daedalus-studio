@@ -84,6 +84,7 @@
 	text-overflow: ellipsis;
 	white-space: pre;
 	font: inherit;
+	user-select: text;
 }
 
 .previewNotice {
