@@ -1290,7 +1290,21 @@
 			"addFiles": "Add files",
 			"addFolder": "Add folder",
 			"addImages": "Add images",
+			"addSession": "Add session",
 			"windowScreenshot": "Window screenshot"
+		},
+		"sessionPicker": {
+			"title": "Add session context",
+			"search": "Search session titles or messages",
+			"allWorkspaces": "All workspaces",
+			"unbound": "No workspace",
+			"noResults": "No sessions found",
+			"selfReference": "The current session cannot reference itself",
+			"alreadyAttached": "Session already attached",
+			"limit": "Attach at most 3 sessions",
+			"loadMore": "Load more",
+			"searchFailed": "Failed to search sessions",
+			"openSource": "Open source session"
 		},
 		"menu": {
 			"context": "Context",

@@ -1,0 +1,48 @@
+.modal {
+	user-select: none;
+}
+
+.filters {
+	display: flex;
+	align-items: center;
+	gap: var(--ds-space-1);
+	margin-bottom: var(--ds-space-1);
+}
+
+.filters :global(.ant-input-search) {
+	flex: 1;
+	min-width: 0;
+}
+
+.workspaceSelect {
+	width: 170px;
+	flex: none;
+}
+
+.error {
+	margin-bottom: var(--ds-space-1);
+}
+
+.results {
+	min-height: 280px;
+	max-height: min(55vh, 500px);
+	overflow: auto;
+}
+
+.menu {
+	border-inline-end: 0 !important;
+	background: transparent;
+}
+
+.results :global(.ant-menu-item) {
+	height: auto;
+	min-height: 32px;
+	line-height: normal;
+	margin: 0;
+	width: 100%;
+}
+
+.loading {
+	display: block;
+	margin: 16px auto;
+}

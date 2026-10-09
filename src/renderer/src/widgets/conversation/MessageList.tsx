@@ -765,6 +765,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 						onRetryEditCancel={onRetryEditCancel}
 						onRetryFromUserMessage={onRetryFromUserMessage}
 						onForkFromUserMessage={onForkFromUserMessage}
+						onOpenReferencedSession={onOpenForkSource}
 						forkDisabled={forkDisabled}
 						isForking={forkingRequestId === block.requestId}
 					/>

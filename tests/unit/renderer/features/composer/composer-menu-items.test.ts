@@ -29,6 +29,13 @@ it("only offers window capture when the optional desktop capability is supplied"
 	expect(JSON.stringify(remote)).not.toContain("windowScreenshot");
 });
 
+it("only offers session references when the Composer can attach context items", () => {
+	const enabled = createComposerOptionsItems(translate, { includeContext: true, includeMode: false, includeSession: true });
+	expect(JSON.stringify(enabled)).toContain("sessions");
+	const disabled = createComposerOptionsItems(translate, { includeContext: true, includeMode: false });
+	expect(JSON.stringify(disabled)).not.toContain("sessions");
+});
+
 function getMenuObjects(items: MenuProps["items"]): MenuObject[] {
 	return (items ?? [])
 		.filter((item): boolean => item !== null && typeof item === "object")

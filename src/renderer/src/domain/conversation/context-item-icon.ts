@@ -28,6 +28,7 @@ export function getAdditionalContextIconName(item: AdditionalContextItem): strin
 	if (item.kind === "node") return "node";
 	if (item.kind === "git_diff_comment") return "git-diff";
 	if (item.kind === "message_selection") return "chat";
+	if (item.kind === "session") return "chat";
 	if (item.kind === "file_selection") return getFileIconName(getItemPath(item));
 	if (item.kind === "web_element") return "global";
 	if (item.kind === "editor_selection") return "read";

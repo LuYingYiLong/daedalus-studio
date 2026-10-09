@@ -35,6 +35,8 @@ import type {
 } from "@/platform/rpc/provider-api";
 import { fetchTextAttachmentContent } from "@/platform/rpc/image-attachment-api";
 import AdditionalContextStrip from "@/widgets/conversation/AdditionalContextStrip";
+import SessionContextPicker from "./SessionContextPicker";
+import type { SessionContextSearchHit } from "@/platform/rpc/session-context-api";
 import { WorkspaceIconView } from "@/widgets/workspace/workspace-appearance";
 import {
 	createCompletionOptions,
@@ -99,6 +101,7 @@ export type ComposerProps = {
 	inputRequest?: ComposerInputRequest;
 	onDraftChange?: (message: string) => void;
 	contextItems?: AdditionalContextItem[];
+	activeSessionId?: string | null;
 	mode: ChatMode;
 	approvalMode: ApprovalMode;
 	slashCommands?: SlashCommandDefinition[];
@@ -140,6 +143,8 @@ export type ComposerProps = {
 	onAddImages?: (files: File[]) => void;
 	onAddWindowScreenshot?: () => void;
 	onAddContextFiles?: (files: File[]) => void;
+	onAddContext?: (item: AdditionalContextItem) => void;
+	onOpenReferencedSession?: (sessionId: string) => void | Promise<void>;
 	onAddPastedTextAttachment?: (input: PastedTextAttachmentInput) => boolean;
 	onRemoveContext?: (contextId: string) => void;
 	onPinContext?: (contextId: string, pinned: boolean) => void;
@@ -235,6 +240,7 @@ function Composer({
 	nextStepSuggestion,
 	inputRequest,
 	contextItems: composerContextItems = EMPTY_CONTEXT_ITEMS,
+	activeSessionId = null,
 	mode,
 	approvalMode,
 	slashCommands = [],
@@ -274,6 +280,8 @@ function Composer({
 	onAddImages,
 	onAddWindowScreenshot,
 	onAddContextFiles,
+	onAddContext,
+	onOpenReferencedSession,
 	onAddPastedTextAttachment,
 	onRemoveContext,
 	onPinContext,
@@ -299,6 +307,7 @@ function Composer({
 	const expandingTextAttachmentIdsRef = useRef<Set<string>>(new Set());
 	const floatingBlurFrameRef = useRef<number | null>(null);
 	const [draftMessage, setDraftMessage] = useState<string>(message);
+	const [sessionPickerOpen, setSessionPickerOpen] = useState<boolean>(false);
 	const [completionToken, setCompletionToken] =
 		useState<ComposerCompletionToken | null>(null);
 	const [completionOptions, setCompletionOptions] = useState<
@@ -405,6 +414,11 @@ function Composer({
 			}
 			if (selectedKey === "images") {
 				imageInputRef.current?.click();
+				return;
+			}
+			if (selectedKey === "sessions") {
+				setSessionPickerOpen(true);
+				return;
 			}
 			if (selectedKey === "windowScreenshot") onAddWindowScreenshot?.();
 		},
@@ -604,7 +618,8 @@ function Composer({
 		onAddFolder !== undefined ||
 		onAddImages !== undefined ||
 		onAddWindowScreenshot !== undefined ||
-		onAddContextFiles !== undefined;
+		onAddContextFiles !== undefined ||
+		onAddContext !== undefined;
 	const canOpenComposerOptions: boolean =
 		canAddContext || onModeChange !== undefined;
 	const showWorkspaceFooter: boolean =
@@ -625,6 +640,7 @@ function Composer({
 			items: createComposerOptionsItems(t, {
 				includeContext: canAddContext,
 				includeWindowScreenshot: onAddWindowScreenshot !== undefined,
+				includeSession: onAddContext !== undefined,
 				includeMode: onModeChange !== undefined,
 				allowedModes,
 			}),
@@ -1528,6 +1544,7 @@ function Composer({
 						<div className={styles.contextArea}>
 							<AdditionalContextStrip
 								items={composerContextItems}
+								onOpenSession={onOpenReferencedSession}
 								align="start"
 								interactive={true}
 								onTogglePin={(
@@ -1906,6 +1923,27 @@ function Composer({
 					) : null}
 				</footer>
 			) : null}
+		<SessionContextPicker
+			open={sessionPickerOpen}
+			currentSessionId={activeSessionId}
+			preferredWorkspaceId={selectedWorkspace?.id ?? null}
+			attachedSessionIds={composerContextItems.filter((item): boolean => item.kind === "session").map((item): string => {
+				const data = item.data as { sessionId?: unknown } | null;
+				return typeof data?.sessionId === "string" ? data.sessionId : "";
+			})}
+			workspaces={workspaceOptions}
+			onAttach={(session: SessionContextSearchHit): void => {
+				onAddContext?.({
+					id: `session:${session.metadata.id}`,
+					kind: "session",
+					title: session.metadata.title,
+					subtitle: session.metadata.workspaceName ?? undefined,
+					source: "manual",
+					data: { sessionId: session.metadata.id, updatedAt: session.metadata.updatedAt },
+				});
+			}}
+			onClose={(): void => setSessionPickerOpen(false)}
+		/>
 		</div>
 	);
 }

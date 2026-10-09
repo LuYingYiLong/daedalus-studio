@@ -14,6 +14,7 @@ export type AdditionalContextStripProps = {
 	onTogglePin?: (contextId: string, pinned: boolean) => void;
 	onRemove?: (contextId: string) => void;
 	onExpandTextAttachment?: (item: AdditionalContextItem) => void;
+	onOpenSession?: (sessionId: string) => void | Promise<void>;
 };
 
 function AdditionalContextStrip({
@@ -23,7 +24,8 @@ function AdditionalContextStrip({
 	interactive = false,
 	onTogglePin,
 	onRemove,
-	onExpandTextAttachment
+	onExpandTextAttachment,
+	onOpenSession,
 }: AdditionalContextStripProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	if (items.length === 0) {
@@ -33,16 +35,29 @@ function AdditionalContextStrip({
 	const stripClassName: string = [
 		styles.contextStrip,
 		align === "start" ? styles.alignStart : styles.alignEnd,
-		className
-	].filter(Boolean).join(" ");
+		className,
+	]
+		.filter(Boolean)
+		.join(" ");
 
 	return (
 		<div className={stripClassName} aria-label={t("chat.contextStrip.aria")}>
 			{items.map((item: AdditionalContextItem): React.ReactNode => {
 				const display = summarizeAdditionalContextItem(item, t);
 				const nextPinned: boolean = item.pinned !== true;
-				const canTogglePin: boolean = interactive && item.kind !== "git_diff_comment" && item.kind !== "message_selection" && item.kind !== "file_selection" && item.kind !== "web_element";
-				const canExpandText: boolean = interactive && item.kind === "text_attachment" && onExpandTextAttachment !== undefined;
+				const canTogglePin: boolean =
+					interactive &&
+					item.kind !== "git_diff_comment" &&
+					item.kind !== "message_selection" &&
+					item.kind !== "file_selection" &&
+					item.kind !== "web_element";
+				const canExpandText: boolean =
+					interactive && item.kind === "text_attachment" && onExpandTextAttachment !== undefined;
+				const sessionId: unknown =
+					item.kind === "session" && typeof item.data === "object" && item.data !== null
+						? (item.data as Record<string, unknown>).sessionId
+						: null;
+				const canOpenSession: boolean = typeof sessionId === "string" && onOpenSession !== undefined;
 
 				return (
 					<Tooltip
@@ -54,24 +69,36 @@ function AdditionalContextStrip({
 							className={`${styles.contextChip} ${canTogglePin ? styles.interactiveChip : ""}`}
 							role={canTogglePin ? "button" : undefined}
 							tabIndex={canTogglePin ? 0 : undefined}
-							onClick={canTogglePin ? (event: React.MouseEvent<HTMLSpanElement>): void => {
-								event.stopPropagation();
-								onTogglePin?.(item.id, nextPinned);
-							} : undefined}
-							onKeyDown={canTogglePin ? (event: React.KeyboardEvent<HTMLSpanElement>): void => {
-								if (event.key !== "Enter" && event.key !== " ") {
-									return;
-								}
+							onClick={
+								canTogglePin
+									? (event: React.MouseEvent<HTMLSpanElement>): void => {
+											event.stopPropagation();
+											onTogglePin?.(item.id, nextPinned);
+										}
+									: undefined
+							}
+							onKeyDown={
+								canTogglePin
+									? (event: React.KeyboardEvent<HTMLSpanElement>): void => {
+											if (event.key !== "Enter" && event.key !== " ") {
+												return;
+											}
 
-								event.preventDefault();
-								event.stopPropagation();
-								onTogglePin?.(item.id, nextPinned);
-							} : undefined}
-							onContextMenu={interactive ? (event: React.MouseEvent<HTMLSpanElement>): void => {
-								event.preventDefault();
-								event.stopPropagation();
-								onRemove?.(item.id);
-							} : undefined}
+											event.preventDefault();
+											event.stopPropagation();
+											onTogglePin?.(item.id, nextPinned);
+										}
+									: undefined
+							}
+							onContextMenu={
+								interactive
+									? (event: React.MouseEvent<HTMLSpanElement>): void => {
+											event.preventDefault();
+											event.stopPropagation();
+											onRemove?.(item.id);
+										}
+									: undefined
+							}
 						>
 							{canExpandText ? (
 								<span
@@ -95,13 +122,34 @@ function AdditionalContextStrip({
 								>
 									<AdditionalContextIcon item={item} className={styles.contextIcon} />
 								</span>
-							) : <AdditionalContextIcon item={item} className={styles.contextIcon} />}
+							) : (
+								<AdditionalContextIcon item={item} className={styles.contextIcon} />
+							)}
 							<span className={styles.contextText}>
 								<span className={styles.contextTitle}>{display.title}</span>
 								<span className={styles.contextMeta}>{display.meta}</span>
 							</span>
-							{item.pinned === true ? <Icon name="pin" className={styles.pinIcon} aria-label={t("chat.contextStrip.pinned")} /> : null}
+							{item.pinned === true ? (
+								<Icon
+									name="pin"
+									className={styles.pinIcon}
+									aria-label={t("chat.contextStrip.pinned")}
+								/>
+							) : null}
 						</span>
+						{/* {canOpenSession ? <span
+							className={styles.openSessionButton}
+							role="button"
+							tabIndex={0}
+							aria-label={t("composer.sessionPicker.openSource")}
+							onClick={(event: React.MouseEvent<HTMLSpanElement>): void => { event.stopPropagation(); if (typeof sessionId === "string") void onOpenSession?.(sessionId); }}
+							onKeyDown={(event: React.KeyboardEvent<HTMLSpanElement>): void => {
+								if (event.key !== "Enter" && event.key !== " ") return;
+								event.preventDefault();
+								event.stopPropagation();
+								if (typeof sessionId === "string") void onOpenSession?.(sessionId);
+							}}
+						>↗</span> : null} */}
 					</Tooltip>
 				);
 			})}

@@ -1285,7 +1285,21 @@
 			"addFiles": "添加文件",
 			"addFolder": "添加文件夹",
 			"addImages": "添加图片",
+			"addSession": "添加会话",
 			"windowScreenshot": "窗口截图"
+		},
+		"sessionPicker": {
+			"title": "添加会话上下文",
+			"search": "搜索会话标题或内容",
+			"allWorkspaces": "全部工作区",
+			"unbound": "未绑定项目",
+			"noResults": "没有找到会话",
+			"selfReference": "不能引用当前会话",
+			"alreadyAttached": "已添加该会话",
+			"limit": "一次最多添加 3 个会话",
+			"loadMore": "加载更多",
+			"searchFailed": "搜索会话失败",
+			"openSource": "打开来源会话"
 		},
 		"menu": {
 			"context": "上下文",

@@ -24,6 +24,7 @@ export type UserBubbleProps = {
 	onRetryEditCancel?: (requestId: string) => void;
 	onRetryFromUserMessage?: (payload: RetryUserMessagePayload) => boolean | void | Promise<boolean | void>;
 	onForkFromUserMessage?: (requestId: string) => void | Promise<void>;
+	onOpenReferencedSession?: (sessionId: string) => void | Promise<void>;
 	forkDisabled?: boolean;
 	isForking?: boolean;
 };
@@ -53,6 +54,7 @@ function UserBubble({
 	onRetryEditCancel,
 	onRetryFromUserMessage,
 	onForkFromUserMessage,
+	onOpenReferencedSession,
 	forkDisabled = false,
 	isForking = false
 }: UserBubbleProps): React.JSX.Element {
@@ -166,6 +168,7 @@ function UserBubble({
 							<div className={styles.retryContextArea}>
 								<AdditionalContextStrip
 									items={draftContext}
+									onOpenSession={onOpenReferencedSession}
 									align="start"
 									interactive={true}
 									onTogglePin={toggleDraftContextPin}
@@ -219,7 +222,7 @@ function UserBubble({
 					</div>
 				) : (
 					<>
-						<AdditionalContextStrip items={additionalContext} />
+						<AdditionalContextStrip items={additionalContext} onOpenSession={onOpenReferencedSession} />
 						{message.length > 0 ? <div
 							className={`${styles.content} markdown-body ${disabled ? styles.disabledContent : ""}`}
 							data-chat-search-text="true"

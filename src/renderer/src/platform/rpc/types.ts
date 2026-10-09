@@ -59,10 +59,7 @@ export type SessionWorktreeSource = {
 	sensitiveIncludedPaths?: string[];
 };
 
-export type WorktreeStartingState =
-	| { type: "head" }
-	| { type: "branch"; ref: string }
-	| { type: "working-tree" };
+export type WorktreeStartingState = { type: "head" } | { type: "branch"; ref: string } | { type: "working-tree" };
 export type WorktreeSetupState =
 	| "not-required"
 	| "pending-trust"
@@ -130,11 +127,7 @@ export type LocalEnvironmentConfig = {
 	defaultEnvironmentId?: string | null;
 	environments: LocalEnvironmentProfile[];
 };
-export type EnvironmentTrustStatus =
-	| "trusted"
-	| "network-approved"
-	| "disabled"
-	| "review-required";
+export type EnvironmentTrustStatus = "trusted" | "network-approved" | "disabled" | "review-required";
 export type LocalEnvironmentConfigDocument = {
 	workspaceId: string;
 	sourceFolderId: string;
@@ -205,8 +198,25 @@ export type FlowTreeOrder = {
 export type FlowTreeOrderUpdate = Omit<FlowTreeOrder, "schemaVersion" | "updatedAt">;
 
 export type FlowNodeTypeId = `${string}/${string}`;
-export type FlowDocumentNodeStatus = "idle" | "queued" | "running" | "waiting" | "completed" | "cached" | "partial_failure" | "failed" | "cancelled" | "skipped";
-export type FlowDocumentRunStatus = "queued" | "running" | "waiting" | "completed" | "partial_failure" | "failed" | "cancelled";
+export type FlowDocumentNodeStatus =
+	| "idle"
+	| "queued"
+	| "running"
+	| "waiting"
+	| "completed"
+	| "cached"
+	| "partial_failure"
+	| "failed"
+	| "cancelled"
+	| "skipped";
+export type FlowDocumentRunStatus =
+	| "queued"
+	| "running"
+	| "waiting"
+	| "completed"
+	| "partial_failure"
+	| "failed"
+	| "cancelled";
 export type FlowMediaArtifactRef = {
 	artifactId: string;
 	flowId: string;
@@ -280,7 +290,19 @@ export type FlowDocumentEdge = {
 	sourcePort: string;
 	targetNodeId: string;
 	targetPort: string;
-	dataType: "text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | "number" | "boolean" | "color" | "size" | "mask";
+	dataType:
+		| "text"
+		| "json"
+		| "image"
+		| "video"
+		| "audio"
+		| "frames"
+		| "artifact"
+		| "number"
+		| "boolean"
+		| "color"
+		| "size"
+		| "mask";
 };
 export type FlowDocumentNodeRun = {
 	batchItems?: Record<string, Record<string, unknown>>;
@@ -336,7 +358,8 @@ export type AdditionalContextItem = {
 		| "git_diff_comment"
 		| "message_selection"
 		| "file_selection"
-		| "web_element";
+		| "web_element"
+		| "session";
 	title: string;
 	subtitle?: string;
 	pinned?: boolean;
@@ -349,13 +372,7 @@ export type AdditionalContextItem = {
 	data?: unknown;
 };
 
-export type MessageQueueStatus =
-	| "pending"
-	| "sending"
-	| "approval"
-	| "failed"
-	| "cancelled"
-	| "rejected";
+export type MessageQueueStatus = "pending" | "sending" | "approval" | "failed" | "cancelled" | "rejected";
 
 export type MessageQueueItem = {
 	id: number;
@@ -424,14 +441,7 @@ export type WorkbenchNextStepHint = {
 	[key: string]: unknown;
 };
 
-export type WorkflowTodoStatus =
-	| "pending"
-	| "running"
-	| "in_progress"
-	| "done"
-	| "failed"
-	| "paused"
-	| string;
+export type WorkflowTodoStatus = "pending" | "running" | "in_progress" | "done" | "failed" | "paused" | string;
 
 export type WorkflowTodoStep = {
 	id: string;
@@ -465,16 +475,8 @@ export type MessageTextAnchor = {
 	contextAfter: string;
 };
 
-export type SelectionAskThreadStatus =
-	| "idle"
-	| "running"
-	| "failed"
-	| "interrupted";
-export type SelectionAskMessageStatus =
-	| "completed"
-	| "running"
-	| "failed"
-	| "interrupted";
+export type SelectionAskThreadStatus = "idle" | "running" | "failed" | "interrupted";
+export type SelectionAskMessageStatus = "completed" | "running" | "failed" | "interrupted";
 
 export type SelectionAskThread = {
 	threadId: string;
@@ -535,14 +537,7 @@ export type AgentRunState = {
 	revision: number;
 	intent: "answer" | "inspect" | "mutate";
 	scope: "bounded" | "unknown" | "complex";
-	lane:
-		| "direct"
-		| "read"
-		| "agent_loop"
-		| "tool_assisted"
-		| "probe"
-		| "lightweight"
-		| "workflow";
+	lane: "direct" | "read" | "agent_loop" | "tool_assisted" | "probe" | "lightweight" | "workflow";
 	stage: AgentRunStage;
 	title: string;
 	planId: string | null;
@@ -556,12 +551,7 @@ export type AgentRunState = {
 	verificationStatus: "verified" | "unverified" | "failed" | null;
 	warnings: string[];
 	terminal: {
-		resultStatus:
-			| "completed"
-			| "completed_with_warnings"
-			| "blocked"
-			| "failed"
-			| "cancelled";
+		resultStatus: "completed" | "completed_with_warnings" | "blocked" | "failed" | "cancelled";
 		message?: string;
 		completedAt: string;
 	} | null;
@@ -693,7 +683,20 @@ export type FlowNodePortDefinition = {
 	id: string;
 	label: string;
 	direction: "input" | "output";
-	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | "number" | "boolean" | "color" | "size" | "mask">;
+	dataTypes: Array<
+		| "text"
+		| "json"
+		| "image"
+		| "video"
+		| "audio"
+		| "frames"
+		| "artifact"
+		| "number"
+		| "boolean"
+		| "color"
+		| "size"
+		| "mask"
+	>;
 	cardinality?: "one" | "many" | "one-or-many";
 	required: boolean;
 	multiple: boolean;
@@ -705,8 +708,21 @@ export type FlowNodeParameterDefinition =
 			id: string;
 			label: string;
 			mode: "connection";
-			dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | "number" | "boolean" | "color" | "size" | "mask">;
-	cardinality?: "one" | "many" | "one-or-many";
+			dataTypes: Array<
+				| "text"
+				| "json"
+				| "image"
+				| "video"
+				| "audio"
+				| "frames"
+				| "artifact"
+				| "number"
+				| "boolean"
+				| "color"
+				| "size"
+				| "mask"
+			>;
+			cardinality?: "one" | "many" | "one-or-many";
 			required: boolean;
 			multiple: boolean;
 			defaultConnect: boolean;
@@ -716,8 +732,21 @@ export type FlowNodeParameterDefinition =
 			label: string;
 			mode: "hybrid";
 			configField: string;
-			dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | "number" | "boolean" | "color" | "size" | "mask">;
-	cardinality?: "one" | "many" | "one-or-many";
+			dataTypes: Array<
+				| "text"
+				| "json"
+				| "image"
+				| "video"
+				| "audio"
+				| "frames"
+				| "artifact"
+				| "number"
+				| "boolean"
+				| "color"
+				| "size"
+				| "mask"
+			>;
+			cardinality?: "one" | "many" | "one-or-many";
 			required: boolean;
 			multiple: boolean;
 			defaultConnect: boolean;
@@ -726,7 +755,20 @@ export type FlowNodeParameterDefinition =
 export type FlowNodeOutputDefinition = {
 	id: string;
 	label: string;
-	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | "number" | "boolean" | "color" | "size" | "mask">;
+	dataTypes: Array<
+		| "text"
+		| "json"
+		| "image"
+		| "video"
+		| "audio"
+		| "frames"
+		| "artifact"
+		| "number"
+		| "boolean"
+		| "color"
+		| "size"
+		| "mask"
+	>;
 	cardinality?: "one" | "many" | "one-or-many";
 	defaultConnect: boolean;
 	optional?: boolean;
@@ -735,7 +777,20 @@ export type FlowDynamicParameterDefinition = {
 	configField: string;
 	idField: string;
 	labelField: string;
-	dataTypes: Array<"text" | "json" | "image" | "video" | "audio" | "frames" | "artifact" | "number" | "boolean" | "color" | "size" | "mask">;
+	dataTypes: Array<
+		| "text"
+		| "json"
+		| "image"
+		| "video"
+		| "audio"
+		| "frames"
+		| "artifact"
+		| "number"
+		| "boolean"
+		| "color"
+		| "size"
+		| "mask"
+	>;
 	cardinality?: "one" | "many" | "one-or-many";
 	dataTypeField?: string;
 	required: boolean;
@@ -766,21 +821,99 @@ export type FlowNodeTypeDefinition = {
 	dynamicParameters?: FlowDynamicParameterDefinition[];
 };
 export type FlowOperation =
-	| { mutationId: string; kind: "node.collapse"; baseLayoutRevision?: number; payload: { nodeId: string; collapsed: boolean } }
-	| { mutationId: string; kind: "node.create"; baseGraphRevision?: number; payload: { nodeId: string; typeId: FlowNodeTypeId; title?: string; x: number; y: number; config?: Record<string, unknown> } }
-	| { mutationId: string; kind: "node.update"; baseGraphRevision?: number; payload: { nodeId: string; title?: string; config?: Record<string, unknown> } }
+	| {
+			mutationId: string;
+			kind: "node.collapse";
+			baseLayoutRevision?: number;
+			payload: { nodeId: string; collapsed: boolean };
+	  }
+	| {
+			mutationId: string;
+			kind: "node.create";
+			baseGraphRevision?: number;
+			payload: {
+				nodeId: string;
+				typeId: FlowNodeTypeId;
+				title?: string;
+				x: number;
+				y: number;
+				config?: Record<string, unknown>;
+			};
+	  }
+	| {
+			mutationId: string;
+			kind: "node.update";
+			baseGraphRevision?: number;
+			payload: { nodeId: string; title?: string; config?: Record<string, unknown> };
+	  }
 	| { mutationId: string; kind: "node.delete"; baseGraphRevision?: number; payload: { nodeId: string } }
-	| { mutationId: string; kind: "node.move"; baseLayoutRevision?: number; payload: { nodeId: string; x: number; y: number } }
-	| { mutationId: string; kind: "node.resize"; baseLayoutRevision?: number; payload: { nodeId: string; width: number; height: number } }
-	| { mutationId: string; kind: "edge.create"; baseGraphRevision?: number; payload: { edgeId: string; sourceNodeId: string; sourcePort: string; targetNodeId: string; targetPort: string; dataType: FlowDocumentEdge["dataType"] } }
+	| {
+			mutationId: string;
+			kind: "node.move";
+			baseLayoutRevision?: number;
+			payload: { nodeId: string; x: number; y: number };
+	  }
+	| {
+			mutationId: string;
+			kind: "node.resize";
+			baseLayoutRevision?: number;
+			payload: { nodeId: string; width: number; height: number };
+	  }
+	| {
+			mutationId: string;
+			kind: "edge.create";
+			baseGraphRevision?: number;
+			payload: {
+				edgeId: string;
+				sourceNodeId: string;
+				sourcePort: string;
+				targetNodeId: string;
+				targetPort: string;
+				dataType: FlowDocumentEdge["dataType"];
+			};
+	  }
 	| { mutationId: string; kind: "edge.delete"; baseGraphRevision?: number; payload: { edgeId: string } }
-	| { mutationId: string; kind: "group.create"; baseLayoutRevision?: number; payload: Omit<FlowDocumentGroup, "flowId" | "nodeIds" | "createdAt" | "updatedAt"> }
-	| { mutationId: string; kind: "group.rename"; baseLayoutRevision?: number; payload: { groupId: string; title: string } }
-	| { mutationId: string; kind: "group.move"; baseLayoutRevision?: number; payload: { groupId: string; x: number; y: number } }
-	| { mutationId: string; kind: "group.reparent"; baseLayoutRevision?: number; payload: { nodes: Array<{ nodeId: string; groupId: string | null }>; groups: Array<{ groupId: string; parentGroupId: string | null }> } }
-	| { mutationId: string; kind: "group.dissolve" | "group.delete"; baseLayoutRevision?: number; payload: { groupId: string } }
+	| {
+			mutationId: string;
+			kind: "group.create";
+			baseLayoutRevision?: number;
+			payload: Omit<FlowDocumentGroup, "flowId" | "nodeIds" | "createdAt" | "updatedAt">;
+	  }
+	| {
+			mutationId: string;
+			kind: "group.rename";
+			baseLayoutRevision?: number;
+			payload: { groupId: string; title: string };
+	  }
+	| {
+			mutationId: string;
+			kind: "group.move";
+			baseLayoutRevision?: number;
+			payload: { groupId: string; x: number; y: number };
+	  }
+	| {
+			mutationId: string;
+			kind: "group.reparent";
+			baseLayoutRevision?: number;
+			payload: {
+				nodes: Array<{ nodeId: string; groupId: string | null }>;
+				groups: Array<{ groupId: string; parentGroupId: string | null }>;
+			};
+	  }
+	| {
+			mutationId: string;
+			kind: "group.dissolve" | "group.delete";
+			baseLayoutRevision?: number;
+			payload: { groupId: string };
+	  }
 	| { mutationId: string; kind: "viewport.update"; baseLayoutRevision?: number; payload: FlowDocument["viewport"] };
-export type FlowPatchAck = { flowId: string; graphRevision: number; layoutRevision: number; acceptedMutationIds: string[]; operations: FlowOperation[] };
+export type FlowPatchAck = {
+	flowId: string;
+	graphRevision: number;
+	layoutRevision: number;
+	acceptedMutationIds: string[];
+	operations: FlowOperation[];
+};
 export type FlowToolDefinition = {
 	name: string;
 	description: string;
@@ -1091,12 +1224,7 @@ export type TimelineBodyPart =
 			provider: string;
 			model: string;
 			status: "waiting" | "reconnecting" | "recovered" | "failed";
-			reason:
-				| "transport"
-				| "idle_timeout"
-				| "gateway"
-				| "rate_limit"
-				| "server";
+			reason: "transport" | "idle_timeout" | "gateway" | "rate_limit" | "server";
 			attempt: number;
 			maxAttempts: 2 | 5 | 15;
 			timeoutMs: number;
@@ -1188,10 +1316,7 @@ export type TimelineBodyPart =
 			data: Record<string, unknown>;
 	  };
 
-export type TimelineBlock =
-	| TimelineUserBlock
-	| TimelineAssistantBlock
-	| TimelineDividerBlock;
+export type TimelineBlock = TimelineUserBlock | TimelineAssistantBlock | TimelineDividerBlock;
 
 export type SessionTimelineNavigationEntry = {
 	entryId: string;

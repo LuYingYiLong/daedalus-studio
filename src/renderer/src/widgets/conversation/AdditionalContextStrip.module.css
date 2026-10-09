@@ -108,3 +108,18 @@
 	height: 13px;
 	color: var(--ds-accent-hover);
 }
+
+.openSessionButton {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	border-radius: var(--ds-radius-xs);
+	cursor: pointer;
+}
+
+.openSessionButton:hover, .openSessionButton:focus-visible {
+	color: var(--ds-accent);
+	background: var(--ds-accent-subtle);
+}

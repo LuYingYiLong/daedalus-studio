@@ -69,6 +69,13 @@ function getFilesystemSelectionMeta(item: AdditionalContextItem, t: TFunction<"c
 }
 
 function getMeta(item: AdditionalContextItem, t: TFunction<"common">): string {
+	if (item.kind === "session") {
+		const data: Record<string, unknown> = getDataRecord(item);
+		const updatedAt: string = getString(data.updatedAt);
+		return [item.subtitle?.trim(), updatedAt.length > 0 ? new Date(updatedAt).toLocaleString() : ""]
+			.filter((part): part is string => typeof part === "string" && part.length > 0)
+			.join(" · ");
+	}
 	if (item.kind === "filesystem_selection") {
 		return getFilesystemSelectionMeta(item, t);
 	}

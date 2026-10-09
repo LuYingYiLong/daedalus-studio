@@ -2,6 +2,7 @@ import { useCallback, useEffect, type MutableRefObject } from "react";
 import { useTranslation } from "react-i18next";
 import type { SessionMetadata } from "@/platform/rpc/types";
 import { fetchSessions, openSession } from "@/platform/rpc/session-api";
+import { readSessionContext } from "@/platform/rpc/session-context-api";
 import {
 	removeSessionFromNavigationHistory,
 	SESSION_NAVIGATION_EVENT,
@@ -153,6 +154,11 @@ function useSessionNavigationController({
 							session.id === sessionId,
 					);
 				if (source === undefined) {
+					const archivedSource = await readSessionContext(sessionId);
+					if (archivedSource.metadata.archivedAt !== undefined) {
+						await window.electronAPI.windowControl.openSettings("archived_sessions");
+						return;
+					}
 					onInfo(t("chat.fork.errors.sourceUnavailable"));
 					return;
 				}

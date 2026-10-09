@@ -15,6 +15,8 @@ type ComposerActionKeys =
 	| "onAddWindowScreenshot"
 	| "onAddPastedTextAttachment"
 	| "onAddContextFiles"
+	| "onAddContext"
+	| "onOpenReferencedSession"
 	| "onRemoveContext"
 	| "onPinContext"
 	| "onClearUnpinnedContext"
@@ -34,6 +36,7 @@ export type HomePageComposerControllerParams = {
 		message: ComposerProps["message"];
 		nextStepSuggestion: ComposerProps["nextStepSuggestion"];
 		contextItems: NonNullable<ComposerProps["contextItems"]>;
+		activeSessionId: ComposerProps["activeSessionId"];
 		mode: ComposerProps["mode"];
 		approvalMode: ComposerProps["approvalMode"];
 		slashCommands: NonNullable<ComposerProps["slashCommands"]>;
@@ -108,6 +111,7 @@ export default function useHomePageComposerController({
 			message: state.message,
 			onDraftChange: actions.onDraftChange,
 			contextItems: state.contextItems,
+			activeSessionId: state.activeSessionId,
 			mode: state.mode,
 			approvalMode: state.approvalMode,
 			slashCommands: state.slashCommands,
@@ -145,6 +149,8 @@ export default function useHomePageComposerController({
 			onAddWindowScreenshot: actions.onAddWindowScreenshot,
 			onAddPastedTextAttachment: actions.onAddPastedTextAttachment,
 			onAddContextFiles: actions.onAddContextFiles,
+			onAddContext: actions.onAddContext,
+			onOpenReferencedSession: actions.onOpenReferencedSession,
 			onWorkspaceSelect: showWorkspaceFooter
 				? actions.onHomeWorkspaceSelect
 				: undefined,
