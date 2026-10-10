@@ -302,6 +302,22 @@ describe("workbench-state", () => {
 		expect(withDone[0]?.type === "assistant" ? withDone[0].status : "missing").toBeUndefined();
 	});
 
+	it("keeps multiple Agent questions in the originating run and updates each answer independently", () => {
+		const questions: BackendEvent[] = ["q1", "q2"].map((questionId): BackendEvent => ({
+			type: "event", id: "run-a", event: "agent.clarification.required", sessionId: "session-a", requestId: "run-a",
+			data: { questionId, sessionId: "session-a", runId: "run-a", title: "Clarify", question: `Question ${questionId}`, choices: [] }
+		}));
+		const initial = applyBackendEventsToTimeline([], questions);
+		const updated = applyBackendEventToTimeline(initial, {
+			type: "event", id: "run-a", event: "agent.clarification.answered", sessionId: "session-a", requestId: "run-a",
+			data: { questionId: "q1", runId: "run-a", answer: "Answer one" }
+		});
+		const parts = updated[0]?.type === "assistant" ? updated[0].bodyParts.filter((part) => part.type === "agent_clarification") : [];
+		expect(parts).toHaveLength(2);
+		expect(parts[0]).toMatchObject({ questionId: "q1", status: "answered", answer: "Answer one" });
+		expect(parts[1]).toMatchObject({ questionId: "q2", status: "pending", answer: null });
+	});
+
 	it("isolates subagent conversation events from the parent timeline unless explicitly included", () => {
 		const childEvent: BackendEvent = {
 			type: "event",

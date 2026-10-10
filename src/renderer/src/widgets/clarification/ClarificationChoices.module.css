@@ -1,0 +1,30 @@
+.suggestedReplies {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ds-space-1);
+}
+
+.suggestedReplyButton {
+	justify-content: flex-start;
+	text-align: left;
+}
+
+.replyContent {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.replyLabel {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.replyDescription {
+	overflow: hidden;
+	font-size: 12px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}

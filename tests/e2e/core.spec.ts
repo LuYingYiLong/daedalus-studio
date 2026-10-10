@@ -206,6 +206,40 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 		await expect.poll(() => mockBackend.getRequests("ai.chat").length).toBe(1);
 	});
 
+	test("Agent 追问不阻断独立工作，回答留在原 Run 时间线", async ({ launchStudio, mockBackend }) => {
+		let runRequestId = "";
+		mockBackend.setHandler("ai.chat", ({ id }) => {
+			runRequestId = id;
+			setTimeout(() => {
+				mockBackend.sendEvent("agent.clarification.required", {
+					questionId: "question-e2e", sessionId: MOCK_SESSION_ID, runId: id, title: "选择实现方向",
+					question: "采用哪一种接口？", choices: [{ label: "现有接口", text: "使用现有接口" }]
+				}, { sessionId: MOCK_SESSION_ID, requestId: id, runId: id });
+				mockBackend.sendEvent("agent.message.delta", { text: "我会先完成不依赖这个选择的检查。" }, { sessionId: MOCK_SESSION_ID, requestId: id, runId: id });
+			}, 50);
+			return { accepted: true };
+		});
+		mockBackend.setHandler("agent.clarification.answer", ({ params }) => {
+			const answer = params as { questionId: string; answer: string };
+			mockBackend.sendEvent("agent.clarification.answered", { questionId: answer.questionId, runId: runRequestId, answer: answer.answer }, { sessionId: MOCK_SESSION_ID, requestId: runRequestId, runId: runRequestId });
+			mockBackend.sendEvent("agent.message.delta", { text: "收到回答，继续使用现有接口。" }, { sessionId: MOCK_SESSION_ID, requestId: runRequestId, runId: runRequestId });
+			return { questionId: answer.questionId, status: "answered", changed: true };
+		});
+		const { mainWindow } = await launchStudio();
+		await openSessionSurface(mainWindow);
+		const composer = mainWindow.locator("[data-studio-composer=\"true\"] textarea");
+		await composer.fill("实现这个功能，接口稍后决定");
+		await composer.press("Enter");
+		await mockBackend.waitForRequest("ai.chat");
+		const question = mainWindow.locator("#agent-question-question-e2e");
+		await expect(question).toBeVisible({ timeout: 15_000 });
+		await expect(mainWindow.getByText("我会先完成不依赖这个选择的检查。")).toBeVisible();
+		await question.getByRole("button", { name: "现有接口" }).click();
+		await expect.poll(() => mockBackend.getRequests("agent.clarification.answer").length).toBe(1);
+		await expect(question.getByText("你的回答: 使用现有接口")).toBeVisible();
+		await expect(mainWindow.getByText("收到回答，继续使用现有接口。")).toBeVisible();
+	});
+
 		test("审批请求可拒绝并恢复终态", async ({ launchStudio, mockBackend }) => {
 		let pending = true;
 		mockBackend.setHandler("approval.list", () => ({

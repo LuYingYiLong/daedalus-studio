@@ -14,6 +14,7 @@ import ImageGenerationPart from "./ImageGenerationPart";
 import ProviderReconnectPart from "./ProviderReconnectPart";
 import CompressionPart from "./CompressionPart";
 import PluginTimelinePart from "./PluginTimelinePart";
+import AgentClarificationCard from "../clarification/AgentClarificationCard";
 import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import MarkdownContent from "../markdown/MarkdownContent";
 import { useTimelineDisclosure } from "@/widgets/conversation/state/timeline-disclosure-state";
@@ -203,6 +204,9 @@ function AssistantBubble({
 
 		if (part.type === "plan") {
 			return <PlanPart key={partKey} part={part} />;
+		}
+		if (part.type === "agent_clarification") {
+			return <AgentClarificationCard key={part.questionId} part={part} />;
 		}
 
 		if (part.type === "inline_diff") {

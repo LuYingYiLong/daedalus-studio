@@ -92,6 +92,7 @@ type NativeNotificationPayload = {
 	sessionId?: string | null;
 	requestId?: string | null;
 	taskId?: string | null;
+	questionId?: string | null;
 	title: string;
 	body: string;
 	dedupeKey: string;
@@ -424,6 +425,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 			const handler = (_event: Electron.IpcRendererEvent, payload: NativeNotificationPayload): void => callback(payload);
 			ipcRenderer.on("native-notification:foreground", handler);
 			return (): void => { ipcRenderer.removeListener("native-notification:foreground", handler); };
+		},
+		onQuestionNavigate: (callback: (target: { sessionId: string; questionId: string }) => void): (() => void) => {
+			const handler = (_event: Electron.IpcRendererEvent, target: { sessionId: string; questionId: string }): void => callback(target);
+			ipcRenderer.on("agent-question:navigate", handler);
+			return (): void => { ipcRenderer.removeListener("agent-question:navigate", handler); };
 		},
 	},
 

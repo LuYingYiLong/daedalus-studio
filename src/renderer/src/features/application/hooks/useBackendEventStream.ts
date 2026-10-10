@@ -1,4 +1,4 @@
-import { useEffect, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { useMemoizedFn } from "ahooks";
 import { useTranslation } from "react-i18next";
 import type { AgentGoalState, PlanApprovalState, PlanClarificationState, SessionMetadata, WorkbenchSnapshot, WorkflowTodoSnapshot } from "@/platform/rpc/types";
@@ -76,6 +76,7 @@ export type BackendEventStreamParams = {
 
 function useBackendEventStream(params: BackendEventStreamParams): void {
 	const { t } = useTranslation();
+	const notifiedQuestionIds = useRef(new Set<string>());
 
 	const handleBackendEvent = useMemoizedFn((event: BackendEvent): void => {
 		params.onEventObserved?.(event);
@@ -87,6 +88,22 @@ function useBackendEventStream(params: BackendEventStreamParams): void {
 		}
 		const eventSessionId: string | null = getBackendEventSessionId(event);
 		const activeSessionId: string | null = params.activeSessionIdRef.current;
+		if (event.event === "agent.clarification.required" && eventSessionId !== null && params.runCompletionNotificationsEnabled) {
+			const data = event.data as Record<string, unknown>;
+			const questionId = typeof data?.questionId === "string" ? data.questionId : "";
+			if (questionId && !notifiedQuestionIds.current.has(questionId)) {
+				notifiedQuestionIds.current.add(questionId);
+				params.showNativeTaskNotification({
+					kind: "clarification_required",
+					sessionId: eventSessionId,
+					requestId: getBackendEventRequestId(event),
+					questionId,
+					title: t("nativeNotifications.agentQuestionTitle"),
+					body: t("nativeNotifications.agentQuestionBody"),
+					dedupeKey: `agent_question:${questionId}`
+				});
+			}
+		}
 		if (isSessionScopedBackendEvent(event) && (eventSessionId === null || eventSessionId !== activeSessionId)) {
 			return;
 		}

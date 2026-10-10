@@ -1555,6 +1555,14 @@
 			"submit": "提交"
 		}
 	},
+	"agentClarification": {
+		"title": "Agent 追问",
+		"placeholder": "也可以直接填写你的回答",
+		"submit": "回答",
+		"answered": "你的回答",
+		"cancelled": "这轮任务已取消，问题已关闭",
+		"submitFailed": "提交回答失败"
+	},
 	"dock": {
 		"tabs": {
 			"changes": "变更",
@@ -3925,8 +3933,8 @@
 			"notifications": {
 				"title": "系统通知",
 				"runCompleted": {
-					"title": "LLM 回复完成时通知",
-					"description": "当回复在后台完成时，通过系统通知提醒你。窗口处于前台时不会重复打扰。"
+					"title": "运行完成和 Agent 追问时通知",
+					"description": "当回复在后台完成或 Agent 发起追问时，通过系统通知提醒你。窗口处于前台时不会重复打扰。"
 				}
 			},
 			"general": {
@@ -4049,6 +4057,8 @@
 		}
 	},
 	"nativeNotifications": {
+		"agentQuestionTitle": "Daedalus 有个问题",
+		"agentQuestionBody": "Agent 已发起追问，可继续处理其他工作，等待你的回答。",
 		"goalAchievedTitle": "Daedalus 已完成目标",
 		"goalStoppedTitle": "Daedalus 目标已停止",
 		"approvalTitle": "Daedalus 需要审批",

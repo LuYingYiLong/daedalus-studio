@@ -1200,6 +1200,7 @@ export type PlanApprovalState = {
 };
 
 export type TimelineBodyPart =
+	| { type: "agent_clarification"; questionId: string; sessionId: string; runId: string; title: string; question: string; choices: Array<{ label: string; text: string; description?: string }>; status: "pending" | "answered" | "applied" | "cancelled"; answer: string | null }
 	| { type: "markdown"; text: string }
 	| {
 			type: "thinking";

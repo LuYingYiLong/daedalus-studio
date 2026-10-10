@@ -3,6 +3,7 @@ import { Button, Input, Space, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import type { PlanRecommendedReply } from "@/platform/rpc/types";
 import styles from "./ClarificationDialog.module.css";
+import ClarificationChoices from "./ClarificationChoices";
 
 export type ClarificationDialogProps = {
 	planId: string;
@@ -23,7 +24,7 @@ function ClarificationDialog({
 	isSubmitting,
 	errorMessage,
 	onSubmit,
-	onSkip
+	onSkip,
 }: ClarificationDialogProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [customReply, setCustomReply] = useState<string>("");
@@ -44,37 +45,17 @@ function ClarificationDialog({
 				</div>
 			</header>
 
-			<Typography.Paragraph className={styles.question}>
-				{question}
-			</Typography.Paragraph>
+			<Typography.Paragraph className={styles.question}>{question}</Typography.Paragraph>
 
-			<Typography.Paragraph className={styles.skipHint}>
-				{t("clarification.skipHint")}
-			</Typography.Paragraph>
+			<Typography.Paragraph className={styles.skipHint}>{t("clarification.skipHint")}</Typography.Paragraph>
 
-			{recommendedReplies.length > 0 ? (
-				<div className={styles.suggestedReplies}>
-					{recommendedReplies.slice(0, 3).map((reply: PlanRecommendedReply, index: number): React.JSX.Element => (
-						<Button
-							key={`${reply.label}:${index.toString()}`}
-							block={true}
-							type={index === 0 ? "primary" : "default"}
-							className={styles.suggestedReplyButton}
-							disabled={isSubmitting}
-							onClick={(): void => onSubmit(reply.text)}
-						>
-							<span className={styles.replyContent}>
-								<span className={styles.replyLabel}>
-									{reply.label}{index === 0 ? ` ${t("clarification.recommendedSuffix")}` : ""}
-								</span>
-								{reply.description ? (
-									<span className={styles.replyDescription}>{reply.description}</span>
-								) : null}
-							</span>
-						</Button>
-					))}
-				</div>
-			) : null}
+			<ClarificationChoices
+				choices={recommendedReplies}
+				disabled={isSubmitting}
+				maxChoices={3}
+				onChoose={onSubmit}
+				recommendedSuffix={t("clarification.recommendedSuffix")}
+			/>
 
 			<Space.Compact className={styles.customReplyRow}>
 				<Input

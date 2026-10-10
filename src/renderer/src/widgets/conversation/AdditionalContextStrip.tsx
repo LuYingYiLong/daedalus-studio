@@ -137,19 +137,6 @@ function AdditionalContextStrip({
 								/>
 							) : null}
 						</span>
-						{/* {canOpenSession ? <span
-							className={styles.openSessionButton}
-							role="button"
-							tabIndex={0}
-							aria-label={t("composer.sessionPicker.openSource")}
-							onClick={(event: React.MouseEvent<HTMLSpanElement>): void => { event.stopPropagation(); if (typeof sessionId === "string") void onOpenSession?.(sessionId); }}
-							onKeyDown={(event: React.KeyboardEvent<HTMLSpanElement>): void => {
-								if (event.key !== "Enter" && event.key !== " ") return;
-								event.preventDefault();
-								event.stopPropagation();
-								if (typeof sessionId === "string") void onOpenSession?.(sessionId);
-							}}
-						>↗</span> : null} */}
 					</Tooltip>
 				);
 			})}

@@ -963,6 +963,17 @@ function updateAssistantBlockFromEvent(block: TimelineAssistantBlock, event: Bac
 		nextParts = appendThinkingPart(nextParts, "", true, getActivityMetadata(data));
 	} else if (event.event === "agent.provider.reconnect") {
 		nextParts = appendProviderReconnectPart(nextParts, data);
+	} else if (event.event === "agent.clarification.required") {
+		const questionId = getStringValue(data, "questionId");
+		if (questionId && !nextParts.some((part): boolean => part.type === "agent_clarification" && part.questionId === questionId)) {
+			const choices = Array.isArray(data.choices) ? data.choices.filter((choice): choice is { label: string; text: string; description?: string } => typeof choice === "object" && choice !== null && typeof choice.label === "string" && typeof choice.text === "string") : [];
+			nextParts = [...nextParts, { type: "agent_clarification", questionId, sessionId: getStringValue(data, "sessionId"), runId: getStringValue(data, "runId"), title: getStringValue(data, "title"), question: getStringValue(data, "question"), choices, status: "pending", answer: null }];
+		}
+	} else if (event.event === "agent.clarification.answered" || event.event === "agent.clarification.applied" || event.event === "agent.clarification.cancelled") {
+		const questionId = getStringValue(data, "questionId");
+		nextParts = nextParts.map((part): TimelineBodyPart => part.type === "agent_clarification" && part.questionId === questionId
+			? { ...part, status: event.event === "agent.clarification.answered" ? "answered" : event.event === "agent.clarification.applied" ? "applied" : "cancelled", answer: event.event === "agent.clarification.answered" ? getStringValue(data, "answer") : part.answer }
+			: part);
 	} else if (event.event === "agent.summary.started") {
 		nextParts = appendSummaryStartPart(nextParts, event);
 	} else if (event.event === "agent.context.compression") {
@@ -1060,6 +1071,7 @@ function shouldCreateAssistantBlock(event: BackendEvent): boolean {
 		event.event === "agent.message.delta" ||
 		event.event === "agent.thinking.delta" ||
 		event.event === "agent.provider.reconnect" ||
+		event.event === "agent.clarification.required" ||
 		event.event === "agent.summary.started" ||
 		event.event === "agent.context.compression" ||
 		event.event === "plugin.timeline.part" ||

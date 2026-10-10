@@ -9,6 +9,7 @@ export type NativeNotificationPayload = {
 	sessionId?: string | null;
 	requestId?: string | null;
 	taskId?: string | null;
+	questionId?: string | null;
 	title: string;
 	body: string;
 	dedupeKey: string;
@@ -105,6 +106,7 @@ export class NativeNotificationService {
 				if (mainWindow !== null && !mainWindow.isDestroyed()) {
 					this.showWindow(mainWindow);
 					if (payload.taskId !== undefined) safeSendToWebContents(mainWindow.webContents, "scheduled-task:navigate", { taskId: payload.taskId, sessionId: payload.sessionId ?? null });
+					if (payload.kind === "clarification_required" && payload.sessionId && payload.questionId) safeSendToWebContents(mainWindow.webContents, "agent-question:navigate", { sessionId: payload.sessionId, questionId: payload.questionId });
 				}
 				this.clearAttention();
 			});

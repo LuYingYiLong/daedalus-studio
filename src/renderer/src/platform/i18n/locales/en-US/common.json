@@ -1560,6 +1560,14 @@
 			"submit": "Submit"
 		}
 	},
+	"agentClarification": {
+		"title": "Agent question",
+		"placeholder": "Or write your own answer",
+		"submit": "Reply",
+		"answered": "Your answer",
+		"cancelled": "This run was cancelled and the question was closed",
+		"submitFailed": "Failed to send answer"
+	},
 	"dock": {
 		"tabs": {
 			"changes": "Changes",
@@ -3944,8 +3952,8 @@
 			"notifications": {
 				"title": "System notifications",
 				"runCompleted": {
-					"title": "Notify when an LLM reply finishes",
-					"description": "Show a system notification when a reply finishes in the background. No duplicate notification is shown while the window is focused."
+					"title": "Notify for completed runs and Agent questions",
+					"description": "Show a system notification when a reply finishes or the Agent asks a question in the background. No duplicate notification is shown while the window is focused."
 				}
 			},
 			"general": {
@@ -4068,6 +4076,8 @@
 		}
 	},
 	"nativeNotifications": {
+		"agentQuestionTitle": "Daedalus has a question",
+		"agentQuestionBody": "The Agent asked for clarification and can keep working while you reply.",
 		"goalAchievedTitle": "Daedalus achieved the goal",
 		"goalStoppedTitle": "Daedalus goal stopped",
 		"approvalTitle": "Daedalus needs approval",

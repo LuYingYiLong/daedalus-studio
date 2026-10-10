@@ -68,6 +68,31 @@ function useSessionNavigationController({
 	onError,
 }: UseSessionNavigationControllerParams): SessionNavigationController {
 	const { t } = useTranslation();
+	useEffect((): (() => void) => {
+		let observer: MutationObserver | null = null;
+		let timeoutId: number | null = null;
+		const stop = (): void => {
+			observer?.disconnect();
+			observer = null;
+			if (timeoutId !== null) window.clearTimeout(timeoutId);
+		};
+		const offNavigate = window.electronAPI.nativeNotifications.onQuestionNavigate(({ sessionId, questionId }): void => {
+			stop();
+			const focusQuestion = (): void => {
+				const card = document.getElementById(`agent-question-${questionId}`);
+				if (card !== null && activeSessionIdRef.current === sessionId) {
+					card.scrollIntoView({ block: "center", behavior: "smooth" });
+					stop();
+				}
+			};
+			observer = new MutationObserver(focusQuestion);
+			observer.observe(document.body, { childList: true, subtree: true });
+			timeoutId = window.setTimeout(stop, 15000);
+			if (activeSessionIdRef.current !== sessionId) window.dispatchEvent(new CustomEvent(SESSION_NAVIGATION_EVENT, { detail: { sessionId, surface: "chat" } }));
+			focusQuestion();
+		});
+		return (): void => { stop(); offNavigate(); };
+	}, [activeSessionIdRef]);
 
 	useEffect((): (() => void) => {
 		function handleSessionNavigation(event: Event): void {

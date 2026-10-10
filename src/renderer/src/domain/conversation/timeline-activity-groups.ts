@@ -82,6 +82,9 @@ export function getTimelinePartKey(part: TimelineBodyPart, index: number): strin
 	if (part.type === "compression") {
 		return `compression:${part.compressionId}`;
 	}
+	if (part.type === "agent_clarification") {
+		return `agent-clarification:${part.questionId}`;
+	}
 	if (part.type === "summary_start") {
 		return `summary:${part.stepRunId || index}`;
 	}

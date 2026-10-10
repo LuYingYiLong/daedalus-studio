@@ -210,6 +210,7 @@ declare global {
 		sessionId?: string | null;
 		requestId?: string | null;
 		taskId?: string | null;
+		questionId?: string | null;
 		title: string;
 		body: string;
 		dedupeKey: string;
@@ -224,6 +225,7 @@ declare global {
 		show: (payload: NativeNotificationPayload) => Promise<NativeNotificationResult>;
 		clearAttention: () => Promise<{ cleared: true }>;
 		onForeground: (callback: (payload: NativeNotificationPayload) => void) => () => void;
+		onQuestionNavigate: (callback: (target: { sessionId: string; questionId: string }) => void) => () => void;
 	}
 
 	interface TrayRecentSession {

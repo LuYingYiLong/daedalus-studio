@@ -1,0 +1,19 @@
+.body {
+	padding: var(--ds-space-2);
+	border: 1px solid var(--ds-border);
+	border-radius: var(--ds-radius-lg);
+	background: var(--ds-surface);
+	user-select: none;
+	display: grid;
+	gap: var(--ds-space-1);
+}
+
+.question {
+	margin: 0 !important;
+}
+
+.customReplyRow {
+	display: grid;
+	gap: var(--ds-space-1);
+	width: 100%;
+}
