@@ -32,7 +32,9 @@ export default function AgentClarificationCard({ part }: { part: Part }): React.
 			className={styles.body}
 			aria-label={t("agentClarification.title")}
 		>
-			<Typography.Paragraph className={styles.question}>{part.question}</Typography.Paragraph>
+			<Typography.Text type={part.status === "pending" ? "secondary" : undefined}>
+				{part.question}
+			</Typography.Text>
 			{part.status === "pending" ? (
 				<>
 					<ClarificationChoices

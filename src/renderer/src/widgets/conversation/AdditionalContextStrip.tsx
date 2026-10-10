@@ -57,7 +57,6 @@ function AdditionalContextStrip({
 					item.kind === "session" && typeof item.data === "object" && item.data !== null
 						? (item.data as Record<string, unknown>).sessionId
 						: null;
-				const canOpenSession: boolean = typeof sessionId === "string" && onOpenSession !== undefined;
 
 				return (
 					<Tooltip
@@ -129,6 +128,19 @@ function AdditionalContextStrip({
 								<span className={styles.contextTitle}>{display.title}</span>
 								<span className={styles.contextMeta}>{display.meta}</span>
 							</span>
+							{typeof sessionId === "string" && onOpenSession ? (
+								<button
+									type="button"
+									className={styles.openSessionButton}
+									aria-label={t("composer.sessionPicker.openSource")}
+									onClick={(event: React.MouseEvent<HTMLButtonElement>): void => {
+										event.stopPropagation();
+										void onOpenSession(sessionId);
+									}}
+								>
+									<Icon name="external-link" />
+								</button>
+							) : null}
 							{item.pinned === true ? (
 								<Icon
 									name="pin"

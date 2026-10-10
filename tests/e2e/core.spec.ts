@@ -236,7 +236,7 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 		await expect(mainWindow.getByText("我会先完成不依赖这个选择的检查。")).toBeVisible();
 		await question.getByRole("button", { name: "现有接口" }).click();
 		await expect.poll(() => mockBackend.getRequests("agent.clarification.answer").length).toBe(1);
-		await expect(question.getByText("你的回答: 使用现有接口")).toBeVisible();
+		await expect(question.getByText(/^(?:你的回答|Your answer): 使用现有接口$/)).toBeVisible();
 		await expect(mainWindow.getByText("收到回答，继续使用现有接口。")).toBeVisible();
 	});
 

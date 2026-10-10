@@ -8,12 +8,9 @@
 	gap: var(--ds-space-1);
 }
 
-.question {
-	margin: 0 !important;
-}
-
 .customReplyRow {
 	display: grid;
 	gap: var(--ds-space-1);
+	grid-template-columns: minmax(0, 1fr) auto;
 	width: 100%;
 }

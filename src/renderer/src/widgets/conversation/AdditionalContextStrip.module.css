@@ -113,9 +113,14 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	flex: 0 0 auto;
 	width: 18px;
 	height: 18px;
+	padding: 0;
+	border: 0;
 	border-radius: var(--ds-radius-xs);
+	color: inherit;
+	background: transparent;
 	cursor: pointer;
 }
 
