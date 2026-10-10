@@ -57,6 +57,7 @@ export type MessageListProps = {
 	forkDisabled?: boolean;
 	forkingRequestId?: string | null;
 	onInlineDiffReview?: () => void;
+	onAssistantFeedbackChange?: (requestId: string, rating: "good" | "bad" | null) => Promise<void>;
 	scrollToBottomRequest?: number;
 	onAwayFromBottomChange?: (awayFromBottom: boolean) => void;
 	onActiveBlockOffsetChange?: (blockOffset: number | null) => void;
@@ -184,9 +185,10 @@ type AssistantTimelineRowProps = {
 	hideInlineDiff: boolean;
 	onInlineDiffReview?: () => void;
 	onTerminalWheelPassThrough?: (deltaY: number) => void;
+	onFeedbackChange?: (requestId: string, rating: "good" | "bad" | null) => Promise<void>;
 };
 
-const AssistantTimelineRow = memo(function AssistantTimelineRow({ block, blockOffset, hideInlineDiff, onInlineDiffReview, onTerminalWheelPassThrough }: AssistantTimelineRowProps): React.JSX.Element {
+const AssistantTimelineRow = memo(function AssistantTimelineRow({ block, blockOffset, hideInlineDiff, onInlineDiffReview, onTerminalWheelPassThrough, onFeedbackChange }: AssistantTimelineRowProps): React.JSX.Element {
 	const [nowIsoTime, setNowIsoTime] = useState<string>(() => new Date().toISOString());
 	useEffect((): (() => void) | void => {
 		if (block.status !== "running") {
@@ -211,6 +213,10 @@ const AssistantTimelineRow = memo(function AssistantTimelineRow({ block, blockOf
 				block.status === "running" ? nowIsoTime : block.completedAtUtc
 			) ?? undefined}
 			completionStatus={block.completionStatus}
+			feedback={block.feedback}
+			onFeedbackChange={onFeedbackChange === undefined || block.requestId.length === 0
+				? undefined
+				: (rating): Promise<void> => onFeedbackChange(block.requestId, rating)}
 			endTime={block.status === "running" ? undefined : formatShortDateTime(block.completedAtUtc)}
 			streaming={block.status === "running"}
 			selectionEnabled={block.status !== "running" && block.status !== "failed"}
@@ -241,6 +247,7 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 	forkDisabled = false,
 	forkingRequestId = null,
 	onInlineDiffReview,
+	onAssistantFeedbackChange,
 	scrollToBottomRequest = 0,
 	onAwayFromBottomChange,
 	onActiveBlockOffsetChange,
@@ -770,11 +777,11 @@ const MessageList = forwardRef<MessageListHandle, MessageListProps>(function Mes
 						isForking={forkingRequestId === block.requestId}
 					/>
 				) : (
-					<AssistantTimelineRow block={block} blockOffset={item.blockOffset} hideInlineDiff={hideInlineDiff} onInlineDiffReview={onInlineDiffReview} onTerminalWheelPassThrough={handleTerminalWheelPassThrough} />
+					<AssistantTimelineRow block={block} blockOffset={item.blockOffset} hideInlineDiff={hideInlineDiff} onInlineDiffReview={onInlineDiffReview} onTerminalWheelPassThrough={handleTerminalWheelPassThrough} onFeedbackChange={onAssistantFeedbackChange} />
 				)}
 			</div>
 		);
-	}, [activeRetryRequestId, canEditUserMessages, forkDisabled, forkingRequestId, handleTerminalWheelPassThrough, hideInlineDiff, onForkFromUserMessage, onInlineDiffReview, onOpenForkSource, onRetryEditCancel, onRetryEditStart, onRetryFromUserMessage, retryDisabled]);
+	}, [activeRetryRequestId, canEditUserMessages, forkDisabled, forkingRequestId, handleTerminalWheelPassThrough, hideInlineDiff, onAssistantFeedbackChange, onForkFromUserMessage, onInlineDiffReview, onOpenForkSource, onRetryEditCancel, onRetryEditStart, onRetryFromUserMessage, retryDisabled]);
 	const virtuosoComponents = useMemo(() => ({
 		Header: renderHeader,
 		Footer: renderFooter,

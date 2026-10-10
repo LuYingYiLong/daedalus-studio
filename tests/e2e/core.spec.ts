@@ -66,9 +66,15 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 		await expect.poll(() => mockBackend.getRequests("client.hello").length).toBeGreaterThan(0);
 	});
 
-	test("创建会话并消费 Mock Backend 的流式回复", async ({ launchStudio, mockBackend }) => {
+	test("创建会话、消费流式回复并切换评价", async ({ launchStudio, mockBackend }) => {
 		let chatRequestId: string | null = null;
 		let persistedReplyAvailable: boolean = false;
+		let feedback: "good" | "bad" | null = null;
+		mockBackend.setHandler("session.assistant.feedback.set", ({ params }) => {
+			const input = params as { sessionId: string; requestId: string; rating: "good" | "bad" | null };
+			feedback = input.rating;
+			return { requestId: input.requestId, rating: feedback, updatedAt: feedback === null ? null : "2026-08-24T00:00:03.000Z" };
+		});
 		mockBackend.setHandler("session.timeline", ({ params }) => {
 			const sessionId: string = (params as { sessionId?: string } | undefined)?.sessionId ?? MOCK_SESSION_ID;
 			if (!persistedReplyAvailable || chatRequestId === null) {
@@ -113,6 +119,7 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 						startedAtUtc: "2026-08-24T00:00:01.000Z",
 						completedAtUtc: "2026-08-24T00:00:02.000Z",
 						completionStatus: "responded",
+						feedback,
 						bodyParts: [{ type: "markdown", text: "Mock reply from E2E" }],
 					},
 				],
@@ -204,6 +211,19 @@ test.describe("Daedalus Studio 核心 Electron E2E", () => {
 		await expect(mainWindow.locator("[data-studio-app-layer=\"true\"]")).not.toHaveAttribute("aria-hidden", "true");
 		await expect(mainWindow.getByText("Mock reply from E2E")).toBeVisible({ timeout: 15_000 });
 		await expect.poll(() => mockBackend.getRequests("ai.chat").length).toBe(1);
+		const good = mainWindow.getByRole("button", { name: /^(Good response|喜欢这条回复)$/ });
+		const bad = mainWindow.getByRole("button", { name: /^(Bad response|不喜欢这条回复)$/ });
+		await expect(good).toBeVisible();
+		await good.click();
+		await expect(good).toHaveAttribute("aria-pressed", "true");
+		await mainWindow.mouse.move(20, 20);
+		await expect(good.locator("xpath=..")).toHaveCSS("opacity", "1");
+		await bad.click();
+		await expect(good).toHaveAttribute("aria-pressed", "false");
+		await expect(bad).toHaveAttribute("aria-pressed", "true");
+		await bad.click();
+		await expect(bad).toHaveAttribute("aria-pressed", "false");
+		expect(mockBackend.getRequests("session.assistant.feedback.set").map(({ params }) => (params as { rating: string | null }).rating)).toEqual(["good", "bad", null]);
 	});
 
 	test("Agent 追问不阻断独立工作，回答留在原 Run 时间线", async ({ launchStudio, mockBackend }) => {

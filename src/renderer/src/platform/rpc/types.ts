@@ -1126,6 +1126,7 @@ export type TimelineAssistantBlock = {
 	completedAtUtc: string;
 	status?: "failed" | "running" | "stopped";
 	completionStatus?: "responded" | "stopped";
+	feedback?: "good" | "bad" | null;
 	bodyParts: TimelineBodyPart[];
 	renderHints?: TimelineRenderHints;
 };

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useComputerOverlay } from "@/features/computer-observation/useComputerOverlay";
-import cursor from "@/assets/icons/ai-cursor.svg";
+import cursor from "@/assets/icons/ai-cursor-colorful.svg";
 import { computerPauseHintKey } from "@/domain/computer-observation/control-feedback";
 import i18n from "@/platform/i18n";
 import styles from "./ComputerOverlay.module.css";

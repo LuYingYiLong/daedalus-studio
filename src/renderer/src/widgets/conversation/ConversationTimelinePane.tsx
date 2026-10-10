@@ -14,6 +14,7 @@ import { useSelectionAsk } from "@/features/conversation/useSelectionAsk";
 import SelectionAskDialog from "./SelectionAskDialog";
 import styles from "./ConversationTimelinePane.module.css";
 import { shouldHideInlineDiffForGoal } from "@/domain/composer/goal-display";
+import { setAssistantFeedback } from "@/platform/rpc/session-api";
 
 export type ConversationTimelinePaneHandle = {
 	closeSearch: () => boolean;
@@ -102,6 +103,19 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 	const handleConversationSearchLoadError = useCallback((error: unknown): void => {
 		console.warn("[ConversationTimelinePane] conversation search degraded to loaded messages", error);
 	}, []);
+	const handleAssistantFeedbackChange = useCallback(async (requestId: string, rating: "good" | "bad" | null): Promise<void> => {
+		try {
+			const saved = await setAssistantFeedback(sessionId, requestId, rating);
+			timelineStore.update((page) => ({
+				...page,
+				blocks: page.blocks.map((block): TimelineBlock => block.type === "assistant" && block.requestId === requestId
+					? { ...block, feedback: saved.rating }
+					: block),
+			}));
+		} catch (error: unknown) {
+			void message.error(error instanceof Error ? error.message : t("chat.assistant.feedback.saveFailed"));
+		}
+	}, [message, sessionId, t, timelineStore]);
 	const conversationSearch = useConversationSearch({
 		sessionId,
 		timelineBlocks: timelinePage.blocks,
@@ -233,6 +247,7 @@ const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, Conv
 				key={sessionId}
 				ref={messageListRef}
 				blocks={timelinePage.blocks}
+				onAssistantFeedbackChange={handleAssistantFeedbackChange}
 				blockOffset={timelinePage.blockOffset}
 				searchOpen={conversationSearch.open}
 				searchQuery={conversationSearch.query}

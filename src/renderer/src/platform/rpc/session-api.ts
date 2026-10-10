@@ -280,6 +280,15 @@ export async function openSession(
 	});
 }
 
+export async function setAssistantFeedback(
+	sessionId: string,
+	requestId: string,
+	rating: "good" | "bad" | null,
+): Promise<{ requestId: string; rating: "good" | "bad" | null; updatedAt: string | null }> {
+	const client = await createBackendClient();
+	return client.request("session.assistant.feedback.set", { sessionId, requestId, rating });
+}
+
 export async function fetchSessionTimeline(
 	sessionId: string,
 	limit: number = 100,

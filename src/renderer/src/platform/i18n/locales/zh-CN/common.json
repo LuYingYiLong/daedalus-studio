@@ -2050,7 +2050,8 @@
 			"process": "过程",
 			"respondedIn": "已响应：{{elapsed}}",
 			"stoppedIn": "已停止：{{elapsed}}",
-			"copyAria": "复制助手消息"
+			"copyAria": "复制助手消息",
+			"feedback": { "good": "喜欢这条回复", "bad": "不喜欢这条回复", "saveFailed": "保存回复评价失败" }
 		},
 		"user": {
 			"copyAria": "复制用户消息",

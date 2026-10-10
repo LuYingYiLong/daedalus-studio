@@ -1,17 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-	chromium,
-	type Browser,
-	type BrowserContext,
-	type Page,
-	type CDPSession,
-} from "playwright";
+import { chromium, type Browser, type BrowserContext, type Page, type CDPSession } from "playwright";
 import { createServer, type Server } from "node:http";
 import { readFileSync } from "node:fs";
 import { createExternalDomRuntime } from "../../src/main/services/browser/external-dom-runtime";
 
 const cursorSvg = readFileSync(
-	new URL("../../src/renderer/src/assets/icons/ai-cursor.svg", import.meta.url),
+	new URL("../../src/renderer/src/assets/icons/ai-cursor-colorful.svg", import.meta.url),
 	"utf8",
 );
 describe("isolated browser execution against a local form", () => {
@@ -23,16 +17,12 @@ describe("isolated browser execution against a local form", () => {
 				'<!doctype html><title>Test only</title><form action="/submitted"><label>Name<input id="name" name="name"></label><label>Password<input type="password" value="local-test-secret"></label><button id="submit">Send</button></form><button type="button" id="other">Other</button><script>window.submits=0;document.querySelector("form").onsubmit=e=>{e.preventDefault();window.submits++}</script>',
 			);
 		});
-		await new Promise<void>((resolve) =>
-			server.listen(0, "127.0.0.1", resolve),
-		);
+		await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 		origin = `http://127.0.0.1:${(server.address() as import("node:net").AddressInfo).port}`;
 		browser = await chromium.launch({ headless: true });
 		context = await browser.newContext();
 		await context.route("**/*", (route) =>
-			route.request().url().startsWith(origin)
-				? route.continue()
-				: route.abort(),
+			route.request().url().startsWith(origin) ? route.continue() : route.abort(),
 		);
 	}, 30000);
 	afterAll(async () => {
@@ -58,19 +48,14 @@ describe("isolated browser execution against a local form", () => {
 			contextId: world.executionContextId,
 			expression: `(${createExternalDomRuntime.toString()})(${JSON.stringify({ cursorSvg, color: "#488fc1" })})`,
 		});
-		const call = async (
-			op: string,
-			args: object = {},
-		): Promise<Record<string, any>> => {
+		const call = async (op: string, args: object = {}): Promise<Record<string, any>> => {
 			const result = await cdp.send("Runtime.evaluate", {
 				contextId: world.executionContextId,
 				expression: `globalThis.__daedalusExternal(${JSON.stringify(op)},${JSON.stringify(args)})`,
 				returnByValue: true,
 			});
 			if (result.exceptionDetails)
-				throw new Error(
-					result.exceptionDetails.exception?.description || "evaluation failed",
-				);
+				throw new Error(result.exceptionDetails.exception?.description || "evaluation failed");
 			return result.result.value;
 		};
 		await call("activate", { generation: "test-generation" });
@@ -94,9 +79,7 @@ describe("isolated browser execution against a local form", () => {
 			pierce: true,
 		});
 		const findFeedback = (node: typeof root): typeof root | undefined =>
-			node.attributes?.includes("data-daedalus-feedback")
-				? node
-				: node.children?.map(findFeedback).find(Boolean);
+			node.attributes?.includes("data-daedalus-feedback") ? node : node.children?.map(findFeedback).find(Boolean);
 		const shadow = findFeedback(root)?.shadowRoots?.[0];
 		expect(shadow?.shadowRootType).toBe("closed");
 		expect(JSON.stringify(shadow)).toContain('"localName":"svg"');
@@ -139,9 +122,7 @@ describe("isolated browser execution against a local form", () => {
 		await call("show");
 		await call("heartbeat", { generation: "test-generation" });
 		expect(await feedback.count()).toBe(0);
-		await expect(
-			call("activate", { generation: "test-generation" }),
-		).rejects.toThrow("browser_scope_stale");
+		await expect(call("activate", { generation: "test-generation" })).rejects.toThrow("browser_scope_stale");
 		await call("activate", { generation: "next-generation" });
 		expect(await feedback.isVisible()).toBe(true);
 		await call("clear");
@@ -159,9 +140,7 @@ describe("isolated browser execution against a local form", () => {
 		await other.bringToFront();
 		await setVisibility(true);
 		expect(await feedback.isVisible()).toBe(false);
-		expect(await other.locator('[data-daedalus-feedback="true"]').count()).toBe(
-			0,
-		);
+		expect(await other.locator('[data-daedalus-feedback="true"]').count()).toBe(0);
 		await call("heartbeat", { generation: "test-generation" });
 		await page.bringToFront();
 		await setVisibility(false);
@@ -173,50 +152,31 @@ describe("isolated browser execution against a local form", () => {
 	it("expires an orphaned cursor even if a stale generation keeps sending heartbeats", async () => {
 		const { page, call } = await pageRuntime();
 		await call("heartbeat", { generation: "old-generation" });
-		await page
-			.locator('[data-daedalus-feedback="true"]')
-			.waitFor({ state: "detached", timeout: 7500 });
+		await page.locator('[data-daedalus-feedback="true"]').waitFor({ state: "detached", timeout: 7500 });
 		await call("heartbeat", { generation: "test-generation" });
 		await call("show");
-		expect(await page.locator('[data-daedalus-feedback="true"]').count()).toBe(
-			0,
-		);
+		expect(await page.locator('[data-daedalus-feedback="true"]').count()).toBe(0);
 		await page.close();
 	}, 10000);
 	it("wait checks visible evidence and scroll uses bounded viewport pages", async () => {
 		const { page, call } = await pageRuntime();
 		expect((await call("wait", { condition: "load" })).ready).toBe(true);
-		expect(
-			(await call("wait", { condition: "text", text: "Name" })).ready,
-		).toBe(true);
-		expect(
-			(await call("wait", { condition: "text", text: "not on page" })).ready,
-		).toBe(false);
-		expect(
-			(await call("wait", { condition: "text", text: "local-test-secret" }))
-				.ready,
-		).toBe(false);
-		await expect(call("wait", { condition: "text", text: "" })).rejects.toThrow(
-			"browser_invalid_wait",
-		);
+		expect((await call("wait", { condition: "text", text: "Name" })).ready).toBe(true);
+		expect((await call("wait", { condition: "text", text: "not on page" })).ready).toBe(false);
+		expect((await call("wait", { condition: "text", text: "local-test-secret" })).ready).toBe(false);
+		await expect(call("wait", { condition: "text", text: "" })).rejects.toThrow("browser_invalid_wait");
 		await page.evaluate(() => {
 			document.body.style.height = "5000px";
 		});
 		const scroll = await call("scroll", { direction: "down", pages: 0.5 });
 		expect(scroll.scrollY).toBe((await page.evaluate(() => innerHeight)) / 2);
-		await expect(
-			call("scroll", { direction: "left", pages: 1 }),
-		).rejects.toThrow("browser_invalid_scroll");
-		await expect(
-			call("scroll", { direction: "down", pages: 99 }),
-		).rejects.toThrow("browser_invalid_scroll");
+		await expect(call("scroll", { direction: "left", pages: 1 })).rejects.toThrow("browser_invalid_scroll");
+		await expect(call("scroll", { direction: "down", pages: 99 })).rejects.toThrow("browser_invalid_scroll");
 		await page.close();
 	});
 	it("isolates references, fills without submitting, deduplicates submit and excludes cursor", async () => {
 		const { page, call } = await pageRuntime();
-		expect(await page.evaluate(() => "__daedalusExternal" in globalThis)).toBe(
-			false,
-		);
+		expect(await page.evaluate(() => "__daedalusExternal" in globalThis)).toBe(false);
 		const obs = await call("observe"),
 			fill = obs.elements.find((e: any) => e.name === "Name"),
 			submit = obs.elements.find((e: any) => e.name === "Send");
@@ -262,9 +222,7 @@ describe("isolated browser execution against a local form", () => {
 		).toBe("none");
 		await call("show");
 		await call("clear");
-		await expect(
-			page.locator('[data-daedalus-feedback="true"]').count(),
-		).resolves.toBe(0);
+		await expect(page.locator('[data-daedalus-feedback="true"]').count()).resolves.toBe(0);
 		await page.close();
 	});
 	it("rejects changed fields, ambiguity, password inputs and implicit submission", async () => {
@@ -294,9 +252,7 @@ describe("isolated browser execution against a local form", () => {
 		).rejects.toThrow("browser_target_forbidden");
 		const prepared = await call("prepare", {
 			observationId: obs.observationId,
-			steps: [
-				{ id: "fill", action: "fill", value: "Ada", elementId: field.id },
-			],
+			steps: [{ id: "fill", action: "fill", value: "Ada", elementId: field.id }],
 		});
 		await page.locator("#name").fill("User edit");
 		await expect(
@@ -320,9 +276,7 @@ describe("isolated browser execution against a local form", () => {
 				{ id: "submit", action: "submit", elementId: submit.id },
 			],
 		});
-		await page
-			.locator("#name")
-			.evaluate((e) => e.replaceWith(e.cloneNode(true)));
+		await page.locator("#name").evaluate((e) => e.replaceWith(e.cloneNode(true)));
 		expect(
 			(
 				await call("execute", {
@@ -357,15 +311,11 @@ describe("isolated browser execution against a local form", () => {
 		});
 		await page.frameLocator("body > iframe").locator("#nested").waitFor();
 		const observation = await call("observe");
-		const node = observation.elements.find(
-			(e: any) => e.name === "Nested field",
-		);
+		const node = observation.elements.find((e: any) => e.name === "Nested field");
 		expect(node.frame).toEqual([0]);
 		const prepared = await call("prepare", {
 			observationId: observation.observationId,
-			steps: [
-				{ id: "nested", action: "fill", value: "Test", elementId: node.id },
-			],
+			steps: [{ id: "nested", action: "fill", value: "Test", elementId: node.id }],
 		});
 		expect(
 			(
@@ -376,14 +326,10 @@ describe("isolated browser execution against a local form", () => {
 				})
 			).status,
 		).toBe("dispatched");
-		expect(
-			await page.frameLocator("body > iframe").locator("#nested").inputValue(),
-		).toBe("Test");
+		expect(await page.frameLocator("body > iframe").locator("#nested").inputValue()).toBe("Test");
 		await call("hide");
 		// 一个密码字段和同源 iframe 内的跨域子页均被遮盖
-		expect(await page.locator("[data-daedalus-feedback] > div").count()).toBe(
-			2,
-		);
+		expect(await page.locator("[data-daedalus-feedback] > div").count()).toBe(2);
 		await call("show");
 		await page.close();
 	});

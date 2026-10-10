@@ -2055,7 +2055,8 @@
 			"process": "Process",
 			"respondedIn": "Responded: {{elapsed}}",
 			"stoppedIn": "Stopped: {{elapsed}}",
-			"copyAria": "Copy assistant message"
+			"copyAria": "Copy assistant message",
+			"feedback": { "good": "Good response", "bad": "Bad response", "saveFailed": "Failed to save response feedback" }
 		},
 		"user": {
 			"copyAria": "Copy user message",

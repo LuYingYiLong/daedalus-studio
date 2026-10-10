@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Input, Typography } from "antd";
+import { Alert, Button, Input, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import type { TimelineBodyPart } from "@/platform/rpc/types";
 import { answerAgentClarification } from "@/platform/rpc/agent-clarification-api";
@@ -74,11 +74,7 @@ export default function AgentClarificationCard({ part }: { part: Part }): React.
 						: `${t("agentClarification.answered")}: ${part.answer ?? ""}`}
 				</Typography.Text>
 			)}
-			{error ? (
-				<Typography.Text type="danger" className={styles.errorText}>
-					{error}
-				</Typography.Text>
-			) : null}
+			{error ? <Alert type="error" title={error} /> : null}
 		</section>
 	);
 }

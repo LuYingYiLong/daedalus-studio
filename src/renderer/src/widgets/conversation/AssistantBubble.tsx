@@ -41,6 +41,8 @@ export type AssistantBubbleProps = {
 	hideInlineDiff?: boolean;
 	onInlineDiffReview?: () => void;
 	onTerminalWheelPassThrough?: (deltaY: number) => void;
+	feedback?: "good" | "bad" | null;
+	onFeedbackChange?: (rating: "good" | "bad" | null) => Promise<void>;
 };
 
 function createAssistantCopyText(
@@ -94,9 +96,12 @@ function AssistantBubble({
 	hideInlineDiff = false,
 	onInlineDiffReview,
 	onTerminalWheelPassThrough,
+	feedback = null,
+	onFeedbackChange,
 }: AssistantBubbleProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [copied, setCopied] = React.useState<boolean>(false);
+	const [feedbackSaving, setFeedbackSaving] = React.useState<boolean>(false);
 	const disclosurePrefix: string = entryId ?? "assistant";
 	const [summaryOpen, setSummaryOpen] = useTimelineDisclosure(
 		`${disclosurePrefix}:summary`,
@@ -120,6 +125,16 @@ function AssistantBubble({
 			window.setTimeout((): void => setCopied(false), 1200);
 		} catch (error: unknown) {
 			console.error("[AssistantBubble] copy failed", error);
+		}
+	}
+
+	async function changeFeedback(rating: "good" | "bad"): Promise<void> {
+		if (onFeedbackChange === undefined || feedbackSaving) return;
+		setFeedbackSaving(true);
+		try {
+			await onFeedbackChange(feedback === rating ? null : rating);
+		} finally {
+			setFeedbackSaving(false);
 		}
 	}
 
@@ -397,7 +412,7 @@ function AssistantBubble({
 					</div>
 				)}
 			</div>
-			<div className={styles.toolbar}>
+			<div className={`${styles.toolbar} ${feedback !== null ? styles.toolbarRated : ""}`}>
 				<Tooltip
 					title={
 						copied ? t("chat.common.copied") : t("chat.common.copy")
@@ -414,6 +429,24 @@ function AssistantBubble({
 						}}
 					/>
 				</Tooltip>
+				{completionStatus === "responded" && onFeedbackChange !== undefined ? (
+					<>
+						{(["good", "bad"] as const).map((rating) => (
+							<Tooltip key={rating} title={t(`chat.assistant.feedback.${rating}`)}>
+								<Button
+									type="text"
+									size="small"
+									shape="circle"
+									aria-label={t(`chat.assistant.feedback.${rating}`)}
+									aria-pressed={feedback === rating}
+									disabled={feedbackSaving}
+									icon={<Icon name={feedback === rating ? rating : `${rating}-unchecked`} />}
+									onClick={(): void => { void changeFeedback(rating); }}
+								/>
+							</Tooltip>
+						))}
+					</>
+				) : null}
 				{endTime ? (
 					<Typography.Text type="secondary">
 						{endTime}

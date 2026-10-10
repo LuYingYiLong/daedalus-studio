@@ -67,6 +67,10 @@
 	user-select: none;
 }
 
+.toolbar.toolbarRated {
+	opacity: 1;
+}
+
 .content {
 	width: 100%;
 	max-width: 100%;

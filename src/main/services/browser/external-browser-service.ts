@@ -14,7 +14,7 @@ import {
 import type { BrowserCdpTransport } from "./browser-transport";
 import { BrowserHostClient } from "./browser-host-client";
 import { createExternalDomRuntime } from "./external-dom-runtime";
-import cursorSvg from "../../../renderer/src/assets/icons/ai-cursor.svg?raw";
+import cursorSvg from "../../../renderer/src/assets/icons/ai-cursor-colorful.svg?raw";
 import { clientPreferencesService } from "../client-preferences";
 type Target = {
 	peer: number;
@@ -38,10 +38,7 @@ export class ExternalBrowserService {
 	private context: ExternalBrowserContext | null = null;
 	private active: ExternalBrowserScope | null = null;
 	private targets = new Map<string, Target>();
-	private matches = new Map<
-		string,
-		{ peer: number; url: string; scope: ExternalBrowserScope; expires: number }
-	>();
+	private matches = new Map<string, { peer: number; url: string; scope: ExternalBrowserScope; expires: number }>();
 	private preparations = new Map<string, Preparation>();
 	private results = new Map<string, Record<string, unknown>>();
 	private busy = false;
@@ -58,10 +55,7 @@ export class ExternalBrowserService {
 			directory,
 			channel,
 			() => {
-				if (
-					[...this.targets.values()].some((t) => !this.host.peers.has(t.peer))
-				)
-					this.stop();
+				if ([...this.targets.values()].some((t) => !this.host.peers.has(t.peer))) this.stop();
 				this.publish();
 			},
 			(scope) => {
@@ -69,9 +63,7 @@ export class ExternalBrowserService {
 					const parsed = parseBrowserScope(scope);
 					if (
 						sameBrowserScope(this.active, parsed) ||
-						[...this.targets.values()].some((target) =>
-							sameBrowserScope(target.scope, parsed),
-						)
+						[...this.targets.values()].some((target) => sameBrowserScope(target.scope, parsed))
 					)
 						this.stop();
 				} catch {
@@ -82,10 +74,8 @@ export class ExternalBrowserService {
 		this.timer = setInterval(() => {
 			if (this.active && Date.now() - this.lastHeartbeat > 5000) this.stop();
 			for (const [id, target] of this.targets)
-				if (target.pendingUntil && target.pendingUntil < Date.now())
-					this.closeTarget(id, target);
-			for (const [id, match] of this.matches)
-				if (match.expires < Date.now()) this.matches.delete(id);
+				if (target.pendingUntil && target.pendingUntil < Date.now()) this.closeTarget(id, target);
+			for (const [id, match] of this.matches) if (match.expires < Date.now()) this.matches.delete(id);
 		}, 500);
 		this.timer.unref();
 	}
@@ -105,13 +95,9 @@ export class ExternalBrowserService {
 	private publish(): void {
 		this.changed(this.state());
 	}
-	async configure(patch: {
-		enabled?: boolean;
-		defaultConnectionId?: string | null;
-	}): Promise<ExternalBrowserState> {
+	async configure(patch: { enabled?: boolean; defaultConnectionId?: string | null }): Promise<ExternalBrowserState> {
 		if (patch.defaultConnectionId !== undefined) {
-			if (patch.defaultConnectionId !== null)
-				browserId(patch.defaultConnectionId);
+			if (patch.defaultConnectionId !== null) browserId(patch.defaultConnectionId);
 			this.defaultConnectionId = patch.defaultConnectionId;
 		}
 		if (patch.enabled !== undefined) this.enabled = patch.enabled === true;
@@ -120,14 +106,12 @@ export class ExternalBrowserService {
 			this.host.stop();
 		} else {
 			try {
-				if (!this.state().available)
-					throw new Error("browser_platform_unsupported");
+				if (!this.state().available) throw new Error("browser_platform_unsupported");
 				await this.host.start();
 				this.error = null;
 			} catch (error) {
 				this.enabled = false;
-				this.error =
-					error instanceof Error ? error.message : "browser_host_unavailable";
+				this.error = error instanceof Error ? error.message : "browser_host_unavailable";
 				this.publish();
 				throw error;
 			}
@@ -155,8 +139,7 @@ export class ExternalBrowserService {
 		this.valid(scope);
 		const key = browserId(id),
 			target = this.targets.get(key);
-		if (!target || !sameBrowserScope(target.scope, scope))
-			throw new Error("browser_target_stale");
+		if (!target || !sameBrowserScope(target.scope, scope)) throw new Error("browser_target_stale");
 		return [key, target];
 	}
 	heartbeat(scope: ExternalBrowserScope): void {
@@ -164,23 +147,14 @@ export class ExternalBrowserService {
 		this.lastHeartbeat = Date.now();
 		for (const [id, target] of this.targets)
 			if (sameBrowserScope(target.scope, scope) && !target.pendingUntil)
-				void this.host
-					.request(target.peer, "heartbeat", { targetId: id }, scope)
-					.catch(() => {
-						if (sameBrowserScope(this.active, scope)) this.stop();
-					});
+				void this.host.request(target.peer, "heartbeat", { targetId: id }, scope).catch(() => {
+					if (sameBrowserScope(this.active, scope)) this.stop();
+				});
 	}
-	private transport(
-		id: string,
-		target: Target,
-		scope: ExternalBrowserScope,
-	): BrowserCdpTransport {
+	private transport(id: string, target: Target, scope: ExternalBrowserScope): BrowserCdpTransport {
 		return {
 			acquire: async () => () => {},
-			sendCommand: async <T>(
-				method: string,
-				params?: Record<string, unknown>,
-			): Promise<T> => {
+			sendCommand: async <T>(method: string, params?: Record<string, unknown>): Promise<T> => {
 				this.valid(scope);
 				const result = await this.host.request(
 					target.peer,
@@ -207,13 +181,10 @@ export class ExternalBrowserService {
 			}>("Page.getFrameTree");
 			if (normalizeExternalBrowserUrl(tree.frameTree.frame.url) !== target.url)
 				throw new Error("browser_page_changed");
-			const world = await cdp.sendCommand<{ executionContextId: number }>(
-				"Page.createIsolatedWorld",
-				{
-					frameId: tree.frameTree.frame.id,
-					worldName: "daedalus-external-browser",
-				},
-			);
+			const world = await cdp.sendCommand<{ executionContextId: number }>("Page.createIsolatedWorld", {
+				frameId: tree.frameTree.frame.id,
+				worldName: "daedalus-external-browser",
+			});
 			target.world = world.executionContextId;
 			await cdp.sendCommand("Runtime.evaluate", {
 				contextId: target.world,
@@ -234,10 +205,7 @@ export class ExternalBrowserService {
 			awaitPromise: false,
 		});
 		if (response.exceptionDetails) {
-			const code =
-				response.exceptionDetails.exception?.description?.match(
-					/browser_[a-z_]+/u,
-				)?.[0];
+			const code = response.exceptionDetails.exception?.description?.match(/browser_[a-z_]+/u)?.[0];
 			throw new Error(code || "browser_dom_unavailable");
 		}
 		target.feedbackGeneration = scope.generation;
@@ -248,17 +216,7 @@ export class ExternalBrowserService {
 			args = browserObject(raw.args);
 		browserId(raw.callId);
 		browserId(raw.toolCallId);
-		if (
-			![
-				"connect",
-				"observe",
-				"scroll",
-				"wait",
-				"screenshot",
-				"prepare",
-				"execute",
-			].includes(raw.toolName)
-		)
+		if (!["connect", "observe", "scroll", "wait", "screenshot", "prepare", "execute"].includes(raw.toolName))
 			throw new Error("browser_operation_forbidden");
 		if (
 			!this.enabled ||
@@ -266,8 +224,7 @@ export class ExternalBrowserService {
 			this.context.sessionId !== scope.sessionId
 		)
 			throw new Error("browser_context_mismatch");
-		if (this.active && !sameBrowserScope(this.active, scope))
-			throw new Error("browser_run_busy");
+		if (this.active && !sameBrowserScope(this.active, scope)) throw new Error("browser_run_busy");
 		if (this.busy) throw new Error("browser_busy");
 		this.active = scope;
 		this.lastHeartbeat = Date.now();
@@ -281,10 +238,8 @@ export class ExternalBrowserService {
 					args.connectionId === undefined
 						? undefined
 						: peers.find((p) => p.id === browserId(args.connectionId));
-				if (args.connectionId !== undefined && !peer)
-					throw new Error("browser_not_connected");
-				let matchId =
-					args.matchId === undefined ? undefined : browserId(args.matchId);
+				if (args.connectionId !== undefined && !peer) throw new Error("browser_not_connected");
+				let matchId = args.matchId === undefined ? undefined : browserId(args.matchId);
 				if (matchId) {
 					const match = this.matches.get(matchId);
 					if (
@@ -303,17 +258,9 @@ export class ExternalBrowserService {
 					const matches = (
 						await Promise.all(
 							(peer ? [peer] : peers).map(async (candidate) => {
-								const result = await this.host.request(
-									candidate.peer,
-									"match",
-									{ url },
-									scope,
-								);
+								const result = await this.host.request(candidate.peer, "match", { url }, scope);
 								this.valid(scope);
-								if (
-									!Array.isArray(result.matches) ||
-									result.matches.length > 20
-								)
+								if (!Array.isArray(result.matches) || result.matches.length > 20)
 									throw new Error("browser_matches_invalid");
 								return result.matches.map((raw) => {
 									const match = browserObject(raw),
@@ -350,18 +297,8 @@ export class ExternalBrowserService {
 							peers.find((p) => p.id === this.defaultConnectionId) ??
 							(peers.length === 1 ? peers[0] : undefined);
 				}
-				if (!peer)
-					throw new Error(
-						peers.length > 1
-							? "browser_default_required"
-							: "browser_not_connected",
-					);
-				const result = await this.host.request(
-					peer.peer,
-					"connect",
-					{ url, matchId },
-					scope,
-				);
+				if (!peer) throw new Error(peers.length > 1 ? "browser_default_required" : "browser_not_connected");
+				const result = await this.host.request(peer.peer, "connect", { url, matchId }, scope);
 				this.valid(scope);
 				if (result.targetId && result.url === url) {
 					this.targets.set(browserId(result.targetId), {
@@ -387,12 +324,7 @@ export class ExternalBrowserService {
 				retained.scope.connectionId === scope.connectionId &&
 				retained.scope.sessionId === scope.sessionId
 			) {
-				await this.host.request(
-					retained.peer,
-					"lease",
-					{ targetId: key },
-					scope,
-				);
+				await this.host.request(retained.peer, "lease", { targetId: key }, scope);
 				this.valid(scope);
 				retained.scope = scope;
 				retained.pendingUntil = undefined;
@@ -415,14 +347,8 @@ export class ExternalBrowserService {
 					const result = await this.evaluate(id, target, scope, "wait", args);
 					const idle =
 						args.condition === "network_idle"
-							? (
-									await this.host.request(
-										target.peer,
-										"networkIdle",
-										{ targetId: id },
-										scope,
-									)
-								).idle === true
+							? (await this.host.request(target.peer, "networkIdle", { targetId: id }, scope)).idle ===
+								true
 							: true;
 					this.valid(scope);
 					if (result.ready === true && idle)
@@ -432,10 +358,7 @@ export class ExternalBrowserService {
 							...(await this.evaluate(id, target, scope, "observe")),
 						};
 					await new Promise((resolve) =>
-						setTimeout(
-							resolve,
-							Math.min(100, Math.max(0, deadline - Date.now())),
-						),
+						setTimeout(resolve, Math.min(100, Math.max(0, deadline - Date.now()))),
 					);
 				} while (Date.now() < deadline);
 				throw new Error("browser_wait_timeout");
@@ -484,9 +407,7 @@ export class ExternalBrowserService {
 					preparation.targetId !== id ||
 					preparation.scope.sessionId !== scope.sessionId ||
 					preparation.scope.connectionId !== scope.connectionId ||
-					!preparation.steps.some(
-						(saved) => JSON.stringify(saved) === JSON.stringify(step),
-					)
+					!preparation.steps.some((saved) => JSON.stringify(saved) === JSON.stringify(step))
 				)
 					throw new Error("browser_proposal_stale");
 				const prior = this.results.get(actionId);
@@ -501,10 +422,7 @@ export class ExternalBrowserService {
 					this.results.set(actionId, result);
 					return result;
 				} catch (error) {
-					const code =
-						error instanceof Error
-							? error.message
-							: "browser_action_unconfirmed";
+					const code = error instanceof Error ? error.message : "browser_action_unconfirmed";
 					const notDispatched = [
 						"browser_form_changed",
 						"browser_target_changed",
@@ -527,10 +445,7 @@ export class ExternalBrowserService {
 			this.busy = false;
 		}
 	}
-	async finish(
-		scope: ExternalBrowserScope,
-		keepTarget: boolean,
-	): Promise<void> {
+	async finish(scope: ExternalBrowserScope, keepTarget: boolean): Promise<void> {
 		if (!sameBrowserScope(this.active, scope)) return;
 		this.active = null;
 		this.publish();
@@ -546,11 +461,8 @@ export class ExternalBrowserService {
 	}
 	private closeTarget(id: string, target: Target): void {
 		this.targets.delete(id);
-		for (const [key, prep] of this.preparations)
-			if (prep.targetId === id) this.preparations.delete(key);
-		void this.host
-			.request(target.peer, "close", { targetId: id }, target.scope)
-			.catch(() => {});
+		for (const [key, prep] of this.preparations) if (prep.targetId === id) this.preparations.delete(key);
+		void this.host.request(target.peer, "close", { targetId: id }, target.scope).catch(() => {});
 	}
 	stop(): void {
 		const active = this.active;
@@ -563,8 +475,7 @@ export class ExternalBrowserService {
 		this.matches.clear();
 		this.preparations.clear();
 		if (active) this.revoked(active);
-		for (const scope of pending)
-			if (!sameBrowserScope(active, scope)) this.revoked(scope);
+		for (const scope of pending) if (!sameBrowserScope(active, scope)) this.revoked(scope);
 		this.publish();
 	}
 	dispose(): void {
