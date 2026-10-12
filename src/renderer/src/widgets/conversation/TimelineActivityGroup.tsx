@@ -7,7 +7,7 @@ import { useTimelineDisclosure } from "@/widgets/conversation/state/timeline-dis
 import {
 	getTimelineActivityLabel,
 	type TimelineActivityGroupSegment,
-	type TimelineActivityPart
+	type TimelineActivityPart,
 } from "@/domain/conversation/timeline-activity-groups";
 import styles from "./TimelineActivityGroup.module.css";
 
@@ -17,7 +17,10 @@ export type TimelineActivityGroupProps = {
 	renderPart: (part: TimelineActivityPart, index: number, childKey: string) => React.ReactNode;
 };
 
-function getSummaryLabel(group: TimelineActivityGroupSegment, t: (key: string, options?: Record<string, unknown>) => string): string {
+function getSummaryLabel(
+	group: TimelineActivityGroupSegment,
+	t: (key: string, options?: Record<string, unknown>) => string,
+): string {
 	const parts: string[] = [];
 	if (group.stats.editedFiles > 0) {
 		parts.push(t("chat.activityGroup.summary.files", { count: group.stats.editedFiles }));
@@ -31,26 +34,23 @@ function getSummaryLabel(group: TimelineActivityGroupSegment, t: (key: string, o
 	if (group.stats.thoughts > 0) {
 		parts.push(t("chat.activityGroup.summary.thoughts", { count: group.stats.thoughts }));
 	}
-	return parts.length > 0 ? parts.join(t("chat.activityGroup.summary.separator")) : t("chat.activityGroup.summary.empty");
+	return parts.length > 0
+		? parts.join(t("chat.activityGroup.summary.separator"))
+		: t("chat.activityGroup.summary.empty");
 }
 
 function TimelineActivityGroup({ group, disclosureKey, renderPart }: TimelineActivityGroupProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [open, setOpen] = useTimelineDisclosure(disclosureKey, false);
 	const labelText: string = useMemo(
-		(): string => group.active
-			? getTimelineActivityLabel(group.latestPart, t)
-			: getSummaryLabel(group, t),
-		[group, t]
+		(): string => (group.active ? getTimelineActivityLabel(group.latestPart, t) : getSummaryLabel(group, t)),
+		[group, t],
 	);
 	const label: React.ReactNode = group.active ? (
-		<ShinyText
-			text={labelText}
-			speed={2.4}
-			color="var(--ds-text-muted)"
-			shineColor="var(--ds-text-secondary)"
-		/>
-	) : labelText;
+		<ShinyText text={labelText} speed={2.4} color="var(--ds-text-muted)" shineColor="var(--ds-text-secondary)" />
+	) : (
+		labelText
+	);
 
 	return (
 		<Collapse
@@ -68,15 +68,20 @@ function TimelineActivityGroup({ group, disclosureKey, renderPart }: TimelineAct
 					<Icon name="arrow-down" />
 				</span>
 			)}
-			items={[{
-				key: group.id,
-				label: label,
-				children: (
-					<div className={styles.content}>
-						{group.parts.map((part: TimelineActivityPart, offset: number): React.ReactNode => renderPart(part, group.partIndexes[offset] as number, `${group.id}:${offset}`))}
-					</div>
-				),
-			}]}
+			items={[
+				{
+					key: group.id,
+					label: label,
+					children: (
+						<div className={styles.content}>
+							{group.parts.map(
+								(part: TimelineActivityPart, offset: number): React.ReactNode =>
+									renderPart(part, group.partIndexes[offset] as number, `${group.id}:${offset}`),
+							)}
+						</div>
+					),
+				},
+			]}
 		/>
 	);
 }

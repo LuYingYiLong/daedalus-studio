@@ -33,7 +33,7 @@ function cloneContextItems(items: AdditionalContextItem[]): AdditionalContextIte
 	return items.map((item: AdditionalContextItem): AdditionalContextItem => {
 		return {
 			...item,
-			data: typeof structuredClone === "function" ? structuredClone(item.data) as unknown : item.data
+			data: typeof structuredClone === "function" ? (structuredClone(item.data) as unknown) : item.data,
 		};
 	});
 }
@@ -56,11 +56,13 @@ function UserBubble({
 	onForkFromUserMessage,
 	onOpenReferencedSession,
 	forkDisabled = false,
-	isForking = false
+	isForking = false,
 }: UserBubbleProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [draftText, setDraftText] = useState<string>(message);
-	const [draftContext, setDraftContext] = useState<AdditionalContextItem[]>(() => cloneContextItems(additionalContext));
+	const [draftContext, setDraftContext] = useState<AdditionalContextItem[]>(() =>
+		cloneContextItems(additionalContext),
+	);
 	const [isSubmittingRetry, setIsSubmittingRetry] = useState<boolean>(false);
 	const [copied, setCopied] = useState<boolean>(false);
 	const wasRetryEditingRef = useRef<boolean>(isRetryEditing);
@@ -115,7 +117,7 @@ function UserBubble({
 			const result = await onRetryFromUserMessage?.({
 				requestId,
 				message: trimmedText,
-				additionalContext: cloneContextItems(draftContext)
+				additionalContext: cloneContextItems(draftContext),
 			});
 
 			if (result !== false) {
@@ -200,11 +202,7 @@ function UserBubble({
 							}}
 						/>
 						<div className={styles.retryToolbar}>
-							<Button
-								type="text"
-								onClick={cancelRetryEdit}
-								disabled={isSubmittingRetry}
-							>
+							<Button type="text" onClick={cancelRetryEdit} disabled={isSubmittingRetry}>
 								{t("chat.user.actions.cancel")}
 							</Button>
 							<Button
@@ -223,40 +221,42 @@ function UserBubble({
 				) : (
 					<>
 						<AdditionalContextStrip items={additionalContext} onOpenSession={onOpenReferencedSession} />
-						{message.length > 0 ? <div
-							className={`${styles.content} markdown-body ${disabled ? styles.disabledContent : ""}`}
-							data-chat-search-text="true"
-							data-chat-search-block-offset={searchBlockOffset}
-							data-message-selection-enabled="true"
-							data-message-selection-entry-id={entryId}
-							data-message-selection-request-id={requestId}
-							data-message-selection-role="user"
-							data-message-selection-segment="user:content"
-							onDoubleClick={(): void => {
-								beginRetryEdit();
-							}}
-						>
-							<MarkdownContent>{message}</MarkdownContent>
-						</div> : null}
+						{message.length > 0 ? (
+							<div
+								className={`${styles.content} markdown-body ${disabled ? styles.disabledContent : ""}`}
+								data-chat-search-text="true"
+								data-chat-search-block-offset={searchBlockOffset}
+								data-message-selection-enabled="true"
+								data-message-selection-entry-id={entryId}
+								data-message-selection-request-id={requestId}
+								data-message-selection-role="user"
+								data-message-selection-segment="user:content"
+								onDoubleClick={(): void => {
+									beginRetryEdit();
+								}}
+							>
+								<MarkdownContent>{message}</MarkdownContent>
+							</div>
+						) : null}
 					</>
 				)}
 			</div>
 			<div className={styles.toolbar}>
-				{sentTime ? (
-					<Typography.Text type="secondary">{sentTime}</Typography.Text>
+				{sentTime ? <Typography.Text type="secondary">{sentTime}</Typography.Text> : null}
+				{message.length > 0 ? (
+					<Tooltip title={copied ? t("chat.common.copied") : t("chat.common.copy")}>
+						<Button
+							type="text"
+							size="small"
+							shape="circle"
+							aria-label={t("chat.user.copyAria")}
+							icon={<Icon name="copy" />}
+							onClick={(): void => {
+								void copyMessage();
+							}}
+						/>
+					</Tooltip>
 				) : null}
-				{message.length > 0 ? <Tooltip title={copied ? t("chat.common.copied") : t("chat.common.copy")}>
-					<Button
-						type="text"
-						size="small"
-						shape="circle"
-						aria-label={t("chat.user.copyAria")}
-						icon={<Icon name="copy" />}
-						onClick={(): void => {
-							void copyMessage();
-						}}
-					/>
-				</Tooltip> : null}
 				{onForkFromUserMessage !== undefined ? (
 					<Tooltip title={t("chat.user.actions.forkFromHere")}>
 						<Button

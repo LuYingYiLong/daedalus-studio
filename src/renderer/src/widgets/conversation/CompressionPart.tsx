@@ -8,20 +8,14 @@ import MarkdownContent from "../markdown/MarkdownContent";
 import { useTimelineDisclosure } from "@/widgets/conversation/state/timeline-disclosure-state";
 import styles from "./CompressionPart.module.css";
 
-export type TimelineCompressionPart = Extract<
-	TimelineBodyPart,
-	{ type: "compression" }
->;
+export type TimelineCompressionPart = Extract<TimelineBodyPart, { type: "compression" }>;
 
 type CompressionPartProps = {
 	part: TimelineCompressionPart;
 	disclosureKey: string;
 };
 
-function CompressionPart({
-	part,
-	disclosureKey,
-}: CompressionPartProps): React.JSX.Element {
+function CompressionPart({ part, disclosureKey }: CompressionPartProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [open, setOpen] = useTimelineDisclosure(disclosureKey, false);
 	const active: boolean = part.status === "running";
@@ -35,8 +29,7 @@ function CompressionPart({
 		if (!active) setOpen(false);
 	}, [active, setOpen]);
 
-	const details: string =
-		part.status === "completed" ? part.summary : part.reason;
+	const details: string = part.status === "completed" ? part.summary : part.reason;
 	const canExpand: boolean = details.trim().length > 0;
 	const itemKey: string = part.compressionId;
 
@@ -48,19 +41,13 @@ function CompressionPart({
 			activeKey={open && canExpand ? [itemKey] : []}
 			onChange={(keys: string | string[]): void => {
 				if (!canExpand) return;
-				setOpen(
-					(Array.isArray(keys) ? keys : [keys]).includes(itemKey),
-				);
+				setOpen((Array.isArray(keys) ? keys : [keys]).includes(itemKey));
 			}}
 			className={`${styles.collapse} ${canExpand ? "" : styles.collapseStatic}`}
 			expandIcon={(): React.JSX.Element => (
 				<span
 					className={`${styles.icon} ${active ? styles.iconActive : ""}`}
-					aria-label={
-						typeof label === "string"
-							? label
-							: t("chat.compression.running")
-					}
+					aria-label={typeof label === "string" ? label : t("chat.compression.running")}
 				>
 					<Icon name="compress" />
 				</span>
@@ -80,10 +67,7 @@ function CompressionPart({
 								<MarkdownContent>{details}</MarkdownContent>
 							</div>
 						) : (
-							<Typography.Text
-								type="secondary"
-								className={styles.reason}
-							>
+							<Typography.Text type="secondary" className={styles.reason}>
 								{details}
 							</Typography.Text>
 						),

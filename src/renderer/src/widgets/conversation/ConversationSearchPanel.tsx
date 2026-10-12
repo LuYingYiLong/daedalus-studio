@@ -29,7 +29,7 @@ export default function ConversationSearchPanel({
 	onQueryChange,
 	onPrevious,
 	onNext,
-	onClose
+	onClose,
 }: ConversationSearchPanelProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const navigationDisabled: boolean = total === 0 || query.trim().length === 0;
@@ -69,9 +69,13 @@ export default function ConversationSearchPanel({
 				aria-live="polite"
 				role="status"
 			>
-				{indexingCompleteConversation
-					? <ShinyText text={t("agentPage.conversationSearch.indexing")} speed={2.4} color="currentColor" />
-					: navigationDisabled ? "0/0" : `${current}/${total}`}
+				{indexingCompleteConversation ? (
+					<ShinyText text={t("agentPage.conversationSearch.indexing")} speed={2.4} color="currentColor" />
+				) : navigationDisabled ? (
+					"0/0"
+				) : (
+					`${current}/${total}`
+				)}
 			</span>
 			<Tooltip title={t("agentPage.conversationSearch.previous")} trigger={["hover", "focus"]}>
 				<Button

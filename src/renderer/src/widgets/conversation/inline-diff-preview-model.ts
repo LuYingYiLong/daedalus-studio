@@ -80,11 +80,7 @@ export function buildInlineDiffPreviewModel(edits: FileEditSnapshot[]): InlineDi
 	if (rows.length > MAX_PREVIEW_ROWS) {
 		truncated = true;
 		return {
-			rows: [
-				...rows.slice(0, 6),
-				{ kind: "hunk", lineNumber: null, text: "…" },
-				...rows.slice(-5),
-			],
+			rows: [...rows.slice(0, 6), { kind: "hunk", lineNumber: null, text: "…" }, ...rows.slice(-5)],
 			truncated,
 			unavailable,
 		};

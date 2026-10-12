@@ -15,7 +15,8 @@ type LoadedImage = {
 	dataUrl: string;
 };
 
-const FALLBACK_IMAGE: string = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNDAiIGhlaWdodD0iMjQwIiB2aWV3Qm94PSIwIDAgMjQwIDI0MCI+PHJlY3Qgd2lkdGg9IjI0MCIgaGVpZ2h0PSIyNDAiIGZpbGw9IiMxZjFmMWYiLz48dGV4dCB4PSIxMjAiIHk9IjEyMCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxNCIgZm9udC1mYW1pbHk9IkFyaWFsIj5JbWFnZSBub3QgYXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==";
+const FALLBACK_IMAGE: string =
+	"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNDAiIGhlaWdodD0iMjQwIiB2aWV3Qm94PSIwIDAgMjQwIDI0MCI+PHJlY3Qgd2lkdGg9IjI0MCIgaGVpZ2h0PSIyNDAiIGZpbGw9IiMxZjFmMWYiLz48dGV4dCB4PSIxMjAiIHk9IjEyMCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxNCIgZm9udC1mYW1pbHk9IkFyaWFsIj5JbWFnZSBub3QgYXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==";
 
 function getArtifacts(part: TimelineImageGenerationPart): TimelineGeneratedImageArtifact[] {
 	return part.artifacts ?? [];
@@ -29,8 +30,8 @@ async function copyImage(dataUrl: string): Promise<void> {
 	const blob: Blob = await response.blob();
 	await navigator.clipboard.write([
 		new ClipboardItem({
-			[blob.type]: blob
-		})
+			[blob.type]: blob,
+		}),
 	]);
 }
 
@@ -44,7 +45,10 @@ function downloadImage(image: LoadedImage): void {
 function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): React.JSX.Element {
 	const { t } = useTranslation();
 	const [messageApi, contextHolder] = message.useMessage();
-	const artifacts: TimelineGeneratedImageArtifact[] = useMemo((): TimelineGeneratedImageArtifact[] => getArtifacts(part), [part]);
+	const artifacts: TimelineGeneratedImageArtifact[] = useMemo(
+		(): TimelineGeneratedImageArtifact[] => getArtifacts(part),
+		[part],
+	);
 	const [loadedImages, setLoadedImages] = useState<LoadedImage[]>([]);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [previewOpen, setPreviewOpen] = useState<boolean>(false);
@@ -61,13 +65,15 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 
 			try {
 				setErrorMessage(null);
-				const results: LoadedImage[] = await Promise.all(artifacts.map(async (artifact: TimelineGeneratedImageArtifact): Promise<LoadedImage> => {
-					const result = await fetchGeneratedImageDataUrl(artifact.sessionId, artifact.imageId);
-					return {
-						artifact,
-						dataUrl: result.dataUrl
-					};
-				}));
+				const results: LoadedImage[] = await Promise.all(
+					artifacts.map(async (artifact: TimelineGeneratedImageArtifact): Promise<LoadedImage> => {
+						const result = await fetchGeneratedImageDataUrl(artifact.sessionId, artifact.imageId);
+						return {
+							artifact,
+							dataUrl: result.dataUrl,
+						};
+					}),
+				);
 				if (!cancelled) {
 					setLoadedImages(results);
 				}
@@ -86,9 +92,10 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 	}, [artifacts, part.status]);
 
 	const previewItems: string[] = loadedImages.map((image: LoadedImage): string => image.dataUrl);
-	const modelLabel: string = part.provider !== undefined && part.model !== undefined
-		? `${part.provider} / ${part.model}`
-		: t("chat.imageGeneration.modelFallback");
+	const modelLabel: string =
+		part.provider !== undefined && part.model !== undefined
+			? `${part.provider} / ${part.model}`
+			: t("chat.imageGeneration.modelFallback");
 
 	function createImageContextMenu(image: LoadedImage): MenuProps {
 		return {
@@ -96,13 +103,13 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 				{
 					key: "copy-image",
 					label: t("chat.imageGeneration.actions.copyImage"),
-					icon: <Icon name="copy" />
+					icon: <Icon name="copy" />,
 				},
 				{
 					key: "save-image",
 					label: t("chat.imageGeneration.actions.saveImage"),
-					icon: <Icon name="download" />
-				}
+					icon: <Icon name="download" />,
+				},
 			],
 			onClick: (info): void => {
 				info.domEvent.stopPropagation();
@@ -112,7 +119,9 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 							void messageApi.success(t("chat.imageGeneration.messages.copied"));
 						})
 						.catch((error: unknown): void => {
-							void messageApi.error(error instanceof Error ? error.message : t("chat.imageGeneration.errors.copy"));
+							void messageApi.error(
+								error instanceof Error ? error.message : t("chat.imageGeneration.errors.copy"),
+							);
 						});
 					return;
 				}
@@ -120,7 +129,7 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 				if (info.key === "save-image") {
 					downloadImage(image);
 				}
-			}
+			},
 		};
 	}
 
@@ -129,7 +138,9 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 			<section className={styles.root}>
 				<div className={styles.header}>
 					<div className={styles.title}>
-						<Typography.Title level={4} className={styles.title}>{t("chat.imageGeneration.generating")}</Typography.Title>
+						<Typography.Title level={4} className={styles.title}>
+							{t("chat.imageGeneration.generating")}
+						</Typography.Title>
 						<Typography.Text
 							copyable={createStudioCopyableConfig({
 								tooltips: [t("chat.common.copy"), t("chat.common.copied")],
@@ -162,8 +173,12 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 	if (part.detailLevel === "compacted") {
 		return (
 			<section className={styles.root}>
-				<Typography.Title level={4} className={styles.title}>{t("chat.imageGeneration.compactedLabel")}</Typography.Title>
-				<Typography.Text type="secondary">{part.compactedSummary ?? t("chat.imageGeneration.compactedSummary")}</Typography.Text>
+				<Typography.Title level={4} className={styles.title}>
+					{t("chat.imageGeneration.compactedLabel")}
+				</Typography.Title>
+				<Typography.Text type="secondary">
+					{part.compactedSummary ?? t("chat.imageGeneration.compactedSummary")}
+				</Typography.Text>
 			</section>
 		);
 	}
@@ -173,8 +188,12 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 			{contextHolder}
 			<div className={styles.header}>
 				<div className={styles.title}>
-					<Typography.Title level={4} className={styles.title}>{t("chat.imageGeneration.generated")}</Typography.Title>
-					<Typography.Text type="secondary" className={styles.modelLabel}>{modelLabel}</Typography.Text>
+					<Typography.Title level={4} className={styles.title}>
+						{t("chat.imageGeneration.generated")}
+					</Typography.Title>
+					<Typography.Text type="secondary" className={styles.modelLabel}>
+						{modelLabel}
+					</Typography.Text>
 					<Typography.Text
 						copyable={createStudioCopyableConfig({
 							tooltips: [t("chat.common.copy"), t("chat.common.copied")],
@@ -186,7 +205,12 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 				</div>
 			</div>
 			{errorMessage !== null ? (
-				<Alert type="warning" showIcon={true} title={t("chat.imageGeneration.previewUnavailable")} description={errorMessage} />
+				<Alert
+					type="warning"
+					showIcon={true}
+					title={t("chat.imageGeneration.previewUnavailable")}
+					description={errorMessage}
+				/>
 			) : null}
 			<Image.PreviewGroup
 				items={previewItems}
@@ -194,8 +218,8 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 					popup: {
 						close: "daedalus-image-preview-close",
 						footer: "daedalus-image-preview-footer",
-						actions: "daedalus-image-preview-actions"
-					}
+						actions: "daedalus-image-preview-actions",
+					},
 				}}
 				preview={{
 					open: previewOpen,
@@ -203,12 +227,14 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 					closeIcon: imagePreviewCloseIcon,
 					actionsRender: renderImagePreviewToolbar,
 					onOpenChange: (open: boolean): void => setPreviewOpen(open),
-					onChange: (current: number): void => setPreviewCurrent(current)
+					onChange: (current: number): void => setPreviewCurrent(current),
 				}}
 			>
 				<div className={styles.grid}>
 					{artifacts.map((artifact: TimelineGeneratedImageArtifact, index: number): React.JSX.Element => {
-						const loadedImage: LoadedImage | undefined = loadedImages.find((image: LoadedImage): boolean => image.artifact.imageId === artifact.imageId);
+						const loadedImage: LoadedImage | undefined = loadedImages.find(
+							(image: LoadedImage): boolean => image.artifact.imageId === artifact.imageId,
+						);
 						const imageButton: React.JSX.Element = (
 							<button
 								key={artifact.imageId}
@@ -229,7 +255,11 @@ function ImageGenerationPart({ part }: { part: TimelineImageGenerationPart }): R
 										src={loadedImage.dataUrl}
 										alt={artifact.prompt}
 										fallback={FALLBACK_IMAGE}
-										placeholder={<div className={styles.placeholder}>{t("chat.imageGeneration.loading")}</div>}
+										placeholder={
+											<div className={styles.placeholder}>
+												{t("chat.imageGeneration.loading")}
+											</div>
+										}
 										preview={false}
 									/>
 								)}

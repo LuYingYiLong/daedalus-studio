@@ -19,13 +19,14 @@ function ProviderReconnectPart({ part, disclosureKey, streaming }: ProviderRecon
 	const [open, setOpen] = useTimelineDisclosure(disclosureKey, false);
 	const reconnectPending: boolean = part.status === "waiting" || part.status === "reconnecting";
 	const active: boolean = reconnectPending && streaming;
-	const label: string = part.status === "recovered"
-		? t("chat.providerReconnect.recovered")
-		: part.status === "failed"
-			? t("chat.providerReconnect.failed")
-			: !streaming
-				? t("chat.providerReconnect.stopped")
-				: t("chat.providerReconnect.attempt", { attempt: part.attempt, max: part.maxAttempts });
+	const label: string =
+		part.status === "recovered"
+			? t("chat.providerReconnect.recovered")
+			: part.status === "failed"
+				? t("chat.providerReconnect.failed")
+				: !streaming
+					? t("chat.providerReconnect.stopped")
+					: t("chat.providerReconnect.attempt", { attempt: part.attempt, max: part.maxAttempts });
 	const reason: string = t(`chat.providerReconnect.reason.${part.reason}`);
 
 	return (
@@ -40,29 +41,36 @@ function ProviderReconnectPart({ part, disclosureKey, streaming }: ProviderRecon
 			ghost
 			className={styles.collapse}
 			expandIcon={(): React.JSX.Element => (
-				<span
-					className={`${styles.icon} ${active ? styles.iconActive : ""}`}
-					aria-label={label}
-				>
+				<span className={`${styles.icon} ${active ? styles.iconActive : ""}`} aria-label={label}>
 					<Icon name="wlan" />
 				</span>
 			)}
-			items={[{
-				key: part.reconnectId,
-				label: <span className={styles.label} aria-live="polite">{label}</span>,
-				children: (
-					<Flex vertical gap={4} className={styles.details}>
-						<Typography.Text>{part.provider} / {part.model}</Typography.Text>
-						<Typography.Text type="secondary">
-							{t("chat.providerReconnect.timeout", { seconds: Math.round(part.timeoutMs / 1000) })}
-						</Typography.Text>
-						<Typography.Text type="secondary">{reason}</Typography.Text>
-						{part.autoExtended ? (
-							<Typography.Text type="secondary">{t("chat.providerReconnect.extended")}</Typography.Text>
-						) : null}
-					</Flex>
-				)
-			}]}
+			items={[
+				{
+					key: part.reconnectId,
+					label: (
+						<span className={styles.label} aria-live="polite">
+							{label}
+						</span>
+					),
+					children: (
+						<Flex vertical gap={4} className={styles.details}>
+							<Typography.Text>
+								{part.provider} / {part.model}
+							</Typography.Text>
+							<Typography.Text type="secondary">
+								{t("chat.providerReconnect.timeout", { seconds: Math.round(part.timeoutMs / 1000) })}
+							</Typography.Text>
+							<Typography.Text type="secondary">{reason}</Typography.Text>
+							{part.autoExtended ? (
+								<Typography.Text type="secondary">
+									{t("chat.providerReconnect.extended")}
+								</Typography.Text>
+							) : null}
+						</Flex>
+					),
+				},
+			]}
 		/>
 	);
 }

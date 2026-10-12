@@ -3,9 +3,9 @@ import type { AlertProps } from "antd";
 import type { TimelineBodyPart } from "@/platform/rpc/types";
 import { memo } from "react";
 import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";
-import styles from "./StatusPart.module.css"
+import styles from "./StatusPart.module.css";
 
-export type TimelineStatusPart = Extract<TimelineBodyPart, {type: "status"}>;
+export type TimelineStatusPart = Extract<TimelineBodyPart, { type: "status" }>;
 export type StatusPartProps = {
 	part: TimelineStatusPart;
 };
@@ -34,9 +34,11 @@ function handleStatusAction(actionId: string | undefined): void {
 	if (actionId?.startsWith("retry_agent_run:")) {
 		const runId: string = actionId.slice("retry_agent_run:".length);
 		if (runId.length > 0) {
-			window.dispatchEvent(new CustomEvent("daedalus:retry-agent-run", {
-				detail: { runId }
-			}));
+			window.dispatchEvent(
+				new CustomEvent("daedalus:retry-agent-run", {
+					detail: { runId },
+				}),
+			);
 		}
 	}
 }
@@ -55,15 +57,14 @@ function StatusPart({ part }: StatusPartProps): React.JSX.Element | null {
 			type={getAlertType(part.status)}
 			title={title}
 			description={details.length > 0 ? details : undefined}
-			action={part.actionLabel === undefined || (part.actionId === "configure_godot" && getPlatformRuntime().system === undefined) ? undefined : (
-				<Button
-					size="small"
-					type="link"
-					onClick={(): void => handleStatusAction(part.actionId)}
-				>
-					{part.actionLabel}
-				</Button>
-			)}
+			action={
+				part.actionLabel === undefined ||
+				(part.actionId === "configure_godot" && getPlatformRuntime().system === undefined) ? undefined : (
+					<Button size="small" type="link" onClick={(): void => handleStatusAction(part.actionId)}>
+						{part.actionLabel}
+					</Button>
+				)
+			}
 			showIcon={true}
 		/>
 	);

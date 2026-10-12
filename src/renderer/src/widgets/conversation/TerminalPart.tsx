@@ -3,7 +3,14 @@ import { copyTextToClipboard } from "@/platform/electron/clipboard";
 import { Button, Collapse, Spin, Tag, Tooltip } from "antd";
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getToolRecovery, readTerminalDisplay as readSharedTerminalDisplay, isTerminalCommandPart, isTimelineToolEventType, type TerminalDisplay as SharedTerminalDisplay, type TimelineToolPart, type ToolRecoveryDisplay } from "@/domain/conversation/tool-part-data";
+import {
+	getToolRecovery,
+	readTerminalDisplay as readSharedTerminalDisplay,
+	isTimelineToolEventType,
+	type TerminalDisplay as SharedTerminalDisplay,
+	type TimelineToolPart,
+	type ToolRecoveryDisplay,
+} from "@/domain/conversation/tool-part-data";
 import { useTimelineDisclosure } from "@/widgets/conversation/state/timeline-disclosure-state";
 import styles from "./TerminalPart.module.css";
 
@@ -22,8 +29,13 @@ function getString(record: Record<string, unknown> | undefined, key: string): st
 	return typeof value === "string" ? value : "";
 }
 
-function getLatestEvent(events: Record<string, unknown>[], type: "tool.result" | "tool.error" | "tool.rejected"): Record<string, unknown> | undefined {
-	return [...events].reverse().find((event: Record<string, unknown>): boolean => isTimelineToolEventType(event, type));
+function getLatestEvent(
+	events: Record<string, unknown>[],
+	type: "tool.result" | "tool.error" | "tool.rejected",
+): Record<string, unknown> | undefined {
+	return [...events]
+		.reverse()
+		.find((event: Record<string, unknown>): boolean => isTimelineToolEventType(event, type));
 }
 
 function getLatestEventIndex(events: Record<string, unknown>[], eventTypes: readonly string[]): number {
@@ -53,11 +65,26 @@ function getTerminalStatus(part: TimelineToolPart, display: TerminalDisplay): Te
 		if (display.executionMode === "job" && display.status === "running") return "background";
 		if (display.status === "timed_out") return "timed_out";
 		if (display.status === "cancelled") return "cancelled";
-		if (resultEvent.ok === false || (display.exitCode !== null && display.exitCode !== 0) || ["failed", "spawn_error"].includes(display.status)) return "failed";
+		if (
+			resultEvent.ok === false ||
+			(display.exitCode !== null && display.exitCode !== 0) ||
+			["failed", "spawn_error"].includes(display.status)
+		)
+			return "failed";
 		return "success";
 	}
-	const approvalIndex: number = getLatestEventIndex(part.events, ["tool.approval_required", "agent.tool.approval_required"]);
-	const executionIndex: number = getLatestEventIndex(part.events, ["tool.approved", "agent.tool.approved", "tool.call", "agent.tool.call", "tool.progress", "agent.tool.progress"]);
+	const approvalIndex: number = getLatestEventIndex(part.events, [
+		"tool.approval_required",
+		"agent.tool.approval_required",
+	]);
+	const executionIndex: number = getLatestEventIndex(part.events, [
+		"tool.approved",
+		"agent.tool.approved",
+		"tool.call",
+		"agent.tool.call",
+		"tool.progress",
+		"agent.tool.progress",
+	]);
 	return approvalIndex > executionIndex ? "approval" : "running";
 }
 
@@ -89,15 +116,21 @@ function TerminalPart({ part, disclosureKey, onScrollWheelPassThrough }: Termina
 	const followOutputRef = useRef<boolean>(true);
 	const display: TerminalDisplay = useMemo((): TerminalDisplay => readTerminalDisplay(part), [part]);
 	const status: TerminalStatus = getTerminalStatus(part, display);
-	const recovery: ToolRecoveryDisplay | undefined = useMemo((): ToolRecoveryDisplay | undefined => getToolRecovery(part.events), [part.events]);
-	const recoveryText: string | undefined = recovery === undefined
-		? undefined
-		: recovery.status === "recovered"
-			? t("chat.tool.recovery.recovered", { attempt: recovery.attempt, max: recovery.maxAttempts })
-			: recovery.status === "exhausted"
-				? t("chat.tool.recovery.exhausted", { attempt: recovery.attempt, max: recovery.maxAttempts })
-				: t("chat.tool.recovery.failed", { attempt: recovery.attempt, max: recovery.maxAttempts });
-	const outputText: string = [display.stdout, display.stderr].filter((value: string): boolean => value.length > 0).join("\n");
+	const recovery: ToolRecoveryDisplay | undefined = useMemo(
+		(): ToolRecoveryDisplay | undefined => getToolRecovery(part.events),
+		[part.events],
+	);
+	const recoveryText: string | undefined =
+		recovery === undefined
+			? undefined
+			: recovery.status === "recovered"
+				? t("chat.tool.recovery.recovered", { attempt: recovery.attempt, max: recovery.maxAttempts })
+				: recovery.status === "exhausted"
+					? t("chat.tool.recovery.exhausted", { attempt: recovery.attempt, max: recovery.maxAttempts })
+					: t("chat.tool.recovery.failed", { attempt: recovery.attempt, max: recovery.maxAttempts });
+	const outputText: string = [display.stdout, display.stderr]
+		.filter((value: string): boolean => value.length > 0)
+		.join("\n");
 
 	useLayoutEffect(() => {
 		if (!open) return;
@@ -121,7 +154,10 @@ function TerminalPart({ part, disclosureKey, onScrollWheelPassThrough }: Termina
 		try {
 			await copyTextToClipboard(value);
 			setCopied(kind);
-			window.setTimeout((): void => setCopied((current): "command" | "output" | null => current === kind ? null : current), 1200);
+			window.setTimeout(
+				(): void => setCopied((current): "command" | "output" | null => (current === kind ? null : current)),
+				1200,
+			);
 		} catch (error: unknown) {
 			console.error("[TerminalPart] copy failed", error);
 		}
@@ -134,15 +170,21 @@ function TerminalPart({ part, disclosureKey, onScrollWheelPassThrough }: Termina
 		failed: "red",
 		timed_out: "orange",
 		cancelled: "default",
-		background: "blue"
+		background: "blue",
 	};
 	const statusLabel: string = t(`chat.terminalPart.status.${status}`);
 	const metadata: Array<{ label: string; value: string }> = [
 		{ label: t("chat.terminalPart.cwd"), value: display.cwd },
-		...(display.sandboxMode === undefined ? [] : [{ label: t("chat.terminalPart.sandbox"), value: display.sandboxMode }]),
-		...(display.exitCode === null ? [] : [{ label: t("chat.terminalPart.exitCode"), value: String(display.exitCode) }]),
-		...(display.durationMs === undefined ? [] : [{ label: t("chat.terminalPart.duration"), value: formatDuration(display.durationMs) }]),
-		...(display.jobId === undefined ? [] : [{ label: t("chat.terminalPart.jobId"), value: display.jobId }])
+		...(display.sandboxMode === undefined
+			? []
+			: [{ label: t("chat.terminalPart.sandbox"), value: display.sandboxMode }]),
+		...(display.exitCode === null
+			? []
+			: [{ label: t("chat.terminalPart.exitCode"), value: String(display.exitCode) }]),
+		...(display.durationMs === undefined
+			? []
+			: [{ label: t("chat.terminalPart.duration"), value: formatDuration(display.durationMs) }]),
+		...(display.jobId === undefined ? [] : [{ label: t("chat.terminalPart.jobId"), value: display.jobId }]),
 	];
 
 	return (
@@ -151,56 +193,105 @@ function TerminalPart({ part, disclosureKey, onScrollWheelPassThrough }: Termina
 			bordered={false}
 			destroyOnHidden
 			activeKey={open ? ["terminal"] : []}
-			onChange={(keys: string | string[]): void => setOpen((Array.isArray(keys) ? keys : [keys]).includes("terminal"))}
+			onChange={(keys: string | string[]): void =>
+				setOpen((Array.isArray(keys) ? keys : [keys]).includes("terminal"))
+			}
 			className={styles.collapse}
 			ghost
 			expandIcon={() => <Icon name="terminal" className={styles.icon} />}
-			items={[{
-				key: "terminal",
-				label: display.commandLine || t("chat.terminalPart.commandFallback"),
-				extra: (
-					<Tag color={statusColors[status]} className={styles.statusTag}>
-						{statusLabel}
-					</Tag>
-				),
-				children: (
-					<div className={styles.body}>
-						{recoveryText === undefined ? null : <div className={styles.recovery}>{recoveryText}</div>}
-						<div className={styles.commandBlock}>
-							<code>{display.commandLine || t("chat.terminalPart.commandFallback")}</code>
-							<Tooltip title={copied === "command" ? t("chat.common.copied") : t("chat.terminalPart.copyCommand")}>
-								<Button type="text" shape="circle" size="small" aria-label={t("chat.terminalPart.copyCommand")} icon={<Icon name={copied === "command" ? "check" : "copy"} />} onClick={(event): void => {
-									event.stopPropagation();
-									void copy("command", display.commandLine);
-								}} />
-							</Tooltip>
-						</div>
-						<div className={styles.outputHeader}>
-							<span>{t("chat.terminalPart.output")}</span>
-						</div>
-						<div ref={outputRef} className={styles.output} onWheel={(event: React.WheelEvent<HTMLDivElement>): void => {
-							const element: HTMLDivElement = event.currentTarget;
-							if (canConsumeOutputWheel(element, event.deltaY)) {
-								event.stopPropagation();
-								return;
-							}
+			items={[
+				{
+					key: "terminal",
+					label: display.commandLine || t("chat.terminalPart.commandFallback"),
+					extra: (
+						<Tag color={statusColors[status]} className={styles.statusTag}>
+							{statusLabel}
+						</Tag>
+					),
+					children: (
+						<div className={styles.body}>
+							{recoveryText === undefined ? null : <div className={styles.recovery}>{recoveryText}</div>}
+							<div className={styles.commandBlock}>
+								<code>{display.commandLine || t("chat.terminalPart.commandFallback")}</code>
+								<Tooltip
+									title={
+										copied === "command"
+											? t("chat.common.copied")
+											: t("chat.terminalPart.copyCommand")
+									}
+								>
+									<Button
+										type="text"
+										shape="circle"
+										size="small"
+										aria-label={t("chat.terminalPart.copyCommand")}
+										icon={<Icon name={copied === "command" ? "check" : "copy"} />}
+										onClick={(event): void => {
+											event.stopPropagation();
+											void copy("command", display.commandLine);
+										}}
+									/>
+								</Tooltip>
+							</div>
+							<div className={styles.outputHeader}>
+								<span>{t("chat.terminalPart.output")}</span>
+							</div>
+							<div
+								ref={outputRef}
+								className={styles.output}
+								onWheel={(event: React.WheelEvent<HTMLDivElement>): void => {
+									const element: HTMLDivElement = event.currentTarget;
+									if (canConsumeOutputWheel(element, event.deltaY)) {
+										event.stopPropagation();
+										return;
+									}
 
-							if (event.deltaY !== 0 && onScrollWheelPassThrough !== undefined) {
-								event.preventDefault();
-								event.stopPropagation();
-								onScrollWheelPassThrough(event.deltaY);
-							}
-						}} onScroll={(event): void => {
-							const element: HTMLDivElement = event.currentTarget;
-							followOutputRef.current = element.scrollHeight - element.scrollTop - element.clientHeight <= 16;
-						}}>
-							{display.stdout.length > 0 ? <section><span>stdout</span>{display.stdoutOmittedChars > 0 ? <em>{t("chat.terminalPart.omitted", { count: display.stdoutOmittedChars })}</em> : null}<pre>{display.stdout}</pre></section> : null}
-							{display.stderr.length > 0 ? <section className={styles.stderr}><span>stderr</span>{display.stderrOmittedChars > 0 ? <em>{t("chat.terminalPart.omitted", { count: display.stderrOmittedChars })}</em> : null}<pre>{display.stderr}</pre></section> : null}
-							{outputText.length === 0 ? <div className={styles.empty}>{status === "running" ? t("chat.terminalPart.waitingOutput") : t("chat.terminalPart.noOutput")}</div> : null}
+									if (event.deltaY !== 0 && onScrollWheelPassThrough !== undefined) {
+										event.preventDefault();
+										event.stopPropagation();
+										onScrollWheelPassThrough(event.deltaY);
+									}
+								}}
+								onScroll={(event): void => {
+									const element: HTMLDivElement = event.currentTarget;
+									followOutputRef.current =
+										element.scrollHeight - element.scrollTop - element.clientHeight <= 16;
+								}}
+							>
+								{display.stdout.length > 0 ? (
+									<section>
+										<span>stdout</span>
+										{display.stdoutOmittedChars > 0 ? (
+											<em>
+												{t("chat.terminalPart.omitted", { count: display.stdoutOmittedChars })}
+											</em>
+										) : null}
+										<pre>{display.stdout}</pre>
+									</section>
+								) : null}
+								{display.stderr.length > 0 ? (
+									<section className={styles.stderr}>
+										<span>stderr</span>
+										{display.stderrOmittedChars > 0 ? (
+											<em>
+												{t("chat.terminalPart.omitted", { count: display.stderrOmittedChars })}
+											</em>
+										) : null}
+										<pre>{display.stderr}</pre>
+									</section>
+								) : null}
+								{outputText.length === 0 ? (
+									<div className={styles.empty}>
+										{status === "running"
+											? t("chat.terminalPart.waitingOutput")
+											: t("chat.terminalPart.noOutput")}
+									</div>
+								) : null}
+							</div>
 						</div>
-					</div>
-				)
-			}]}
+					),
+				},
+			]}
 		/>
 	);
 }

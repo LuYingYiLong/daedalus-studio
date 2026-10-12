@@ -18,36 +18,55 @@ function ToolFileDiff({ sessionId, batchId }: ToolFileDiffProps): React.JSX.Elem
 		let active: boolean = true;
 		setEdits(null);
 		setError(null);
-		void fetchFileEditBatch(sessionId, batchId).then((result) => {
-			if (active) setEdits(result.fileEditBatch.edits);
-		}).catch((reason: unknown): void => {
-			if (active) setError(reason instanceof Error ? reason.message : "Unable to load file diff.");
-		});
-		return (): void => { active = false; };
+		void fetchFileEditBatch(sessionId, batchId)
+			.then((result) => {
+				if (active) setEdits(result.fileEditBatch.edits);
+			})
+			.catch((reason: unknown): void => {
+				if (active) setError(reason instanceof Error ? reason.message : "Unable to load file diff.");
+			});
+		return (): void => {
+			active = false;
+		};
 	}, [batchId, sessionId]);
 
-	const parsedEdits = useMemo(() => (edits ?? []).map((edit: FileEditSnapshot) => ({
-		edit,
-		file: (() => {
-			const source: string | null = createFileEditUnifiedDiff(edit);
-			return source === null ? null : parseDiff(source)[0] ?? null;
-		})()
-	})), [edits]);
+	const parsedEdits = useMemo(
+		() =>
+			(edits ?? []).map((edit: FileEditSnapshot) => ({
+				edit,
+				file: (() => {
+					const source: string | null = createFileEditUnifiedDiff(edit);
+					return source === null ? null : (parseDiff(source)[0] ?? null);
+				})(),
+			})),
+		[edits],
+	);
 
 	if (error !== null) return <Alert type="warning" showIcon message={error} />;
-	if (edits === null) return <div className={styles.diffLoading}><Spin size="small" /> Loading diff…</div>;
+	if (edits === null)
+		return (
+			<div className={styles.diffLoading}>
+				<Spin size="small" /> Loading diff…
+			</div>
+		);
 	return (
 		<div className={styles.fileDiffList}>
-			{parsedEdits.map(({ edit, file }): React.JSX.Element => (
-				<section key={edit.path} className={styles.fileDiff}>
-					<div className={styles.fileDiffPath}>
-						{edit.sourceFolderId === undefined ? edit.path : `[${edit.sourceFolderId}] ${edit.path}`}
-					</div>
-					{file === null
-						? <div className={styles.diffUnavailable}>{edit.unavailableReason ?? "This edit has no text snapshot to compare."}</div>
-						: <Diff diffType={file.type} hunks={file.hunks} viewType="split" />}
-				</section>
-			))}
+			{parsedEdits.map(
+				({ edit, file }): React.JSX.Element => (
+					<section key={edit.path} className={styles.fileDiff}>
+						<div className={styles.fileDiffPath}>
+							{edit.sourceFolderId === undefined ? edit.path : `[${edit.sourceFolderId}] ${edit.path}`}
+						</div>
+						{file === null ? (
+							<div className={styles.diffUnavailable}>
+								{edit.unavailableReason ?? "This edit has no text snapshot to compare."}
+							</div>
+						) : (
+							<Diff diffType={file.type} hunks={file.hunks} viewType="split" />
+						)}
+					</section>
+				),
+			)}
 		</div>
 	);
 }

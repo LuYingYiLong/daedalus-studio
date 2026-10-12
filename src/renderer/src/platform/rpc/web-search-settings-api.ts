@@ -49,9 +49,7 @@ export async function fetchWebSearchSettings(): Promise<WebSearchSettings> {
 	return client.request<WebSearchSettings>("webSearchSettings.get");
 }
 
-export async function updateWebSearchSettings(
-	patch: WebSearchSettingsPatch,
-): Promise<WebSearchSettings> {
+export async function updateWebSearchSettings(patch: WebSearchSettingsPatch): Promise<WebSearchSettings> {
 	const client = await createBackendClient();
 
 	return client.request<WebSearchSettings>("webSearchSettings.update", patch);

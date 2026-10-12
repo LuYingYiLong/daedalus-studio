@@ -120,15 +120,10 @@ export type UsageMetricsTrendsResult = {
 	points: UsageMetricsTrendPoint[];
 };
 
-export async function fetchUsageMetricsSummary(
-	filters?: UsageMetricsFilters,
-): Promise<UsageMetricsSummary> {
+export async function fetchUsageMetricsSummary(filters?: UsageMetricsFilters): Promise<UsageMetricsSummary> {
 	const client = await createBackendClient();
 
-	return client.request<UsageMetricsSummary>(
-		"usage.metrics.summary.get",
-		filters,
-	);
+	return client.request<UsageMetricsSummary>("usage.metrics.summary.get", filters);
 }
 
 export async function listUsageMetricsLogs(
@@ -136,10 +131,7 @@ export async function listUsageMetricsLogs(
 ): Promise<UsageMetricsLogsListResult> {
 	const client = await createBackendClient();
 
-	return client.request<UsageMetricsLogsListResult>(
-		"usage.metrics.logs.list",
-		params,
-	);
+	return client.request<UsageMetricsLogsListResult>("usage.metrics.logs.list", params);
 }
 
 export async function fetchUsageMetricsTrends(
@@ -147,8 +139,5 @@ export async function fetchUsageMetricsTrends(
 ): Promise<UsageMetricsTrendsResult> {
 	const client = await createBackendClient();
 
-	return client.request<UsageMetricsTrendsResult>(
-		"usage.metrics.trends.get",
-		params,
-	);
+	return client.request<UsageMetricsTrendsResult>("usage.metrics.trends.get", params);
 }

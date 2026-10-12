@@ -1,9 +1,19 @@
-import type { AdditionalContextItem, AgentGoalState, MessageTextAnchor, SelectionAskThread, SessionTimelineNavigationEntry, TimelineBlock } from "@/platform/rpc/types";
+import type {
+	AdditionalContextItem,
+	AgentGoalState,
+	MessageTextAnchor,
+	SelectionAskThread,
+	SessionTimelineNavigationEntry,
+	TimelineBlock,
+} from "@/platform/rpc/types";
 import type { TimelinePageStore } from "@/domain/workbench/timeline-page-store";
 import { useTimelinePage } from "@/domain/workbench/timeline-page-store";
 import type { RetryUserMessagePayload } from "./UserBubble";
 import ConversationAnchorNavigator from "./ConversationAnchorNavigator";
-import { resolveActiveTimelineEntryIdFromLoadedBlocks, resolveAdjacentTimelineEntry } from "@/domain/conversation/conversation-navigation";
+import {
+	resolveActiveTimelineEntryIdFromLoadedBlocks,
+	resolveAdjacentTimelineEntry,
+} from "@/domain/conversation/conversation-navigation";
 import ConversationSearchPanel from "./ConversationSearchPanel";
 import MessageList, { type MessageListHandle } from "./MessageList";
 import { useConversationSearch } from "@/features/conversation/useConversationSearch";
@@ -52,253 +62,300 @@ export type ConversationTimelinePaneProps = {
 	goal: AgentGoalState | null;
 };
 
-const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, ConversationTimelinePaneProps>(function ConversationTimelinePane({
-	sessionId,
-	timelineStore,
-	timelineNavigationEntries,
-	isLoading,
-	errorMessage,
-	isLoadingMoreBefore,
-	isLoadingMoreAfter,
-	retryDisabled,
-	activeRetryRequestId,
-	onLoadMoreBefore,
-	onLoadMoreAfter,
-	onTimelineNavigationLoadEntry,
-	onTimelineSearchLoadOffset,
-	onRetryEditStart,
-	onRetryEditCancel,
-	onRetryFromUserMessage,
-	onForkFromUserMessage,
-	onOpenForkSource,
-	forkDisabled,
-	forkingRequestId,
-	onInlineDiffReview,
-	onAwayFromBottomChange,
-	contextItems,
-	onAddContext,
-	initialSelectionAskThreads,
-	goal
-}: ConversationTimelinePaneProps, ref): React.JSX.Element {
-	const { i18n, t } = useTranslation();
-	const { message } = App.useApp();
-	const timelinePage = useTimelinePage(timelineStore);
-	const messageListRef = useRef<MessageListHandle | null>(null);
-	const conversationSearchInputRef = useRef<InputRef | null>(null);
-	const [activeTimelineBlockOffset, setActiveTimelineBlockOffset] = useState<number | null>(null);
-	const [pendingTimelineEntryId, setPendingTimelineEntryId] = useState<string | null>(null);
-	const selectionAsk = useSelectionAsk(sessionId, initialSelectionAskThreads);
-	const activeSelectionAskThread: SelectionAskThread | null = selectionAsk.activeThreadId === null
-		? null
-		: selectionAsk.threads.find((thread: SelectionAskThread): boolean => thread.threadId === selectionAsk.activeThreadId) ?? null;
-	const activeTimelineEntryId: string | null = useMemo(
-		(): string | null => resolveActiveTimelineEntryIdFromLoadedBlocks(
+const ConversationTimelinePane = forwardRef<ConversationTimelinePaneHandle, ConversationTimelinePaneProps>(
+	function ConversationTimelinePane(
+		{
+			sessionId,
+			timelineStore,
 			timelineNavigationEntries,
-			timelinePage.blocks,
-			timelinePage.blockOffset,
-			activeTimelineBlockOffset
-		),
-		[activeTimelineBlockOffset, timelineNavigationEntries, timelinePage.blockOffset, timelinePage.blocks]
-	);
-	const handleConversationSearchLoadError = useCallback((error: unknown): void => {
-		console.warn("[ConversationTimelinePane] conversation search degraded to loaded messages", error);
-	}, []);
-	const handleAssistantFeedbackChange = useCallback(async (requestId: string, rating: "good" | "bad" | null): Promise<void> => {
-		try {
-			const saved = await setAssistantFeedback(sessionId, requestId, rating);
-			timelineStore.update((page) => ({
-				...page,
-				blocks: page.blocks.map((block): TimelineBlock => block.type === "assistant" && block.requestId === requestId
-					? { ...block, feedback: saved.rating }
-					: block),
-			}));
-		} catch (error: unknown) {
-			void message.error(error instanceof Error ? error.message : t("chat.assistant.feedback.saveFailed"));
-		}
-	}, [message, sessionId, t, timelineStore]);
-	const conversationSearch = useConversationSearch({
-		sessionId,
-		timelineBlocks: timelinePage.blocks,
-		timelineBlockOffset: timelinePage.blockOffset,
-		activeRetryRequestId,
-		onLoadBlockOffset: onTimelineSearchLoadOffset,
-		onLoadError: handleConversationSearchLoadError
-	});
-
-	const focusConversationSearchInput = useCallback((): void => {
-		window.requestAnimationFrame((): void => {
-			conversationSearchInputRef.current?.focus();
-			conversationSearchInputRef.current?.select();
-		});
-	}, []);
-
-	useEffect((): void => {
-		if (conversationSearch.open) {
-			focusConversationSearchInput();
-		}
-	}, [conversationSearch.open, focusConversationSearchInput]);
-
-	useEffect((): void => {
-		setActiveTimelineBlockOffset(null);
-		setPendingTimelineEntryId(null);
-	}, [sessionId]);
-
-	useEffect((): void => {
-		if (activeTimelineBlockOffset === null && timelinePage.blocks.length > 0) {
-			setActiveTimelineBlockOffset(timelinePage.blockOffset + timelinePage.blocks.length - 1);
-		}
-	}, [activeTimelineBlockOffset, timelinePage.blockOffset, timelinePage.blocks.length]);
-
-	useEffect((): void => {
-		if (pendingTimelineEntryId === null || !timelinePage.blocks.some((block: TimelineBlock): boolean => block.id === pendingTimelineEntryId)) {
-			return;
-		}
-		window.requestAnimationFrame((): void => {
-			if (messageListRef.current?.scrollToEntry(pendingTimelineEntryId, "smooth") === true) {
-				setPendingTimelineEntryId(null);
-			}
-		});
-	}, [pendingTimelineEntryId, timelinePage.blocks]);
-
-	const handleTimelineNavigate = useCallback((entry: SessionTimelineNavigationEntry): void => {
-		setActiveTimelineBlockOffset(entry.blockOffset);
-		if (messageListRef.current?.scrollToEntry(entry.entryId, "smooth") === true) {
-			return;
-		}
-		setPendingTimelineEntryId(entry.entryId);
-		void onTimelineNavigationLoadEntry(entry);
-	}, [onTimelineNavigationLoadEntry]);
-	const handleSelectionAsk = useCallback(async (anchor: MessageTextAnchor): Promise<void> => {
-		try {
-			await selectionAsk.createOrOpen(anchor, i18n.language.startsWith("zh") ? "zh-CN" : "en-US");
-		} catch (error: unknown) {
-			void message.error(error instanceof Error ? error.message : t("chat.selection.askFailed"));
-		}
-	}, [i18n.language, message, selectionAsk, t]);
-	const handleDeleteSelectionAsk = useCallback(async (threadId: string): Promise<void> => {
-		try {
-			await selectionAsk.remove(threadId);
-		} catch (error: unknown) {
-			void message.error(error instanceof Error ? error.message : t("chat.selection.deleteAskFailed"));
-		}
-	}, [message, selectionAsk, t]);
-	const handleDeleteAllSelectionAsks = useCallback(async (): Promise<void> => {
-		try {
-			await selectionAsk.removeAll();
-		} catch (error: unknown) {
-			void message.error(error instanceof Error ? error.message : t("chat.selection.deleteAskFailed"));
-		}
-	}, [message, selectionAsk, t]);
-
-	const navigateTurn = useCallback((direction: "previous" | "next"): void => {
-		if (timelineNavigationEntries.length === 0) {
-			return;
-		}
-		const liveBlockOffset: number | null = messageListRef.current?.getActiveBlockOffset() ?? activeTimelineBlockOffset;
-		const liveActiveEntryId: string | null = resolveActiveTimelineEntryIdFromLoadedBlocks(
-			timelineNavigationEntries,
-			timelinePage.blocks,
-			timelinePage.blockOffset,
-			liveBlockOffset
+			isLoading,
+			errorMessage,
+			isLoadingMoreBefore,
+			isLoadingMoreAfter,
+			retryDisabled,
+			activeRetryRequestId,
+			onLoadMoreBefore,
+			onLoadMoreAfter,
+			onTimelineNavigationLoadEntry,
+			onTimelineSearchLoadOffset,
+			onRetryEditStart,
+			onRetryEditCancel,
+			onRetryFromUserMessage,
+			onForkFromUserMessage,
+			onOpenForkSource,
+			forkDisabled,
+			forkingRequestId,
+			onInlineDiffReview,
+			onAwayFromBottomChange,
+			contextItems,
+			onAddContext,
+			initialSelectionAskThreads,
+			goal,
+		}: ConversationTimelinePaneProps,
+		ref,
+	): React.JSX.Element {
+		const { i18n, t } = useTranslation();
+		const { message } = App.useApp();
+		const timelinePage = useTimelinePage(timelineStore);
+		const messageListRef = useRef<MessageListHandle | null>(null);
+		const conversationSearchInputRef = useRef<InputRef | null>(null);
+		const [activeTimelineBlockOffset, setActiveTimelineBlockOffset] = useState<number | null>(null);
+		const [pendingTimelineEntryId, setPendingTimelineEntryId] = useState<string | null>(null);
+		const selectionAsk = useSelectionAsk(sessionId, initialSelectionAskThreads);
+		const activeSelectionAskThread: SelectionAskThread | null =
+			selectionAsk.activeThreadId === null
+				? null
+				: (selectionAsk.threads.find(
+						(thread: SelectionAskThread): boolean => thread.threadId === selectionAsk.activeThreadId,
+					) ?? null);
+		const activeTimelineEntryId: string | null = useMemo(
+			(): string | null =>
+				resolveActiveTimelineEntryIdFromLoadedBlocks(
+					timelineNavigationEntries,
+					timelinePage.blocks,
+					timelinePage.blockOffset,
+					activeTimelineBlockOffset,
+				),
+			[activeTimelineBlockOffset, timelineNavigationEntries, timelinePage.blockOffset, timelinePage.blocks],
 		);
-		const target: SessionTimelineNavigationEntry | null = resolveAdjacentTimelineEntry(
-			timelineNavigationEntries,
-			liveActiveEntryId,
-			direction
+		const handleConversationSearchLoadError = useCallback((error: unknown): void => {
+			console.warn("[ConversationTimelinePane] conversation search degraded to loaded messages", error);
+		}, []);
+		const handleAssistantFeedbackChange = useCallback(
+			async (requestId: string, rating: "good" | "bad" | null): Promise<void> => {
+				try {
+					const saved = await setAssistantFeedback(sessionId, requestId, rating);
+					timelineStore.update((page) => ({
+						...page,
+						blocks: page.blocks.map(
+							(block): TimelineBlock =>
+								block.type === "assistant" && block.requestId === requestId
+									? { ...block, feedback: saved.rating }
+									: block,
+						),
+					}));
+				} catch (error: unknown) {
+					void message.error(
+						error instanceof Error ? error.message : t("chat.assistant.feedback.saveFailed"),
+					);
+				}
+			},
+			[message, sessionId, t, timelineStore],
 		);
-		if (target !== null) {
-			handleTimelineNavigate(target);
-		}
-	}, [activeTimelineBlockOffset, handleTimelineNavigate, timelineNavigationEntries, timelinePage.blockOffset, timelinePage.blocks]);
+		const conversationSearch = useConversationSearch({
+			sessionId,
+			timelineBlocks: timelinePage.blocks,
+			timelineBlockOffset: timelinePage.blockOffset,
+			activeRetryRequestId,
+			onLoadBlockOffset: onTimelineSearchLoadOffset,
+			onLoadError: handleConversationSearchLoadError,
+		});
 
-	useImperativeHandle(ref, (): ConversationTimelinePaneHandle => ({
-		closeSearch: (): boolean => {
-			if (!conversationSearch.open) {
-				return false;
+		const focusConversationSearchInput = useCallback((): void => {
+			window.requestAnimationFrame((): void => {
+				conversationSearchInputRef.current?.focus();
+				conversationSearchInputRef.current?.select();
+			});
+		}, []);
+
+		useEffect((): void => {
+			if (conversationSearch.open) {
+				focusConversationSearchInput();
 			}
-			conversationSearch.closeSearch();
-			return true;
-		},
-		navigateTurn,
-		openSearch: (query?: string): void => {
-			conversationSearch.openSearch(query);
-			focusConversationSearchInput();
-		},
-		scrollToBottom: (behavior: ScrollBehavior = "smooth"): void => {
-			messageListRef.current?.scrollToBottom(behavior);
-		}
-	}), [conversationSearch, focusConversationSearchInput, navigateTurn]);
+		}, [conversationSearch.open, focusConversationSearchInput]);
 
-	return (
-		<div className={styles.timelinePane}>
-			<ConversationSearchPanel
-				open={conversationSearch.open}
-				query={conversationSearch.query}
-				current={conversationSearch.current}
-				total={conversationSearch.total}
-				loading={conversationSearch.loading}
-				inputRef={conversationSearchInputRef}
-				onQueryChange={conversationSearch.setQuery}
-				onPrevious={conversationSearch.goPrevious}
-				onNext={conversationSearch.goNext}
-				onClose={conversationSearch.closeSearch}
-			/>
-			<MessageList
-				key={sessionId}
-				ref={messageListRef}
-				blocks={timelinePage.blocks}
-				onAssistantFeedbackChange={handleAssistantFeedbackChange}
-				blockOffset={timelinePage.blockOffset}
-				searchOpen={conversationSearch.open}
-				searchQuery={conversationSearch.query}
-				activeSearchMatch={conversationSearch.activeMatch}
-				hideInlineDiff={shouldHideInlineDiffForGoal(goal)}
-				contextItems={contextItems}
-				selectionAskThreads={selectionAsk.threads}
-				onAddSelectionContext={onAddContext}
-				onSelectionAsk={handleSelectionAsk}
-				onOpenSelectionAsk={selectionAsk.open}
-				onDeleteSelectionAsk={handleDeleteSelectionAsk}
-				onDeleteAllSelectionAsks={handleDeleteAllSelectionAsks}
-				isLoading={isLoading}
-				errorMessage={errorMessage}
-				hasMoreBefore={timelinePage.hasMoreBefore}
-				hasMoreAfter={timelinePage.hasMoreAfter}
-				isLoadingMoreBefore={isLoadingMoreBefore}
-				isLoadingMoreAfter={isLoadingMoreAfter}
-				onLoadMoreBefore={onLoadMoreBefore}
-				onLoadMoreAfter={onLoadMoreAfter}
-				retryDisabled={retryDisabled}
-				activeRetryRequestId={activeRetryRequestId}
-				onRetryEditStart={onRetryEditStart}
-				onRetryEditCancel={onRetryEditCancel}
-				onRetryFromUserMessage={onRetryFromUserMessage}
-				onForkFromUserMessage={onForkFromUserMessage}
-				onOpenForkSource={onOpenForkSource}
-				forkDisabled={forkDisabled}
-				forkingRequestId={forkingRequestId}
-				onInlineDiffReview={onInlineDiffReview}
-				onAwayFromBottomChange={onAwayFromBottomChange}
-				onActiveBlockOffsetChange={setActiveTimelineBlockOffset}
-			/>
-			<ConversationAnchorNavigator
-				entries={timelineNavigationEntries}
-				activeEntryId={activeTimelineEntryId}
-				onNavigate={handleTimelineNavigate}
-			/>
-			<SelectionAskDialog
-				thread={activeSelectionAskThread}
-				messages={activeSelectionAskThread === null ? [] : selectionAsk.messagesByThread[activeSelectionAskThread.threadId] ?? []}
-				loading={selectionAsk.loading}
-				sending={selectionAsk.sending || activeSelectionAskThread?.status === "running"}
-				cancelling={selectionAsk.cancelling}
-				error={selectionAsk.error}
-				onClose={selectionAsk.close}
-				onSend={selectionAsk.send}
-				onStop={selectionAsk.cancel}
-			/>
-		</div>
-	);
-});
+		useEffect((): void => {
+			setActiveTimelineBlockOffset(null);
+			setPendingTimelineEntryId(null);
+		}, [sessionId]);
+
+		useEffect((): void => {
+			if (activeTimelineBlockOffset === null && timelinePage.blocks.length > 0) {
+				setActiveTimelineBlockOffset(timelinePage.blockOffset + timelinePage.blocks.length - 1);
+			}
+		}, [activeTimelineBlockOffset, timelinePage.blockOffset, timelinePage.blocks.length]);
+
+		useEffect((): void => {
+			if (
+				pendingTimelineEntryId === null ||
+				!timelinePage.blocks.some((block: TimelineBlock): boolean => block.id === pendingTimelineEntryId)
+			) {
+				return;
+			}
+			window.requestAnimationFrame((): void => {
+				if (messageListRef.current?.scrollToEntry(pendingTimelineEntryId, "smooth") === true) {
+					setPendingTimelineEntryId(null);
+				}
+			});
+		}, [pendingTimelineEntryId, timelinePage.blocks]);
+
+		const handleTimelineNavigate = useCallback(
+			(entry: SessionTimelineNavigationEntry): void => {
+				setActiveTimelineBlockOffset(entry.blockOffset);
+				if (messageListRef.current?.scrollToEntry(entry.entryId, "smooth") === true) {
+					return;
+				}
+				setPendingTimelineEntryId(entry.entryId);
+				void onTimelineNavigationLoadEntry(entry);
+			},
+			[onTimelineNavigationLoadEntry],
+		);
+		const handleSelectionAsk = useCallback(
+			async (anchor: MessageTextAnchor): Promise<void> => {
+				try {
+					await selectionAsk.createOrOpen(anchor, i18n.language.startsWith("zh") ? "zh-CN" : "en-US");
+				} catch (error: unknown) {
+					void message.error(error instanceof Error ? error.message : t("chat.selection.askFailed"));
+				}
+			},
+			[i18n.language, message, selectionAsk, t],
+		);
+		const handleDeleteSelectionAsk = useCallback(
+			async (threadId: string): Promise<void> => {
+				try {
+					await selectionAsk.remove(threadId);
+				} catch (error: unknown) {
+					void message.error(error instanceof Error ? error.message : t("chat.selection.deleteAskFailed"));
+				}
+			},
+			[message, selectionAsk, t],
+		);
+		const handleDeleteAllSelectionAsks = useCallback(async (): Promise<void> => {
+			try {
+				await selectionAsk.removeAll();
+			} catch (error: unknown) {
+				void message.error(error instanceof Error ? error.message : t("chat.selection.deleteAskFailed"));
+			}
+		}, [message, selectionAsk, t]);
+
+		const navigateTurn = useCallback(
+			(direction: "previous" | "next"): void => {
+				if (timelineNavigationEntries.length === 0) {
+					return;
+				}
+				const liveBlockOffset: number | null =
+					messageListRef.current?.getActiveBlockOffset() ?? activeTimelineBlockOffset;
+				const liveActiveEntryId: string | null = resolveActiveTimelineEntryIdFromLoadedBlocks(
+					timelineNavigationEntries,
+					timelinePage.blocks,
+					timelinePage.blockOffset,
+					liveBlockOffset,
+				);
+				const target: SessionTimelineNavigationEntry | null = resolveAdjacentTimelineEntry(
+					timelineNavigationEntries,
+					liveActiveEntryId,
+					direction,
+				);
+				if (target !== null) {
+					handleTimelineNavigate(target);
+				}
+			},
+			[
+				activeTimelineBlockOffset,
+				handleTimelineNavigate,
+				timelineNavigationEntries,
+				timelinePage.blockOffset,
+				timelinePage.blocks,
+			],
+		);
+
+		useImperativeHandle(
+			ref,
+			(): ConversationTimelinePaneHandle => ({
+				closeSearch: (): boolean => {
+					if (!conversationSearch.open) {
+						return false;
+					}
+					conversationSearch.closeSearch();
+					return true;
+				},
+				navigateTurn,
+				openSearch: (query?: string): void => {
+					conversationSearch.openSearch(query);
+					focusConversationSearchInput();
+				},
+				scrollToBottom: (behavior: ScrollBehavior = "smooth"): void => {
+					messageListRef.current?.scrollToBottom(behavior);
+				},
+			}),
+			[conversationSearch, focusConversationSearchInput, navigateTurn],
+		);
+
+		return (
+			<div className={styles.timelinePane}>
+				<ConversationSearchPanel
+					open={conversationSearch.open}
+					query={conversationSearch.query}
+					current={conversationSearch.current}
+					total={conversationSearch.total}
+					loading={conversationSearch.loading}
+					inputRef={conversationSearchInputRef}
+					onQueryChange={conversationSearch.setQuery}
+					onPrevious={conversationSearch.goPrevious}
+					onNext={conversationSearch.goNext}
+					onClose={conversationSearch.closeSearch}
+				/>
+				<MessageList
+					key={sessionId}
+					ref={messageListRef}
+					blocks={timelinePage.blocks}
+					onAssistantFeedbackChange={handleAssistantFeedbackChange}
+					blockOffset={timelinePage.blockOffset}
+					searchOpen={conversationSearch.open}
+					searchQuery={conversationSearch.query}
+					activeSearchMatch={conversationSearch.activeMatch}
+					hideInlineDiff={shouldHideInlineDiffForGoal(goal)}
+					contextItems={contextItems}
+					selectionAskThreads={selectionAsk.threads}
+					onAddSelectionContext={onAddContext}
+					onSelectionAsk={handleSelectionAsk}
+					onOpenSelectionAsk={selectionAsk.open}
+					onDeleteSelectionAsk={handleDeleteSelectionAsk}
+					onDeleteAllSelectionAsks={handleDeleteAllSelectionAsks}
+					isLoading={isLoading}
+					errorMessage={errorMessage}
+					hasMoreBefore={timelinePage.hasMoreBefore}
+					hasMoreAfter={timelinePage.hasMoreAfter}
+					isLoadingMoreBefore={isLoadingMoreBefore}
+					isLoadingMoreAfter={isLoadingMoreAfter}
+					onLoadMoreBefore={onLoadMoreBefore}
+					onLoadMoreAfter={onLoadMoreAfter}
+					retryDisabled={retryDisabled}
+					activeRetryRequestId={activeRetryRequestId}
+					onRetryEditStart={onRetryEditStart}
+					onRetryEditCancel={onRetryEditCancel}
+					onRetryFromUserMessage={onRetryFromUserMessage}
+					onForkFromUserMessage={onForkFromUserMessage}
+					onOpenForkSource={onOpenForkSource}
+					forkDisabled={forkDisabled}
+					forkingRequestId={forkingRequestId}
+					onInlineDiffReview={onInlineDiffReview}
+					onAwayFromBottomChange={onAwayFromBottomChange}
+					onActiveBlockOffsetChange={setActiveTimelineBlockOffset}
+				/>
+				<ConversationAnchorNavigator
+					entries={timelineNavigationEntries}
+					activeEntryId={activeTimelineEntryId}
+					onNavigate={handleTimelineNavigate}
+				/>
+				<SelectionAskDialog
+					thread={activeSelectionAskThread}
+					messages={
+						activeSelectionAskThread === null
+							? []
+							: (selectionAsk.messagesByThread[activeSelectionAskThread.threadId] ?? [])
+					}
+					loading={selectionAsk.loading}
+					sending={selectionAsk.sending || activeSelectionAskThread?.status === "running"}
+					cancelling={selectionAsk.cancelling}
+					error={selectionAsk.error}
+					onClose={selectionAsk.close}
+					onSend={selectionAsk.send}
+					onStop={selectionAsk.cancel}
+				/>
+			</div>
+		);
+	},
+);
 
 export default memo(ConversationTimelinePane);

@@ -1,10 +1,5 @@
 import { createBackendClient } from "@/platform/rpc/transport/backend-client";
-import type {
-	WorkspaceColor,
-	WorkspaceConfig,
-	WorkspaceIcon,
-	WorkspaceListResult,
-} from "./types";
+import type { WorkspaceColor, WorkspaceConfig, WorkspaceIcon, WorkspaceListResult } from "./types";
 
 export type ConfigureWorkspaceParams = {
 	workspaceRoot: string;
@@ -100,19 +95,14 @@ export async function fetchWorkspaces(): Promise<WorkspaceListResult> {
 
 export async function fetchWorkspaceTreeOrder(): Promise<WorkspaceTreeOrderPreferences> {
 	const client = await createBackendClient();
-	return client.request<WorkspaceTreeOrderPreferences>(
-		"workspace.tree.order.get",
-	);
+	return client.request<WorkspaceTreeOrderPreferences>("workspace.tree.order.get");
 }
 
 export async function updateWorkspaceTreeOrder(
 	order: WorkspaceTreeOrderUpdate,
 ): Promise<WorkspaceTreeOrderPreferences> {
 	const client = await createBackendClient();
-	return client.request<WorkspaceTreeOrderPreferences>(
-		"workspace.tree.order.update",
-		order,
-	);
+	return client.request<WorkspaceTreeOrderPreferences>("workspace.tree.order.update", order);
 }
 
 export async function selectWorkspace(
@@ -131,20 +121,13 @@ export async function selectWorkspace(
 	return result.workspace;
 }
 
-export async function configureEnvironment(
-	params: ConfigureEnvironmentParams,
-): Promise<ConfigureEnvironmentResult> {
+export async function configureEnvironment(params: ConfigureEnvironmentParams): Promise<ConfigureEnvironmentResult> {
 	const client = await createBackendClient();
 
-	return client.request<ConfigureEnvironmentResult>(
-		"environment.configure",
-		params,
-	);
+	return client.request<ConfigureEnvironmentResult>("environment.configure", params);
 }
 
-export async function deleteWorkspace(
-	workspaceId: string,
-): Promise<DeleteWorkspaceResult> {
+export async function deleteWorkspace(workspaceId: string): Promise<DeleteWorkspaceResult> {
 	const client = await createBackendClient();
 
 	return client.request<DeleteWorkspaceResult>("workspace.delete", {
@@ -152,23 +135,13 @@ export async function deleteWorkspace(
 	});
 }
 
-export async function getWorktreeEligibility(
-	workspaceId: string,
-): Promise<WorktreeEligibilityResult> {
+export async function getWorktreeEligibility(workspaceId: string): Promise<WorktreeEligibilityResult> {
 	const client = await createBackendClient();
-	return client.request<WorktreeEligibilityResult>(
-		"workspace.worktree.eligibility.get",
-		{ workspaceId },
-	);
+	return client.request<WorktreeEligibilityResult>("workspace.worktree.eligibility.get", { workspaceId });
 }
 
-export async function updateWorkspace(
-	params: UpdateWorkspaceParams,
-): Promise<WorkspaceConfig> {
+export async function updateWorkspace(params: UpdateWorkspaceParams): Promise<WorkspaceConfig> {
 	const client = await createBackendClient();
-	const result = await client.request<{ workspace: WorkspaceConfig }>(
-		"workspace.update",
-		params,
-	);
+	const result = await client.request<{ workspace: WorkspaceConfig }>("workspace.update", params);
 	return result.workspace;
 }

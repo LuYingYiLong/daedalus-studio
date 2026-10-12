@@ -251,9 +251,11 @@ export default function WorkspaceProjectDialog({
 			return true;
 		});
 		if (newPaths.length === 0) {
-			setError(t("workspaceTree.projectEditor.duplicateFolder", {
-				defaultValue: "This source folder is already in the project.",
-			}));
+			setError(
+				t("workspaceTree.projectEditor.duplicateFolder", {
+					defaultValue: "This source folder is already in the project.",
+				}),
+			);
 			return;
 		}
 		setDraft((current): WorkspaceProjectDraft | null => {
@@ -298,21 +300,25 @@ export default function WorkspaceProjectDialog({
 		}
 		const paths: Array<string | null> = Array.from(files, getLocalPathForFile);
 		if (paths.length === 0 || paths.some((path): boolean => path === null)) {
-			setError(t("workspaceTree.projectEditor.dropFoldersOnly", {
-				defaultValue: "Only folders from the file manager can be added.",
-			}));
+			setError(
+				t("workspaceTree.projectEditor.dropFoldersOnly", {
+					defaultValue: "Only folders from the file manager can be added.",
+				}),
+			);
 			return;
 		}
 		try {
 			setAddingFolder(true);
-			const directories: string[] = await Promise.all(paths.map((path): Promise<string> =>
-				window.electronAPI.workspaceFs.validateSourceDirectory(path!),
-			));
+			const directories: string[] = await Promise.all(
+				paths.map((path): Promise<string> => window.electronAPI.workspaceFs.validateSourceDirectory(path!)),
+			);
 			appendSourceFolders(directories);
 		} catch {
-			setError(t("workspaceTree.projectEditor.dropFoldersOnly", {
-				defaultValue: "Only folders from the file manager can be added.",
-			}));
+			setError(
+				t("workspaceTree.projectEditor.dropFoldersOnly", {
+					defaultValue: "Only folders from the file manager can be added.",
+				}),
+			);
 		} finally {
 			setAddingFolder(false);
 		}
@@ -500,7 +506,9 @@ export default function WorkspaceProjectDialog({
 									selectedKeys={[draft.primarySourceFolderId]}
 									onClick={({ key }): void =>
 										setDraft((current): WorkspaceProjectDraft | null =>
-											current === null ? null : { ...current, primarySourceFolderId: String(key) },
+											current === null
+												? null
+												: { ...current, primarySourceFolderId: String(key) },
 										)
 									}
 								/>

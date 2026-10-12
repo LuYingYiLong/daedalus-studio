@@ -18,7 +18,17 @@ export type SelectionAskDialogProps = {
 	onStop: () => Promise<void>;
 };
 
-function SelectionAskDialog({ thread, messages, loading, sending, cancelling, error, onClose, onSend, onStop }: SelectionAskDialogProps): React.JSX.Element {
+function SelectionAskDialog({
+	thread,
+	messages,
+	loading,
+	sending,
+	cancelling,
+	error,
+	onClose,
+	onSend,
+	onStop,
+}: SelectionAskDialogProps): React.JSX.Element {
 	const { t } = useTranslation();
 	const [draft, setDraft] = useState<string>("");
 	const listRef = useRef<HTMLDivElement | null>(null);
@@ -27,10 +37,16 @@ function SelectionAskDialog({ thread, messages, loading, sending, cancelling, er
 	const scheduledScrollFrameRef = useRef<number | null>(null);
 	const previousSendingRef = useRef<boolean>(sending);
 	const activeThreadIdRef = useRef<string | null>(thread?.threadId ?? null);
-	const activeMessages = useMemo(() => messages.filter((message: SelectionAskMessage): boolean => message.content.length > 0 || message.status !== "completed"), [messages]);
+	const activeMessages = useMemo(
+		() =>
+			messages.filter(
+				(message: SelectionAskMessage): boolean => message.content.length > 0 || message.status !== "completed",
+			),
+		[messages],
+	);
 	const getDisplayContent = (message: SelectionAskMessage): string => {
 		return message.role === "user" && message.sequence === 1
-			? thread?.anchor.quote ?? message.content
+			? (thread?.anchor.quote ?? message.content)
 			: message.content;
 	};
 
@@ -54,7 +70,9 @@ function SelectionAskDialog({ thread, messages, loading, sending, cancelling, er
 			return;
 		}
 
-		const userMessages: NodeListOf<HTMLElement> = element.querySelectorAll<HTMLElement>("[data-selection-ask-role='user']");
+		const userMessages: NodeListOf<HTMLElement> = element.querySelectorAll<HTMLElement>(
+			"[data-selection-ask-role='user']",
+		);
 		const latestUserMessage: HTMLElement | undefined = userMessages[userMessages.length - 1];
 		if (latestUserMessage === undefined) {
 			element.scrollTop = element.scrollHeight;
@@ -135,8 +153,12 @@ function SelectionAskDialog({ thread, messages, loading, sending, cancelling, er
 			{thread === null ? null : (
 				<div className={styles.shell}>
 					<div className={styles.anchorHeader}>
-						<Typography.Text ellipsis={{ tooltip: thread.anchor.quote }}>{thread.anchor.quote}</Typography.Text>
-						<Typography.Text type="secondary">{thread.provider}/{thread.model}</Typography.Text>
+						<Typography.Text ellipsis={{ tooltip: thread.anchor.quote }}>
+							{thread.anchor.quote}
+						</Typography.Text>
+						<Typography.Text type="secondary">
+							{thread.provider}/{thread.model}
+						</Typography.Text>
 					</div>
 					<div
 						ref={listRef}
@@ -156,13 +178,22 @@ function SelectionAskDialog({ thread, messages, loading, sending, cancelling, er
 										<div className={styles.userMessageText}>{getDisplayContent(message)}</div>
 									) : (
 										<div className={`${styles.messageContent} markdown-body`}>
-											<MarkdownContent streaming={message.status === "running"}>{getDisplayContent(message)}</MarkdownContent>
+											<MarkdownContent streaming={message.status === "running"}>
+												{getDisplayContent(message)}
+											</MarkdownContent>
 										</div>
 									)}
-									{message.status === "running" && message.content.length === 0 ? <Spin size="small" /> : null}
+									{message.status === "running" && message.content.length === 0 ? (
+										<Spin size="small" />
+									) : null}
 									{message.status === "failed" || message.status === "interrupted" ? (
 										<Typography.Text type="danger">
-											{message.errorMessage ?? t(message.status === "interrupted" ? "chat.selection.interrupted" : "chat.selection.responseFailed")}
+											{message.errorMessage ??
+												t(
+													message.status === "interrupted"
+														? "chat.selection.interrupted"
+														: "chat.selection.responseFailed",
+												)}
 										</Typography.Text>
 									) : null}
 								</div>
@@ -180,13 +211,27 @@ function SelectionAskDialog({ thread, messages, loading, sending, cancelling, er
 								if (!event.nativeEvent.isComposing) submit();
 							}}
 						/>
-						<Tooltip title={t(cancelling ? "chat.selection.stoppingAsk" : sending ? "chat.selection.stopAsk" : "chat.selection.sendAsk")}>
+						<Tooltip
+							title={t(
+								cancelling
+									? "chat.selection.stoppingAsk"
+									: sending
+										? "chat.selection.stopAsk"
+										: "chat.selection.sendAsk",
+							)}
+						>
 							<Button
 								type="primary"
 								icon={<Icon name={sending ? "stop" : "send"} />}
 								disabled={cancelling || (!sending && draft.trim().length === 0)}
 								onClick={handlePrimaryAction}
-								aria-label={t(cancelling ? "chat.selection.stoppingAsk" : sending ? "chat.selection.stopAsk" : "chat.selection.sendAsk")}
+								aria-label={t(
+									cancelling
+										? "chat.selection.stoppingAsk"
+										: sending
+											? "chat.selection.stopAsk"
+											: "chat.selection.sendAsk",
+								)}
 							/>
 						</Tooltip>
 					</Space.Compact>

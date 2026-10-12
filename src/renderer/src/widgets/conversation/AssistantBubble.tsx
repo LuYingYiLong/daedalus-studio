@@ -45,11 +45,7 @@ export type AssistantBubbleProps = {
 	onFeedbackChange?: (rating: "good" | "bad" | null) => Promise<void>;
 };
 
-function createAssistantCopyText(
-	message?: string,
-	content?: string,
-	bodyParts?: TimelineBodyPart[],
-): string {
+function createAssistantCopyText(message?: string, content?: string, bodyParts?: TimelineBodyPart[]): string {
 	const explicitText: string = message ?? content ?? "";
 	if (explicitText.trim().length > 0) {
 		return explicitText;
@@ -71,9 +67,7 @@ function createAssistantCopyText(
 				return part.prompt;
 			}
 			if (part.type === "status") {
-				return [part.title, part.details]
-					.filter((text: string): boolean => text.trim().length > 0)
-					.join("\n");
+				return [part.title, part.details].filter((text: string): boolean => text.trim().length > 0).join("\n");
 			}
 			return "";
 		})
@@ -103,10 +97,7 @@ function AssistantBubble({
 	const [copied, setCopied] = React.useState<boolean>(false);
 	const [feedbackSaving, setFeedbackSaving] = React.useState<boolean>(false);
 	const disclosurePrefix: string = entryId ?? "assistant";
-	const [summaryOpen, setSummaryOpen] = useTimelineDisclosure(
-		`${disclosurePrefix}:summary`,
-		false,
-	);
+	const [summaryOpen, setSummaryOpen] = useTimelineDisclosure(`${disclosurePrefix}:summary`, false);
 	const timingLabel: string | undefined =
 		elapsedTime === undefined
 			? undefined
@@ -118,9 +109,7 @@ function AssistantBubble({
 
 	async function copyMessage(): Promise<void> {
 		try {
-			await copyTextToClipboard(
-				createAssistantCopyText(message, content, bodyParts),
-			);
+			await copyTextToClipboard(createAssistantCopyText(message, content, bodyParts));
 			setCopied(true);
 			window.setTimeout((): void => setCopied(false), 1200);
 		} catch (error: unknown) {
@@ -166,11 +155,7 @@ function AssistantBubble({
 
 		if (part.type === "thinking") {
 			return part.text.trim().length > 0 ? (
-				<ThinkingPart
-					key={partKey}
-					part={part}
-					disclosureKey={`${partKey}:thinking`}
-				/>
+				<ThinkingPart key={partKey} part={part} disclosureKey={`${partKey}:thinking`} />
 			) : null;
 		}
 
@@ -204,13 +189,7 @@ function AssistantBubble({
 		}
 
 		if (part.type === "compression") {
-			return (
-				<CompressionPart
-					key={partKey}
-					part={part}
-					disclosureKey={`${partKey}:compression`}
-				/>
-			);
+			return <CompressionPart key={partKey} part={part} disclosureKey={`${partKey}:compression`} />;
 		}
 
 		if (part.type === "status") {
@@ -225,13 +204,7 @@ function AssistantBubble({
 		}
 
 		if (part.type === "inline_diff") {
-			return hideInlineDiff ? null : (
-				<InlineDiffPart
-					key={partKey}
-					part={part}
-					onReview={onInlineDiffReview}
-				/>
-			);
+			return hideInlineDiff ? null : <InlineDiffPart key={partKey} part={part} onReview={onInlineDiffReview} />;
 		}
 
 		if (part.type === "image_generation") {
@@ -271,13 +244,7 @@ function AssistantBubble({
 								part: TimelineActivityPart,
 								index: number,
 								childKey: string,
-							): React.ReactNode =>
-								renderBodyPart(
-									part,
-									index,
-									`${scope}:${segmentKey}:${childKey}`,
-								)
-							}
+							): React.ReactNode => renderBodyPart(part, index, `${scope}:${segmentKey}:${childKey}`)}
 						/>
 					);
 				}
@@ -299,35 +266,16 @@ function AssistantBubble({
 			return renderActivitySegments(parts, "main", true);
 		}
 
-		const summaryStartPart: Extract<
-			TimelineBodyPart,
-			{ type: "summary_start" }
-		> = parts[summaryStartIndex] as Extract<
-			TimelineBodyPart,
-			{ type: "summary_start" }
-		>;
-		const foldedParts: TimelineBodyPart[] = parts.slice(
-			0,
-			summaryStartIndex,
+		const summaryStartPart: Extract<TimelineBodyPart, { type: "summary_start" }> = parts[
+			summaryStartIndex
+		] as Extract<TimelineBodyPart, { type: "summary_start" }>;
+		const foldedParts: TimelineBodyPart[] = parts.slice(0, summaryStartIndex);
+		const visibleParts: TimelineBodyPart[] = parts.slice(summaryStartIndex + 1);
+		const foldedChildren: React.ReactNode[] = renderActivitySegments(foldedParts, "summary-before", false).filter(
+			(child: React.ReactNode): boolean => child !== null && child !== undefined,
 		);
-		const visibleParts: TimelineBodyPart[] = parts.slice(
-			summaryStartIndex + 1,
-		);
-		const foldedChildren: React.ReactNode[] = renderActivitySegments(
-			foldedParts,
-			"summary-before",
-			false,
-		).filter(
-			(child: React.ReactNode): boolean =>
-				child !== null && child !== undefined,
-		);
-		const visibleChildren: React.ReactNode[] = renderActivitySegments(
-			visibleParts,
-			"summary-after",
-			true,
-		).filter(
-			(child: React.ReactNode): boolean =>
-				child !== null && child !== undefined,
+		const visibleChildren: React.ReactNode[] = renderActivitySegments(visibleParts, "summary-after", true).filter(
+			(child: React.ReactNode): boolean => child !== null && child !== undefined,
 		);
 
 		return (
@@ -339,33 +287,15 @@ function AssistantBubble({
 						bordered={false}
 						destroyOnHidden={true}
 						ghost
-						activeKey={
-							summaryOpen
-								? [
-										summaryStartPart.stepRunId ||
-											"summary-process",
-									]
-								: []
-						}
+						activeKey={summaryOpen ? [summaryStartPart.stepRunId || "summary-process"] : []}
 						onChange={(keys: string | string[]): void => {
-							setSummaryOpen(
-								(Array.isArray(keys) ? keys : [keys]).length >
-									0,
-							);
+							setSummaryOpen((Array.isArray(keys) ? keys : [keys]).length > 0);
 						}}
 						items={[
 							{
-								key:
-									summaryStartPart.stepRunId ||
-									"summary-process",
-								label:
-									summaryStartPart.foldTitle ||
-									t("chat.assistant.process"),
-								children: (
-									<div className={styles.summaryContent}>
-										{foldedChildren}
-									</div>
-								),
+								key: summaryStartPart.stepRunId || "summary-process",
+								label: summaryStartPart.foldTitle || t("chat.assistant.process"),
+								children: <div className={styles.summaryContent}>{foldedChildren}</div>,
 							},
 						]}
 					/>
@@ -376,17 +306,10 @@ function AssistantBubble({
 	}
 
 	return (
-		<article
-			id={entryId}
-			className={styles.root}
-			data-entry-id={entryId}
-			data-entry-kind="assistant"
-		>
+		<article id={entryId} className={styles.root} data-entry-id={entryId} data-entry-kind="assistant">
 			{timingLabel !== undefined ? (
 				<div className={styles.timingRow}>
-					<Typography.Text type="secondary">
-						{timingLabel}
-					</Typography.Text>
+					<Typography.Text type="secondary">{timingLabel}</Typography.Text>
 					<Divider size="small" className={styles.antDivider} />
 				</div>
 			) : null}
@@ -403,21 +326,14 @@ function AssistantBubble({
 						data-message-selection-role="assistant"
 						data-message-selection-segment="assistant:content"
 					>
-						<MarkdownContent
-							streaming={streaming}
-							stickyCodeHeaders
-						>
+						<MarkdownContent streaming={streaming} stickyCodeHeaders>
 							{message ?? content ?? ""}
 						</MarkdownContent>
 					</div>
 				)}
 			</div>
 			<div className={`${styles.toolbar} ${feedback !== null ? styles.toolbarRated : ""}`}>
-				<Tooltip
-					title={
-						copied ? t("chat.common.copied") : t("chat.common.copy")
-					}
-				>
+				<Tooltip title={copied ? t("chat.common.copied") : t("chat.common.copy")}>
 					<Button
 						type="text"
 						size="small"
@@ -441,17 +357,15 @@ function AssistantBubble({
 									aria-pressed={feedback === rating}
 									disabled={feedbackSaving}
 									icon={<Icon name={feedback === rating ? rating : `${rating}-unchecked`} />}
-									onClick={(): void => { void changeFeedback(rating); }}
+									onClick={(): void => {
+										void changeFeedback(rating);
+									}}
 								/>
 							</Tooltip>
 						))}
 					</>
 				) : null}
-				{endTime ? (
-					<Typography.Text type="secondary">
-						{endTime}
-					</Typography.Text>
-				) : null}
+				{endTime ? <Typography.Text type="secondary">{endTime}</Typography.Text> : null}
 			</div>
 		</article>
 	);

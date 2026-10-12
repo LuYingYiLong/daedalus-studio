@@ -34,7 +34,7 @@ function getWaveClass(distance: number): string {
 export default function ConversationAnchorNavigator({
 	entries,
 	activeEntryId,
-	onNavigate
+	onNavigate,
 }: ConversationAnchorNavigatorProps): React.JSX.Element | null {
 	const { t } = useTranslation();
 	const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -43,10 +43,20 @@ export default function ConversationAnchorNavigator({
 	const draggingPointerIdRef = useRef<number | null>(null);
 	const draggedIndexRef = useRef<number | null>(null);
 	const suppressNextClickRef = useRef<boolean>(false);
-	const entriesByHref: ReadonlyMap<string, SessionTimelineNavigationEntry> = useMemo((): ReadonlyMap<string, SessionTimelineNavigationEntry> => {
-		return new Map(entries.map((entry: SessionTimelineNavigationEntry): [string, SessionTimelineNavigationEntry] => [entryHref(entry), entry]));
+	const entriesByHref: ReadonlyMap<string, SessionTimelineNavigationEntry> = useMemo((): ReadonlyMap<
+		string,
+		SessionTimelineNavigationEntry
+	> => {
+		return new Map(
+			entries.map((entry: SessionTimelineNavigationEntry): [string, SessionTimelineNavigationEntry] => [
+				entryHref(entry),
+				entry,
+			]),
+		);
 	}, [entries]);
-	const activeEntry: SessionTimelineNavigationEntry | undefined = entries.find((entry: SessionTimelineNavigationEntry): boolean => entry.entryId === activeEntryId);
+	const activeEntry: SessionTimelineNavigationEntry | undefined = entries.find(
+		(entry: SessionTimelineNavigationEntry): boolean => entry.entryId === activeEntryId,
+	);
 	const activeHref: string = activeEntry === undefined ? "" : entryHref(activeEntry);
 
 	function getIndexAtClientY(clientY: number): number | null {
@@ -55,9 +65,7 @@ export default function ConversationAnchorNavigator({
 			return null;
 		}
 		const ticks: HTMLElement[] = Array.from(
-			navigator.querySelectorAll<HTMLElement>(
-				"[data-conversation-anchor-index]",
-			),
+			navigator.querySelectorAll<HTMLElement>("[data-conversation-anchor-index]"),
 		);
 		if (ticks.length === 0) {
 			return null;
@@ -104,7 +112,9 @@ export default function ConversationAnchorNavigator({
 			return undefined;
 		}
 		const frameId: number = window.requestAnimationFrame((): void => {
-			const activeTick: HTMLElement | null = navigator.querySelector<HTMLElement>("[data-conversation-anchor-active='true']");
+			const activeTick: HTMLElement | null = navigator.querySelector<HTMLElement>(
+				"[data-conversation-anchor-active='true']",
+			);
 			if (activeTick === null) {
 				return;
 			}
@@ -123,7 +133,8 @@ export default function ConversationAnchorNavigator({
 	const items: AnchorProps["items"] = entries.map((entry: SessionTimelineNavigationEntry, index: number) => {
 		const isActive: boolean = entry.entryId === activeEntryId;
 		const distance: number = hoveredIndex === null ? -1 : Math.abs(index - hoveredIndex);
-		const tooltipText: string = entry.preview.length > 0 ? entry.preview : t("agentPage.conversationNavigator.emptyMessage");
+		const tooltipText: string =
+			entry.preview.length > 0 ? entry.preview : t("agentPage.conversationNavigator.emptyMessage");
 		return {
 			key: entry.entryId,
 			href: entryHref(entry),
@@ -134,11 +145,9 @@ export default function ConversationAnchorNavigator({
 						aria-current={isActive ? "true" : undefined}
 						data-conversation-anchor-active={isActive ? "true" : undefined}
 						data-conversation-anchor-index={index}
-						className={[
-							styles.tick,
-							isActive ? styles.tickActive : "",
-							getWaveClass(distance)
-						].filter(Boolean).join(" ")}
+						className={[styles.tick, isActive ? styles.tickActive : "", getWaveClass(distance)]
+							.filter(Boolean)
+							.join(" ")}
 						onBlur={(): void => setHoveredIndex(null)}
 						onFocus={(): void => setHoveredIndex(index)}
 						onMouseEnter={(): void => setHoveredIndex(index)}
@@ -189,7 +198,7 @@ export default function ConversationAnchorNavigator({
 						}}
 					/>
 				</Tooltip>
-			)
+			),
 		};
 	});
 
@@ -210,7 +219,7 @@ export default function ConversationAnchorNavigator({
 					root: styles.anchorRoot,
 					item: styles.anchorItem,
 					itemTitle: styles.anchorItemTitle,
-					indicator: styles.anchorIndicator
+					indicator: styles.anchorIndicator,
 				}}
 				getCurrentAnchor={(): string => activeHref}
 				items={items}

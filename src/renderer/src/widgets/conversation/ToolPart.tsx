@@ -1,6 +1,6 @@
 import { TimelineBodyPart } from "@/platform/rpc/types";
 import ShinyText from "@/ui/ShinyText";
-import styles from "./ToolPart.module.css"
+import styles from "./ToolPart.module.css";
 import { Icon } from "@/assets/icons";
 import { Collapse, Tag } from "antd";
 import React, { useMemo } from "react";
@@ -9,7 +9,15 @@ import { getToolDisplayInfo } from "@/domain/conversation/tool-display";
 import { getToolStatus, type ToolStatus } from "@/domain/conversation/tool-status";
 import { useTimelineDisclosure } from "@/widgets/conversation/state/timeline-disclosure-state";
 import ToolFileDiff from "./ToolFileDiff";
-import { getFileEditBatch, getSourceFolderId, getToolRecovery, isTimelineToolEventType, type FileEditBatchSummary, type FileEditSummaryItem, type ToolRecoveryDisplay } from "@/domain/conversation/tool-part-data";
+import {
+	getFileEditBatch,
+	getSourceFolderId,
+	getToolRecovery,
+	isTimelineToolEventType,
+	type FileEditBatchSummary,
+	type FileEditSummaryItem,
+	type ToolRecoveryDisplay,
+} from "@/domain/conversation/tool-part-data";
 
 export type TimelineToolPart = Extract<TimelineBodyPart, { type: "tool" }>;
 
@@ -30,7 +38,7 @@ const FILE_WRITE_TOOL_NAMES: ReadonlySet<string> = new Set<string>([
 	"mcp_godot_apply_scene_patch",
 	"mcp_godot_editor_apply_scene_patch",
 	"mcp_godot_set_project_setting",
-	"mcp_godot_unset_project_setting"
+	"mcp_godot_unset_project_setting",
 ]);
 
 function getStringValue(event: Record<string, unknown> | undefined, key: string): string | undefined {
@@ -38,19 +46,31 @@ function getStringValue(event: Record<string, unknown> | undefined, key: string)
 	return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
-function getLatestEvent(events: Record<string, unknown>[], type: "tool.result" | "tool.error" | "tool.reviewed"): Record<string, unknown> | undefined {
-	return [...events].reverse().find((event: Record<string, unknown>): boolean => isTimelineToolEventType(event, type));
+function getLatestEvent(
+	events: Record<string, unknown>[],
+	type: "tool.result" | "tool.error" | "tool.reviewed",
+): Record<string, unknown> | undefined {
+	return [...events]
+		.reverse()
+		.find((event: Record<string, unknown>): boolean => isTimelineToolEventType(event, type));
 }
 
-function getReviewText(events: Record<string, unknown>, t: (key: string, options?: Record<string, unknown>) => string): string | undefined {
+function getReviewText(
+	events: Record<string, unknown>,
+	t: (key: string, options?: Record<string, unknown>) => string,
+): string | undefined {
 	const decision: string = getStringValue(events, "decision") ?? "ask_user";
 	const reason: string = getStringValue(events, "reason") ?? "";
 	const source: string = getStringValue(events, "authorizationSource") ?? "policy";
 	const scope: string = getStringValue(events, "scope") ?? "this_call";
 	const sideEffects: string = Array.isArray(events.sideEffects)
-		? events.sideEffects.filter((value: unknown): value is string => typeof value === "string" && value.length > 0).join(", ")
+		? events.sideEffects
+				.filter((value: unknown): value is string => typeof value === "string" && value.length > 0)
+				.join(", ")
 		: "";
-	const details: string = [reason, scope, sideEffects].filter((value: string): boolean => value.length > 0).join(" · ");
+	const details: string = [reason, scope, sideEffects]
+		.filter((value: string): boolean => value.length > 0)
+		.join(" · ");
 	if (source === "review_model") {
 		if (decision === "allow") return t("chat.tool.review.modelApproved", { reason: details });
 		if (decision === "deny") return t("chat.tool.review.modelDenied", { reason: details });
@@ -65,9 +85,13 @@ function getToolResultText(events: Record<string, unknown>[]): string {
 	if (result !== undefined) {
 		const summary: string | undefined = getStringValue(result, "summary");
 		const failedChecks: string[] = Array.isArray(result.failedChecks)
-			? result.failedChecks.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0)
+			? result.failedChecks.filter(
+					(value: unknown): value is string => typeof value === "string" && value.trim().length > 0,
+				)
 			: [];
-		return [summary, ...failedChecks].filter((value: string | undefined): value is string => value !== undefined).join("\n");
+		return [summary, ...failedChecks]
+			.filter((value: string | undefined): value is string => value !== undefined)
+			.join("\n");
 	}
 
 	const error: Record<string, unknown> | undefined = getLatestEvent(events, "tool.error");
@@ -79,37 +103,46 @@ function getCompactedFilePaths(events: Record<string, unknown>[]): string[] {
 		if (!Array.isArray(event.filePaths)) {
 			continue;
 		}
-		return event.filePaths.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0);
+		return event.filePaths.filter(
+			(value: unknown): value is string => typeof value === "string" && value.trim().length > 0,
+		);
 	}
 	return [];
 }
 
 function getCompactedSummary(events: Record<string, unknown>[]): string {
-	const latest: Record<string, unknown> | undefined = [...events].reverse().find((event: Record<string, unknown>): boolean => (
-		typeof event.summary === "string"
-		|| Array.isArray(event.failedChecks)
-		|| typeof event.message === "string"
-		|| typeof event.reason === "string"
-	));
+	const latest: Record<string, unknown> | undefined = [...events]
+		.reverse()
+		.find(
+			(event: Record<string, unknown>): boolean =>
+				typeof event.summary === "string" ||
+				Array.isArray(event.failedChecks) ||
+				typeof event.message === "string" ||
+				typeof event.reason === "string",
+		);
 	if (latest === undefined) {
 		return "";
 	}
 	const failedChecks: string[] = Array.isArray(latest.failedChecks)
-		? latest.failedChecks.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0)
+		? latest.failedChecks.filter(
+				(value: unknown): value is string => typeof value === "string" && value.trim().length > 0,
+			)
 		: [];
 	return [
 		getStringValue(latest, "summary"),
 		...failedChecks,
 		getStringValue(latest, "message"),
-		getStringValue(latest, "reason")
-	].filter((value: string | undefined): value is string => value !== undefined).join("\n");
+		getStringValue(latest, "reason"),
+	]
+		.filter((value: string | undefined): value is string => value !== undefined)
+		.join("\n");
 }
 
 export type ToolPartProps = {
 	part: TimelineToolPart;
 	disclosureKey?: string;
 	stopped?: boolean;
-}
+};
 
 function ToolPart({ part, disclosureKey = "tool", stopped = false }: ToolPartProps): React.JSX.Element {
 	const { t } = useTranslation();
@@ -125,41 +158,66 @@ function ToolPart({ part, disclosureKey = "tool", stopped = false }: ToolPartPro
 		error: t("chat.tool.status.failed"),
 		approval: t("chat.tool.status.approvalRequired"),
 		stopped: t("chat.tool.status.stopped"),
-	}
+	};
 	const statusColor: Record<ToolStatus, string> = {
 		pending: "default",
 		running: "lime",
 		success: "green",
 		error: "red",
 		approval: "gold",
-		stopped: "default"
-	}
+		stopped: "default",
+	};
 	const isActiveStatus: boolean = status === "running" || status === "approval";
 	const genStatusTag = () => (
 		<Tag color={statusColor[status]}>
-			{isActiveStatus ? <ShinyText text={statusText[status]} speed={2.4} color="currentColor" /> : statusText[status]}
+			{isActiveStatus ? (
+				<ShinyText text={statusText[status]} speed={2.4} color="currentColor" />
+			) : (
+				statusText[status]
+			)}
 		</Tag>
-	)
-	const resultText: string = useMemo((): string => isCompacted ? "" : getToolResultText(part.events), [isCompacted, part.events]);
-	const compactedFilePaths: string[] = useMemo((): string[] => isCompacted ? getCompactedFilePaths(part.events) : [], [isCompacted, part.events]);
-	const compactedResultSummary: string = useMemo((): string => isCompacted ? getCompactedSummary(part.events) : "", [isCompacted, part.events]);
-	const fileEditBatch: FileEditBatchSummary | undefined = useMemo((): FileEditBatchSummary | undefined => getFileEditBatch(part.events), [part.events]);
-	const recovery: ToolRecoveryDisplay | undefined = useMemo((): ToolRecoveryDisplay | undefined => getToolRecovery(part.events), [part.events]);
-	const recoveryText: string | undefined = recovery === undefined
-		? undefined
-		: recovery.status === "recovered"
-			? t("chat.tool.recovery.recovered", { attempt: recovery.attempt, max: recovery.maxAttempts })
-			: recovery.status === "exhausted"
-				? t("chat.tool.recovery.exhausted", { attempt: recovery.attempt, max: recovery.maxAttempts })
-			: t("chat.tool.recovery.failed", { attempt: recovery.attempt, max: recovery.maxAttempts });
+	);
+	const resultText: string = useMemo(
+		(): string => (isCompacted ? "" : getToolResultText(part.events)),
+		[isCompacted, part.events],
+	);
+	const compactedFilePaths: string[] = useMemo(
+		(): string[] => (isCompacted ? getCompactedFilePaths(part.events) : []),
+		[isCompacted, part.events],
+	);
+	const compactedResultSummary: string = useMemo(
+		(): string => (isCompacted ? getCompactedSummary(part.events) : ""),
+		[isCompacted, part.events],
+	);
+	const fileEditBatch: FileEditBatchSummary | undefined = useMemo(
+		(): FileEditBatchSummary | undefined => getFileEditBatch(part.events),
+		[part.events],
+	);
+	const recovery: ToolRecoveryDisplay | undefined = useMemo(
+		(): ToolRecoveryDisplay | undefined => getToolRecovery(part.events),
+		[part.events],
+	);
+	const recoveryText: string | undefined =
+		recovery === undefined
+			? undefined
+			: recovery.status === "recovered"
+				? t("chat.tool.recovery.recovered", { attempt: recovery.attempt, max: recovery.maxAttempts })
+				: recovery.status === "exhausted"
+					? t("chat.tool.recovery.exhausted", { attempt: recovery.attempt, max: recovery.maxAttempts })
+					: t("chat.tool.recovery.failed", { attempt: recovery.attempt, max: recovery.maxAttempts });
 	const reviewEvent: Record<string, unknown> | undefined = getLatestEvent(part.events, "tool.reviewed");
 	const reviewText: string | undefined = reviewEvent === undefined ? undefined : getReviewText(reviewEvent, t);
 	const label = (
 		<span className={styles.toolLabel} title={toolDisplay.label}>
-			<span className={styles.toolLabelText}>{((): string => {
-				const sourceFolderId: string | undefined = fileEditBatch?.sourceFolderId ?? getSourceFolderId(part.events);
-				return sourceFolderId === undefined ? toolDisplay.label : `[${sourceFolderId}] ${toolDisplay.label}`;
-			})()}</span>
+			<span className={styles.toolLabelText}>
+				{((): string => {
+					const sourceFolderId: string | undefined =
+						fileEditBatch?.sourceFolderId ?? getSourceFolderId(part.events);
+					return sourceFolderId === undefined
+						? toolDisplay.label
+						: `[${sourceFolderId}] ${toolDisplay.label}`;
+				})()}
+			</span>
 			{fileEditBatch === undefined ? null : (
 				<span className={styles.fileStats}>
 					<span className={styles.additions}>+{fileEditBatch.additions}</span>
@@ -168,14 +226,21 @@ function ToolPart({ part, disclosureKey = "tool", stopped = false }: ToolPartPro
 			)}
 		</span>
 	);
-	const activityText: string | undefined = status === "running"
-		? isFileWriteTool
-			? t("chat.tool.activity.writing", { tool: toolDisplay.label })
-			: t("chat.tool.activity.running")
-		: status === "pending"
-			? t("chat.tool.activity.pending")
-		: undefined;
-	const hasDetails: boolean = isCompacted || activityText !== undefined || resultText.length > 0 || fileEditBatch !== undefined || recoveryText !== undefined || reviewText !== undefined;
+	const activityText: string | undefined =
+		status === "running"
+			? isFileWriteTool
+				? t("chat.tool.activity.writing", { tool: toolDisplay.label })
+				: t("chat.tool.activity.running")
+			: status === "pending"
+				? t("chat.tool.activity.pending")
+				: undefined;
+	const hasDetails: boolean =
+		isCompacted ||
+		activityText !== undefined ||
+		resultText.length > 0 ||
+		fileEditBatch !== undefined ||
+		recoveryText !== undefined ||
+		reviewText !== undefined;
 
 	return (
 		<Collapse
@@ -188,30 +253,48 @@ function ToolPart({ part, disclosureKey = "tool", stopped = false }: ToolPartPro
 				setOpen((Array.isArray(keys) ? keys : [keys]).includes("tool"));
 			}}
 			className={styles.toolCollapse}
-			expandIcon={() => (
-				<Icon name={toolDisplay.iconName} className={styles.toolIcon} />
-			)}
+			expandIcon={() => <Icon name={toolDisplay.iconName} className={styles.toolIcon} />}
 			items={[
 				{
 					key: "tool",
 					label,
 					children: !hasDetails ? null : (
 						<div className={styles.details}>
-							{isCompacted ? <div className={styles.activityText}>{part.compactedSummary ?? t("chat.tool.compactedDetails")}</div> : null}
-							{compactedResultSummary.length === 0 ? null : <div className={styles.resultText}>{compactedResultSummary}</div>}
+							{isCompacted ? (
+								<div className={styles.activityText}>
+									{part.compactedSummary ?? t("chat.tool.compactedDetails")}
+								</div>
+							) : null}
+							{compactedResultSummary.length === 0 ? null : (
+								<div className={styles.resultText}>{compactedResultSummary}</div>
+							)}
 							{compactedFilePaths.length === 0 ? null : (
 								<ul className={styles.fileList}>
-									{compactedFilePaths.map((filePath: string): React.JSX.Element => <li key={filePath} className={styles.fileItem}>{filePath}</li>)}
+									{compactedFilePaths.map(
+										(filePath: string): React.JSX.Element => (
+											<li key={filePath} className={styles.fileItem}>
+												{filePath}
+											</li>
+										),
+									)}
 								</ul>
 							)}
-							{activityText === undefined ? null : <div className={styles.activityText}>{activityText}</div>}
+							{activityText === undefined ? null : (
+								<div className={styles.activityText}>{activityText}</div>
+							)}
 							{reviewText === undefined ? null : <div className={styles.activityText}>{reviewText}</div>}
-							{recoveryText === undefined ? null : <div className={styles.recoveryText}>{recoveryText}</div>}
+							{recoveryText === undefined ? null : (
+								<div className={styles.recoveryText}>{recoveryText}</div>
+							)}
 							{resultText.length === 0 ? null : <div className={styles.resultText}>{resultText}</div>}
 							{fileEditBatch === undefined ? null : (
 								<div className={styles.fileChanges}>
 									<div className={styles.fileChangesSummary}>
-										<span>{t("chat.tool.fileChanges.summary", { count: fileEditBatch.editedFileCount })}</span>
+										<span>
+											{t("chat.tool.fileChanges.summary", {
+												count: fileEditBatch.editedFileCount,
+											})}
+										</span>
 										<span className={styles.fileStats}>
 											<span className={styles.additions}>+{fileEditBatch.additions}</span>
 											<span className={styles.deletions}>-{fileEditBatch.deletions}</span>
@@ -219,17 +302,31 @@ function ToolPart({ part, disclosureKey = "tool", stopped = false }: ToolPartPro
 									</div>
 									{fileEditBatch.sessionId === undefined || isCompacted ? (
 										<ul className={styles.fileList}>
-											{fileEditBatch.editedFiles.map((file: FileEditSummaryItem): React.JSX.Element => (
-																				<li key={`${file.sourceFolderId ?? ""}:${file.path}`} className={styles.fileItem}>{file.sourceFolderId === undefined ? file.path : `[${file.sourceFolderId}] ${file.path}`}</li>
-											))}
+											{fileEditBatch.editedFiles.map(
+												(file: FileEditSummaryItem): React.JSX.Element => (
+													<li
+														key={`${file.sourceFolderId ?? ""}:${file.path}`}
+														className={styles.fileItem}
+													>
+														{file.sourceFolderId === undefined
+															? file.path
+															: `[${file.sourceFolderId}] ${file.path}`}
+													</li>
+												),
+											)}
 										</ul>
-									) : <ToolFileDiff sessionId={fileEditBatch.sessionId} batchId={fileEditBatch.batchId} />}
+									) : (
+										<ToolFileDiff
+											sessionId={fileEditBatch.sessionId}
+											batchId={fileEditBatch.batchId}
+										/>
+									)}
 								</div>
 							)}
 						</div>
 					),
-					extra: genStatusTag()
-				}
+					extra: genStatusTag(),
+				},
 			]}
 		/>
 	);

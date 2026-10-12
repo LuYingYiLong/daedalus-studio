@@ -15,7 +15,7 @@ export default function DeleteWorkspaceDialog({
 	workspace,
 	loading,
 	onConfirm,
-	onCancel
+	onCancel,
 }: DeleteWorkspaceDialogProps): React.JSX.Element {
 	const { t } = useTranslation();
 
@@ -35,7 +35,8 @@ export default function DeleteWorkspaceDialog({
 			</Typography.Paragraph>
 			<Typography.Text type="secondary">
 				{t("workspaceTree.modals.deleteWorkspace.sessionPolicy", {
-					defaultValue: "Sessions are moved to another matching project when possible. Unmatched sessions are permanently deleted."
+					defaultValue:
+						"Sessions are moved to another matching project when possible. Unmatched sessions are permanently deleted.",
 				})}
 			</Typography.Text>
 		</Modal>

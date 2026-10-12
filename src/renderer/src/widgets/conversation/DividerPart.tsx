@@ -31,7 +31,11 @@ export default function DividerPart({ block, onOpenForkSource }: DividerPartProp
 							{origin.sessionTitle}
 						</Button>
 					</Tooltip>
-					<Typography.Text type="secondary" ellipsis={{ tooltip: origin.messagePreview }} className={styles.preview}>
+					<Typography.Text
+						type="secondary"
+						ellipsis={{ tooltip: origin.messagePreview }}
+						className={styles.preview}
+					>
 						{origin.messagePreview}
 					</Typography.Text>
 				</span>

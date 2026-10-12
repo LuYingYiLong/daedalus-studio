@@ -145,17 +145,17 @@ function ThinkingPart({ part, disclosureKey = "thinking" }: ThinkingPartProps): 
 				}
 				setOpen(nextOpen);
 			}}
-			expandIcon={() => (
-				<Icon name="thinking" className={styles.icon} />
-			)}
+			expandIcon={() => <Icon name="thinking" className={styles.icon} />}
 			items={[
 				{
 					key: "thinking",
-					label: isCompacted
-						? t("chat.thinking.compactedLabel")
-						: part.done
-						? t("chat.thinking.label")
-						: <ShinyText text={t("chat.thinking.activeLabel")} speed={2.4} />,
+					label: isCompacted ? (
+						t("chat.thinking.compactedLabel")
+					) : part.done ? (
+						t("chat.thinking.label")
+					) : (
+						<ShinyText text={t("chat.thinking.activeLabel")} speed={2.4} />
+					),
 					children: (
 						<div
 							ref={contentRef}
@@ -203,8 +203,8 @@ function ThinkingPart({ part, disclosureKey = "thinking" }: ThinkingPartProps): 
 								)}
 							</div>
 						</div>
-					)
-				}
+					),
+				},
 			]}
 		/>
 	);
