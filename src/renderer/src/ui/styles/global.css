@@ -11,8 +11,8 @@
 .settings-window-warmup__indicator {
 	width: 24px;
 	height: 24px;
-	border: 2px solid rgb(71 140 191 / 22%);
-	border-top-color: #478cbf;
+	border: 2px solid color-mix(in srgb, var(--ds-accent) 22%, transparent);
+	border-top-color: var(--ds-accent);
 	border-radius: 50%;
 	animation: settings-window-warmup-spin 700ms linear infinite;
 }

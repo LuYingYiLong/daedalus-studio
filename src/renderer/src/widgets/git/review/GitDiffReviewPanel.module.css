@@ -15,12 +15,12 @@
 	--diff-gutter-delete-background-color: var(--ds-git-deletion-bg);
 	--diff-code-insert-background-color: var(--ds-git-addition-bg);
 	--diff-code-delete-background-color: var(--ds-git-deletion-bg);
-	--diff-code-insert-edit-background-color: rgb(63 185 80 / 22%);
-	--diff-code-delete-edit-background-color: rgb(255 123 114 / 22%);
-	--diff-gutter-selected-background-color: rgb(176 146 52 / 22%);
-	--diff-code-selected-background-color: rgb(176 146 52 / 22%);
-	--diff-selection-background-color: rgb(71 140 191 / 28%);
-	--diff-omit-gutter-line-color: rgb(255 123 114 / 58%);
+	--diff-code-insert-edit-background-color: color-mix(in srgb, var(--ds-git-addition) 22%, transparent);
+	--diff-code-delete-edit-background-color: color-mix(in srgb, var(--ds-git-deletion) 22%, transparent);
+	--diff-gutter-selected-background-color: var(--ds-accent-muted);
+	--diff-code-selected-background-color: var(--ds-accent-muted);
+	--diff-selection-background-color: var(--ds-accent-muted);
+	--diff-omit-gutter-line-color: color-mix(in srgb, var(--ds-git-deletion) 58%, transparent);
 }
 
 .panel > :global(.ant-divider-horizontal) {

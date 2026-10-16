@@ -76,6 +76,19 @@
 }
 
 .code {
+	--md-syntax-keyword: #ff7b72;
+	--md-syntax-title: #d2a8ff;
+	--md-syntax-constant: #79c0ff;
+	--md-syntax-string: #a5d6ff;
+	--md-syntax-builtin: #ffa657;
+	--md-syntax-comment: #8b949e;
+	--md-syntax-tag: #7ee787;
+	--md-syntax-heading: #1f6feb;
+	--md-syntax-bullet: #f2cc60;
+	--md-syntax-addition: #aff5b4;
+	--md-syntax-addition-bg: #033a16;
+	--md-syntax-deletion: #ffdcd7;
+	--md-syntax-deletion-bg: #67060c;
 	display: block;
 	width: max-content;
 	min-width: 100%;
@@ -92,8 +105,98 @@
 	tab-size: 2;
 }
 
-/* highlight.js 样式调整 */
-.code.hljs {
-	background: transparent !important;
-	padding: 0 !important;
+:global(:root[data-theme="light"]) .code {
+	--md-syntax-keyword: #d73a49;
+	--md-syntax-title: #6f42c1;
+	--md-syntax-constant: #005cc5;
+	--md-syntax-string: #032f62;
+	--md-syntax-builtin: #e36209;
+	--md-syntax-comment: #6a737d;
+	--md-syntax-tag: #22863a;
+	--md-syntax-heading: #005cc5;
+	--md-syntax-bullet: #735c0f;
+	--md-syntax-addition: #22863a;
+	--md-syntax-addition-bg: #f0fff4;
+	--md-syntax-deletion: #b31d28;
+	--md-syntax-deletion-bg: #ffeef0;
+}
+
+.code :global(.hljs-doctag),
+.code :global(.hljs-keyword),
+.code :global(.hljs-template-tag),
+.code :global(.hljs-template-variable),
+.code :global(.hljs-type),
+.code :global(.hljs-variable.language_) {
+	color: var(--md-syntax-keyword);
+}
+
+.code :global(.hljs-title) {
+	color: var(--md-syntax-title);
+}
+
+.code :global(.hljs-attr),
+.code :global(.hljs-attribute),
+.code :global(.hljs-literal),
+.code :global(.hljs-meta),
+.code :global(.hljs-number),
+.code :global(.hljs-operator),
+.code :global(.hljs-variable),
+.code :global(.hljs-selector-attr),
+.code :global(.hljs-selector-class),
+.code :global(.hljs-selector-id) {
+	color: var(--md-syntax-constant);
+}
+
+.code :global(.hljs-regexp),
+.code :global(.hljs-string) {
+	color: var(--md-syntax-string);
+}
+
+.code :global(.hljs-built_in),
+.code :global(.hljs-symbol) {
+	color: var(--md-syntax-builtin);
+}
+
+.code :global(.hljs-comment),
+.code :global(.hljs-code),
+.code :global(.hljs-formula) {
+	color: var(--md-syntax-comment);
+}
+
+.code :global(.hljs-name),
+.code :global(.hljs-quote),
+.code :global(.hljs-selector-tag),
+.code :global(.hljs-selector-pseudo) {
+	color: var(--md-syntax-tag);
+}
+
+.code :global(.hljs-subst) {
+	color: var(--ds-text-primary);
+}
+
+.code :global(.hljs-section) {
+	color: var(--md-syntax-heading);
+	font-weight: bold;
+}
+
+.code :global(.hljs-bullet) {
+	color: var(--md-syntax-bullet);
+}
+
+.code :global(.hljs-emphasis) {
+	font-style: italic;
+}
+
+.code :global(.hljs-strong) {
+	font-weight: bold;
+}
+
+.code :global(.hljs-addition) {
+	color: var(--md-syntax-addition);
+	background-color: var(--md-syntax-addition-bg);
+}
+
+.code :global(.hljs-deletion) {
+	color: var(--md-syntax-deletion);
+	background-color: var(--md-syntax-deletion-bg);
 }

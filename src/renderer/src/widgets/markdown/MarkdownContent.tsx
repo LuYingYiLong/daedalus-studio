@@ -16,7 +16,6 @@ import { getFileExtensionForLanguage, normalizeHighlightLanguage as normalizeMar
 import { useTimelineScrollFrameCoordinator } from "@/widgets/conversation/state/timeline-scroll-frame-context";
 import { getPlatformRuntime } from "@/platform/runtime/platform-runtime";
 import MermaidBlock from "./MermaidBlock";
-import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
 
 export type MarkdownContentProps = {

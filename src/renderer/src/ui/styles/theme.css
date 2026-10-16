@@ -120,8 +120,8 @@
 	--ds-border: #3b3b3b;
 	--ds-border-subtle: #3b3b3b;
 	--ds-accent: #478cbf;
-	--ds-accent-hover: #5aa0d2;
-	--ds-accent-active: #386f98;
+	--ds-accent-hover: #649ec9;
+	--ds-accent-active: #3a739d;
 	--ds-accent-muted: rgb(71 140 191 / 24%);
 	--ds-accent-subtle: rgb(71 140 191 / 14%);
 	--ds-text-primary: #e8e8e8;
@@ -135,9 +135,9 @@
 	--ds-git-deletion: #ff7b72;
 	--ds-git-addition-bg: rgb(63 185 80 / 14%);
 	--ds-git-deletion-bg: rgb(255 123 114 / 14%);
+	--ds-box-shadow: 0 8px 16px rgb(0 0 0 / 40%);
 	--ds-window-glass-opacity: 1;
 	--ds-window-glass-tint: rgb(20 20 20 / var(--ds-window-glass-opacity));
-	--ds-window-glass-highlight: rgb(255 255 255 / 7%);
 	--ds-space-1: 4px;
 	--ds-space-2: 8px;
 	--ds-space-3: 12px;
@@ -192,9 +192,9 @@
 	--ds-surface-active: #e3e3e3;
 	--ds-border: #d6d6d6;
 	--ds-border-subtle: #d6d6d6;
-	--ds-accent: #59a0d6;
-	--ds-accent-hover: #5aa0d2;
-	--ds-accent-active: #1c70b0;
+	--ds-accent: #478cbf;
+	--ds-accent-hover: #5d9ac7;
+	--ds-accent-active: #3d78a4;
 	--ds-accent-muted: rgb(71 140 191 / 18%);
 	--ds-accent-subtle: rgb(71 140 191 / 10%);
 	--ds-text-primary: #141414;
@@ -207,6 +207,5 @@
 	--ds-git-deletion-bg: rgb(207 34 46 / 12%);
 	--ds-box-shadow: 0 8px 16px #0000000f;
 	--ds-window-glass-tint: rgb(245 245 245 / var(--ds-window-glass-opacity));
-	--ds-window-glass-highlight: rgb(255 255 255 / 58%);
 	color-scheme: light;
 }

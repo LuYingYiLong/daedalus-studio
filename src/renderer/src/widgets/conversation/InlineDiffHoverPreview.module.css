@@ -3,7 +3,7 @@
 	z-index: 1100;
 	pointer-events: auto;
 	user-select: none;
-	filter: drop-shadow(--ds-box-shadow);
+	filter: drop-shadow(var(--ds-box-shadow));
 }
 
 .previewSurface {
